@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-rise-green: #1C7C54;
+  --color-rise-cream: #FBF8EF;
+  --color-rise-white: #FFFFFF;
+  --color-rise-brown: #83684F;
+  --color-rise-black: #000000;
+  --font-heading: "Red Hat Display", sans-serif;
+  --font-body: "Garet", "Red Hat Display", sans-serif;
+}
+
+body {
+  background: var(--color-rise-cream);
+  color: var(--color-rise-black);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
