@@ -14,6 +14,7 @@ export default function InsightsLayout({ children }: { children: React.ReactNode
     { label: "Shortlisting", href: `${base}/shortlisting` },
     { label: "PD Booking", href: `${base}/parents-discovery-booking` },
     { label: "PD Form", href: `${base}/parents-discovery-form` },
+    { label: "Health", href: `${base}/health` },
   ];
 
   return (
