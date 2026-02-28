@@ -1,28 +1,7 @@
-import type { HealthResponse } from "@/app/api/health/route";
+import { getHealth } from "@/lib/health";
 
-async function getHealth(): Promise<HealthResponse | null> {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/health`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
-
-export default async function HealthPage() {
-  const data = await getHealth();
-
-  if (!data) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        <p className="text-red-600 font-medium">Failed to load health data.</p>
-      </div>
-    );
-  }
-
-  const { vars, checkedAt } = data;
+export default function HealthPage() {
+  const { vars, checkedAt } = getHealth();
   const present = vars.filter((v) => v.present);
   const missing = vars.filter((v) => !v.present);
 

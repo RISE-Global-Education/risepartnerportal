@@ -1,14 +1,23 @@
 import type { MixmaxInsightsResponse } from "@/app/api/mixmax/route";
+import { readCache, isCacheFresh, fetchFromMixmax, writeCache } from "@/app/api/mixmax/route";
 import InsightsTable from "./InsightsTable";
 import RefreshButton from "./RefreshButton";
 
 async function getMixmaxInsights(): Promise<MixmaxInsightsResponse | null> {
+  const apiKey = process.env.MIXMAX_API_KEY;
+  if (!apiKey || apiKey === "your_key_here") return null;
+
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/mixmax`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return res.json();
+    const cached = readCache();
+    if (cached && isCacheFresh(cached.fetchedAt)) {
+      return { ...cached.data, cachedAt: cached.fetchedAt };
+    }
+    const data = await fetchFromMixmax(apiKey);
+    writeCache(data);
+    return { ...data, cachedAt: new Date().toISOString() };
   } catch {
+    const cached = readCache();
+    if (cached) return { ...cached.data, cachedAt: cached.fetchedAt };
     return null;
   }
 }

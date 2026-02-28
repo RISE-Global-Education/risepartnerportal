@@ -36,12 +36,12 @@ export interface MixmaxInsightsResponse {
 
 const CACHE_FILE = path.join(process.cwd(), ".mixmax-cache.json");
 
-interface CacheFile {
+export interface CacheFile {
   fetchedAt: string; // ISO string
   data: MixmaxInsightsResponse;
 }
 
-function readCache(): CacheFile | null {
+export function readCache(): CacheFile | null {
   try {
     const raw = fs.readFileSync(CACHE_FILE, "utf-8");
     return JSON.parse(raw) as CacheFile;
@@ -63,7 +63,7 @@ export function writeCache(data: MixmaxInsightsResponse): void {
  *   - If current time is before today's 9:30 AM IST, use yesterday's 9:30 AM IST as the threshold.
  *   - Cache is fresh if fetchedAt >= threshold.
  */
-function isCacheFresh(fetchedAt: string): boolean {
+export function isCacheFresh(fetchedAt: string): boolean {
   const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30
 
   const now = Date.now();
