@@ -9,7 +9,7 @@ export async function POST() {
 
   try {
     const data = await fetchFromMixmax(apiKey);
-    writeCache(data);
+    await writeCache(data);
     return NextResponse.json({ ok: true, cachedAt: new Date().toISOString() });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

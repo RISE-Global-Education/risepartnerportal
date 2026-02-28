@@ -17,15 +17,15 @@ export async function getMixmaxData(): Promise<MixmaxData> {
   }
 
   try {
-    const cached = readCache();
+    const cached = await readCache();
     if (cached && isCacheFresh(cached.fetchedAt)) {
       return { recipients: cached.data.recipients, cachedAt: cached.fetchedAt };
     }
     const data = await fetchFromMixmax(apiKey);
-    writeCache(data);
+    await writeCache(data);
     return { recipients: data.recipients, cachedAt: new Date().toISOString() };
   } catch {
-    const cached = readCache();
+    const cached = await readCache();
     if (cached) return { recipients: cached.data.recipients, cachedAt: cached.fetchedAt };
     return { recipients: [], cachedAt: null };
   }

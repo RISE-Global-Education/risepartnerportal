@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 
 export interface MixmaxRecipient {
   email: string;
@@ -32,30 +30,82 @@ export interface MixmaxInsightsResponse {
   cachedAt?: string; // ISO string of when data was last fetched
 }
 
-// ── Cache helpers ──────────────────────────────────────────────────────────────
+// ── Cache helpers (Airtable-backed) ───────────────────────────────────────────
+//
+// Requires a table named "_mixmax_cache" in your Airtable base with:
+//   - "key"       (Single line text)  — identifier, always "mixmax"
+//   - "fetchedAt" (Single line text)  — ISO timestamp
+//   - "payload"   (Long text)         — JSON string of MixmaxInsightsResponse
+//
+// Set MIXMAX_CACHE_BASE and MIXMAX_CACHE_TABLE in your env vars, OR
+// it defaults to the student pipeline base with table name "_mixmax_cache".
 
-// Vercel's filesystem is read-only except for /tmp
-const CACHE_FILE = process.env.VERCEL
-  ? "/tmp/.mixmax-cache.json"
-  : path.join(process.cwd(), ".mixmax-cache.json");
+const CACHE_BASE  = process.env.MIXMAX_CACHE_BASE  ?? "appyvj8Xh10kGWbJN";
+const CACHE_TABLE = process.env.MIXMAX_CACHE_TABLE ?? "_mixmax_cache";
+const AIRTABLE_BASE = "https://api.airtable.com/v0";
 
 export interface CacheFile {
-  fetchedAt: string; // ISO string
+  fetchedAt: string;
   data: MixmaxInsightsResponse;
 }
 
-export function readCache(): CacheFile | null {
+export async function readCache(): Promise<CacheFile | null> {
   try {
-    const raw = fs.readFileSync(CACHE_FILE, "utf-8");
-    return JSON.parse(raw) as CacheFile;
+    const token = process.env.AIRTABLE_TOKEN;
+    if (!token) return null;
+    const url = `${AIRTABLE_BASE}/${CACHE_BASE}/${CACHE_TABLE}?filterByFormula={key}="mixmax"&maxRecords=1`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const record = json.records?.[0];
+    if (!record) return null;
+    const fetchedAt: string = record.fields.fetchedAt;
+    const payload: string = record.fields.payload;
+    if (!fetchedAt || !payload) return null;
+    return { fetchedAt, data: JSON.parse(payload) };
   } catch {
     return null;
   }
 }
 
-export function writeCache(data: MixmaxInsightsResponse): void {
-  const entry: CacheFile = { fetchedAt: new Date().toISOString(), data };
-  fs.writeFileSync(CACHE_FILE, JSON.stringify(entry), "utf-8");
+export async function writeCache(data: MixmaxInsightsResponse): Promise<void> {
+  try {
+    const token = process.env.AIRTABLE_TOKEN;
+    if (!token) return;
+
+    const fetchedAt = new Date().toISOString();
+    const payload = JSON.stringify(data);
+
+    // Check if record already exists
+    const searchUrl = `${AIRTABLE_BASE}/${CACHE_BASE}/${CACHE_TABLE}?filterByFormula={key}="mixmax"&maxRecords=1`;
+    const searchRes = await fetch(searchUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const searchJson = await searchRes.json();
+    const existing = searchJson.records?.[0];
+
+    if (existing) {
+      // Update existing record
+      await fetch(`${AIRTABLE_BASE}/${CACHE_BASE}/${CACHE_TABLE}/${existing.id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ fields: { fetchedAt, payload } }),
+      });
+    } else {
+      // Create new record
+      await fetch(`${AIRTABLE_BASE}/${CACHE_BASE}/${CACHE_TABLE}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ fields: { key: "mixmax", fetchedAt, payload } }),
+      });
+    }
+  } catch (err) {
+    console.error("[Mixmax] writeCache failed:", err);
+  }
 }
 
 /**
@@ -225,27 +275,21 @@ export async function GET() {
   }
 
   try {
-    // Serve from cache if still fresh
-    const cached = readCache();
+    const cached = await readCache();
     if (cached && isCacheFresh(cached.fetchedAt)) {
-      return NextResponse.json({
-        ...cached.data,
-        cachedAt: cached.fetchedAt,
-      });
+      return NextResponse.json({ ...cached.data, cachedAt: cached.fetchedAt });
     }
 
-    // Cache is stale or missing — fetch fresh data
     console.log("[Mixmax] Cache stale or missing, fetching from API…");
     const data = await fetchFromMixmax(apiKey);
-    writeCache(data);
+    await writeCache(data);
 
     return NextResponse.json({ ...data, cachedAt: new Date().toISOString() });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Mixmax API fetch failed:", message);
 
-    // If fetch fails but we have a stale cache, serve it rather than erroring
-    const cached = readCache();
+    const cached = await readCache();
     if (cached) {
       console.warn("[Mixmax] Serving stale cache after fetch failure");
       return NextResponse.json({ ...cached.data, cachedAt: cached.fetchedAt });

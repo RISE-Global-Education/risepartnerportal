@@ -12,16 +12,16 @@ async function getMixmaxInsights(): Promise<MixmaxResult> {
   if (!apiKey || apiKey === "your_key_here") return { ok: false, reason: "no_key" };
 
   try {
-    const cached = readCache();
+    const cached = await readCache();
     if (cached && isCacheFresh(cached.fetchedAt)) {
       return { ok: true, data: { ...cached.data, cachedAt: cached.fetchedAt } };
     }
     const data = await fetchFromMixmax(apiKey);
-    writeCache(data);
+    await writeCache(data);
     return { ok: true, data: { ...data, cachedAt: new Date().toISOString() } };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    const cached = readCache();
+    const cached = await readCache();
     if (cached) return { ok: true, data: { ...cached.data, cachedAt: cached.fetchedAt } };
     return { ok: false, reason: "fetch_error", error };
   }

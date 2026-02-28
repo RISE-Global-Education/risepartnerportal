@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { readCache } from "@/app/api/mixmax/route";
 
 export async function GET() {
-  const cached = readCache();
+  const cached = await readCache();
   if (!cached) {
     return NextResponse.json({ error: "No cache. Visit /insights/mixmax first to populate it." }, { status: 404 });
   }

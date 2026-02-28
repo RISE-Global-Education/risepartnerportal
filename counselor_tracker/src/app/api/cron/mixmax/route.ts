@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   try {
     console.log("[Cron] Fetching fresh Mixmax data…");
     const data = await fetchFromMixmax(apiKey);
-    writeCache(data);
+    await writeCache(data);
     console.log("[Cron] Mixmax cache refreshed at", new Date().toISOString());
     return NextResponse.json({ ok: true, cachedAt: new Date().toISOString() });
   } catch (err) {
