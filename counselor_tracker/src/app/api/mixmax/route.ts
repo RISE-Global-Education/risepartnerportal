@@ -135,57 +135,58 @@ export async function fetchFromMixmax(apiKey: string): Promise<MixmaxInsightsRes
   } while (cursor);
 
   // 2. For each sequence fetch recipients and aggregate stats
+  // Sequential + delay to avoid Mixmax 429 rate limits
   const recipientMap = new Map<string, MixmaxRecipient>();
 
-  await Promise.all(
-    sequences.map(async (seq) => {
-      let offset = 0;
-      const limit = 50;
-      while (true) {
-        const recipients: MixmaxApiRecipient[] = await mixmaxGet(
-          `/sequences/${seq._id}/recipients?limit=${limit}&offset=${offset}`,
-          apiKey
-        );
-        if (!Array.isArray(recipients) || recipients.length === 0) break;
+  for (const seq of sequences) {
+    let offset = 0;
+    const limit = 50;
+    while (true) {
+      const recipients: MixmaxApiRecipient[] = await mixmaxGet(
+        `/sequences/${seq._id}/recipients?limit=${limit}&offset=${offset}`,
+        apiKey
+      );
+      if (!Array.isArray(recipients) || recipients.length === 0) break;
 
-        for (const r of recipients) {
-          const email = r.to?.email ?? "";
-          if (!email) continue;
+      for (const r of recipients) {
+        const email = r.to?.email ?? "";
+        if (!email) continue;
 
-          let sent = 0, opened = 0, clicked = 0, replied = 0, bounced = 0;
-          let lastSentAt: number | null = null;
-          for (const stage of r.stages ?? []) {
-            if (stage.state === "sent" || stage.sentAt) {
-              sent++;
-              opened += stage.opens ?? 0;
-              clicked += stage.clicks ?? 0;
-              replied += stage.replied ?? 0;
-              bounced += stage.bounced ?? 0;
-              if (stage.sentAt && (!lastSentAt || stage.sentAt > lastSentAt)) {
-                lastSentAt = stage.sentAt;
-              }
+        let sent = 0, opened = 0, clicked = 0, replied = 0, bounced = 0;
+        let lastSentAt: number | null = null;
+        for (const stage of r.stages ?? []) {
+          if (stage.state === "sent" || stage.sentAt) {
+            sent++;
+            opened += stage.opens ?? 0;
+            clicked += stage.clicks ?? 0;
+            replied += stage.replied ?? 0;
+            bounced += stage.bounced ?? 0;
+            if (stage.sentAt && (!lastSentAt || stage.sentAt > lastSentAt)) {
+              lastSentAt = stage.sentAt;
             }
           }
-
-          const key = `${email}::${seq._id}`;
-          recipientMap.set(key, {
-            email,
-            name: r.to?.name ?? "",
-            sent,
-            opened,
-            clicked,
-            replied,
-            bounced,
-            sequenceName: seq.name,
-            lastSentAt,
-          });
         }
 
-        if (recipients.length < limit) break;
-        offset += limit;
+        const key = `${email}::${seq._id}`;
+        recipientMap.set(key, {
+          email,
+          name: r.to?.name ?? "",
+          sent,
+          opened,
+          clicked,
+          replied,
+          bounced,
+          sequenceName: seq.name,
+          lastSentAt,
+        });
       }
-    })
-  );
+
+      if (recipients.length < limit) break;
+      offset += limit;
+      await new Promise((res) => setTimeout(res, 300));
+    }
+    await new Promise((res) => setTimeout(res, 300));
+  }
 
   const recipients = Array.from(recipientMap.values()).sort(
     (a, b) => b.sent - a.sent

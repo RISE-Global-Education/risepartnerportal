@@ -1,4 +1,5 @@
 import { fetchAllRecords, getField } from "@/lib/airtable";
+import { getMixmaxData } from "@/lib/mixmax";
 import AirtableInsightsClient from "./AirtableInsightsClient";
 
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
@@ -65,44 +66,17 @@ export default async function AirtableInsightsPage({
     acceptanceEmailSentTime: getField<string>(r, "Acceptances Email Sent Time") ?? null,
   }));
 
-  // ── 3. Fetch Mixmax recipients from internal API ──
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-  let allMixmaxRecipients: {
-    email: string;
-    sequenceName: string;
-    sent: number;
-    opened: number;
-    replied: number;
-  }[] = [];
-
-  let mixmaxCachedAt: string | null = null;
-
-  try {
-    const res = await fetch(`${baseUrl}/api/mixmax`, { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      mixmaxCachedAt = data.cachedAt ?? null;
-      allMixmaxRecipients = (data.recipients ?? [])
-        .filter((r: { sequenceName?: string }) =>
-          ACCEPTANCE_SEQUENCES.includes(r.sequenceName ?? "")
-        )
-        .map((r: {
-          email: string;
-          sequenceName?: string;
-          sent: number;
-          opened: number;
-          replied: number;
-        }) => ({
-          email: r.email.toLowerCase().trim(),
-          sequenceName: r.sequenceName ?? "Unknown",
-          sent: r.sent,
-          opened: r.opened,
-          replied: r.replied,
-        }));
-    }
-  } catch {
-    // Mixmax unavailable — proceed with nulls
-  }
+  // ── 3. Fetch Mixmax recipients ──
+  const { recipients: mixmaxAll, cachedAt: mixmaxCachedAt } = await getMixmaxData();
+  const allMixmaxRecipients = mixmaxAll
+    .filter((r) => ACCEPTANCE_SEQUENCES.includes(r.sequenceName ?? ""))
+    .map((r) => ({
+      email: r.email.toLowerCase().trim(),
+      sequenceName: r.sequenceName ?? "Unknown",
+      sent: r.sent,
+      opened: r.opened,
+      replied: r.replied,
+    }));
 
   // ── 4. Build email → [MixmaxRow] map (acceptance sequences only) ──
   const mixmaxByEmail = new Map<string, typeof allMixmaxRecipients>();

@@ -1,4 +1,5 @@
 import { fetchAllRecords, getField } from "@/lib/airtable";
+import { getMixmaxData } from "@/lib/mixmax";
 import ParentsDiscoveryBookingClient from "./ParentsDiscoveryBookingClient";
 
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
@@ -50,44 +51,17 @@ export default async function ParentsDiscoveryBookingPage({
     qualifiedStatus: getField<string>(r, "Qualified") ?? "",
   }));
 
-  // ── 2. Fetch Mixmax recipients from internal API ──
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-  let allMixmaxRecipients: {
-    email: string;
-    sequenceName: string;
-    sent: number;
-    opened: number;
-    replied: number;
-  }[] = [];
-
-  let mixmaxCachedAt: string | null = null;
-
-  try {
-    const res = await fetch(`${baseUrl}/api/mixmax`, { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      mixmaxCachedAt = data.cachedAt ?? null;
-      allMixmaxRecipients = (data.recipients ?? [])
-        .filter((r: { sequenceName?: string }) =>
-          BOOKING_SEQUENCES.includes(r.sequenceName ?? "")
-        )
-        .map((r: {
-          email: string;
-          sequenceName?: string;
-          sent: number;
-          opened: number;
-          replied: number;
-        }) => ({
-          email: r.email.toLowerCase().trim(),
-          sequenceName: r.sequenceName ?? "Unknown",
-          sent: r.sent,
-          opened: r.opened,
-          replied: r.replied,
-        }));
-    }
-  } catch {
-    // Mixmax unavailable — proceed with nulls
-  }
+  // ── 2. Fetch Mixmax recipients ──
+  const { recipients: mixmaxAll, cachedAt: mixmaxCachedAt } = await getMixmaxData();
+  const allMixmaxRecipients = mixmaxAll
+    .filter((r) => BOOKING_SEQUENCES.includes(r.sequenceName ?? ""))
+    .map((r) => ({
+      email: r.email.toLowerCase().trim(),
+      sequenceName: r.sequenceName ?? "Unknown",
+      sent: r.sent,
+      opened: r.opened,
+      replied: r.replied,
+    }));
 
   // ── 3. Build email → [MixmaxRow] map ──
   const mixmaxByEmail = new Map<string, typeof allMixmaxRecipients>();
