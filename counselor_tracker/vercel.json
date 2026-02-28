@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/mixmax",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/airtable",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/daily-check",
+      "schedule": "5 4 * * *"
+    }
+  ]
+}

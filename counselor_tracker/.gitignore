@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# Mixmax daily cache
+.mixmax-cache.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*

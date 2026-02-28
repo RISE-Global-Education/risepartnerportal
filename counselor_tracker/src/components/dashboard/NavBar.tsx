@@ -8,10 +8,12 @@ export default function NavBar({ secret }: { secret: string }) {
   const pathname = usePathname();
   const basePath = `/dashboard/${secret}`;
   const isSearch = pathname.endsWith("/search");
+  const isInsights = pathname.includes("/insights");
 
   const tabs = [
-    { label: "Dashboard", href: basePath, active: !isSearch },
+    { label: "Dashboard", href: basePath, active: !isSearch && !isInsights },
     { label: "Search", href: `${basePath}/search`, active: isSearch },
+    { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights },
   ];
 
   return (
@@ -43,9 +45,6 @@ export default function NavBar({ secret }: { secret: string }) {
               {tab.label}
             </Link>
           ))}
-          <span className="px-3 py-2 text-sm font-medium text-gray-300 cursor-not-allowed">
-            Revenue
-          </span>
         </div>
       </div>
     </nav>
