@@ -3,22 +3,27 @@ import { readCache, isCacheFresh, fetchFromMixmax, writeCache } from "@/app/api/
 import InsightsTable from "./InsightsTable";
 import RefreshButton from "./RefreshButton";
 
-async function getMixmaxInsights(): Promise<MixmaxInsightsResponse | null> {
+type MixmaxResult =
+  | { ok: true; data: MixmaxInsightsResponse }
+  | { ok: false; reason: "no_key" | "fetch_error"; error?: string };
+
+async function getMixmaxInsights(): Promise<MixmaxResult> {
   const apiKey = process.env.MIXMAX_API_KEY;
-  if (!apiKey || apiKey === "your_key_here") return null;
+  if (!apiKey || apiKey === "your_key_here") return { ok: false, reason: "no_key" };
 
   try {
     const cached = readCache();
     if (cached && isCacheFresh(cached.fetchedAt)) {
-      return { ...cached.data, cachedAt: cached.fetchedAt };
+      return { ok: true, data: { ...cached.data, cachedAt: cached.fetchedAt } };
     }
     const data = await fetchFromMixmax(apiKey);
     writeCache(data);
-    return { ...data, cachedAt: new Date().toISOString() };
-  } catch {
+    return { ok: true, data: { ...data, cachedAt: new Date().toISOString() } };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
     const cached = readCache();
-    if (cached) return { ...cached.data, cachedAt: cached.fetchedAt };
-    return null;
+    if (cached) return { ok: true, data: { ...cached.data, cachedAt: cached.fetchedAt } };
+    return { ok: false, reason: "fetch_error", error };
   }
 }
 
@@ -54,23 +59,32 @@ const STAT_CARDS = [
 ];
 
 export default async function MixmaxInsightsPage() {
-  const data = await getMixmaxInsights();
+  const result = await getMixmaxInsights();
 
-  if (!data) {
+  if (!result.ok) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-amber-800">
-          <p className="font-semibold">Mixmax not connected</p>
-          <p className="text-sm mt-1">
-            Add your <code className="bg-amber-100 px-1 rounded">MIXMAX_API_KEY</code> to{" "}
-            <code className="bg-amber-100 px-1 rounded">.env.local</code> to enable email insights.
-          </p>
+          {result.reason === "no_key" ? (
+            <>
+              <p className="font-semibold">Mixmax not connected</p>
+              <p className="text-sm mt-1">
+                Add your <code className="bg-amber-100 px-1 rounded">MIXMAX_API_KEY</code> to{" "}
+                <code className="bg-amber-100 px-1 rounded">.env.local</code> to enable email insights.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-semibold">Mixmax fetch failed</p>
+              <p className="text-sm mt-1 font-mono break-all">{result.error}</p>
+            </>
+          )}
         </div>
       </div>
     );
   }
 
-  const { totals, recipients, cachedAt } = data;
+  const { totals, recipients, cachedAt } = result.data;
 
   const fetchedLabel = cachedAt
     ? new Date(cachedAt).toLocaleString("en-IN", {

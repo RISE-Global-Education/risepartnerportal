@@ -34,7 +34,10 @@ export interface MixmaxInsightsResponse {
 
 // ── Cache helpers ──────────────────────────────────────────────────────────────
 
-const CACHE_FILE = path.join(process.cwd(), ".mixmax-cache.json");
+// Vercel's filesystem is read-only except for /tmp
+const CACHE_FILE = process.env.VERCEL
+  ? "/tmp/.mixmax-cache.json"
+  : path.join(process.cwd(), ".mixmax-cache.json");
 
 export interface CacheFile {
   fetchedAt: string; // ISO string
