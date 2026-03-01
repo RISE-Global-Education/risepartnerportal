@@ -5,7 +5,7 @@ import ParentsDiscoveryFormClient from "./ParentsDiscoveryFormClient";
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
 
-const FORM_SEQUENCES = ["Parents Discovery - Application Form"];
+const FORM_SEQUENCES = ["Parents  Discovery - Application Form"];
 
 export interface MappedRow {
   recordId: string;

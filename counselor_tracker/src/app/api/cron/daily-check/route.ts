@@ -15,8 +15,8 @@ const ACCEPTANCE_SEQUENCES = ["Acceptance Email - No Scholarship", "Acceptance E
 const SHORTLISTING_STATUSES = ["SWA1", "SWA2", "SWA3", "Call Shortlisting"];
 const SHORTLISTING_SEQUENCES = ["Shortlisting Mail"];
 
-const BOOKING_SEQUENCES = ["Parents Discovery - Booking Link"];
-const FORM_SEQUENCES = ["Parents Discovery - Application Form"];
+const BOOKING_SEQUENCES = ["Parents  Discovery - Booking Link"];
+const FORM_SEQUENCES = ["Parents  Discovery - Application Form"];
 
 const DAYS = 30; // same default as pages
 
