@@ -2,6 +2,7 @@ import type { MixmaxInsightsResponse } from "@/app/api/mixmax/route";
 import { readCache, isCacheFresh, fetchFromMixmax, writeCache } from "@/app/api/mixmax/route";
 import InsightsTable from "./InsightsTable";
 import RefreshButton from "./RefreshButton";
+import MasterTestButton from "./MasterTestButton";
 
 type MixmaxResult =
   | { ok: true; data: MixmaxInsightsResponse }
@@ -58,7 +59,12 @@ const STAT_CARDS = [
   },
 ];
 
-export default async function MixmaxInsightsPage() {
+export default async function MixmaxInsightsPage({
+  params,
+}: {
+  params: Promise<{ secret: string }>;
+}) {
+  const { secret } = await params;
   const result = await getMixmaxInsights();
 
   if (!result.ok) {
@@ -107,6 +113,7 @@ export default async function MixmaxInsightsPage() {
             Powered by Mixmax · All sequences
           </span>
           <RefreshButton apiPath="/api/refresh/mixmax" />
+          <MasterTestButton secret={secret} />
         </div>
       </div>
       <p className="text-xs text-rise-brown/60 mb-6">
