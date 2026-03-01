@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchAllRecords, getField } from "@/lib/airtable";
+import { readCache } from "@/app/api/mixmax/route";
 import nodemailer from "nodemailer";
 
 // ── Constants (mirrors the 4 insight pages) ────────────────────────────────
@@ -149,20 +150,21 @@ export async function GET(req: NextRequest) {
   }
 
   const apiKey = process.env.MIXMAX_API_KEY;
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
 
   // ── 1. Fetch Mixmax recipients (all sequences) ─────────────────────────
   let allMixmax: MixmaxRow[] = [];
   if (apiKey && apiKey !== "your_key_here") {
     try {
-      const res = await fetch(`${baseUrl}/api/mixmax`, { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
-        allMixmax = (data.recipients ?? []).map((r: { email: string; sequenceName?: string; sent: number }) => ({
+      const cached = await readCache();
+      if (cached) {
+        allMixmax = (cached.data.recipients ?? []).map((r) => ({
           email: r.email.toLowerCase().trim(),
           sequenceName: r.sequenceName ?? "",
           sent: r.sent,
         }));
+        console.log(`[DailyCheck] Loaded ${allMixmax.length} Mixmax rows from cache (fetched ${cached.fetchedAt})`);
+      } else {
+        console.warn("[DailyCheck] Could not fetch Mixmax data");
       }
     } catch {
       console.warn("[DailyCheck] Could not fetch Mixmax data");

@@ -30,19 +30,24 @@ export interface MixmaxInsightsResponse {
   cachedAt?: string; // ISO string of when data was last fetched
 }
 
-// ── Cache helpers (Airtable-backed) ───────────────────────────────────────────
+// ── Cache helpers (Upstash Redis-backed) ──────────────────────────────────────
 //
-// Requires a table named "_mixmax_cache" in your Airtable base with:
-//   - "key"       (Single line text)  — identifier, always "mixmax"
-//   - "fetchedAt" (Single line text)  — ISO timestamp
-//   - "payload"   (Long text)         — JSON string of MixmaxInsightsResponse
-//
-// Set MIXMAX_CACHE_BASE and MIXMAX_CACHE_TABLE in your env vars, OR
-// it defaults to the student pipeline base with table name "_mixmax_cache".
+// Requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN env vars.
+// The cache is stored under the key "mixmax:cache" as a JSON string.
 
-const CACHE_BASE  = process.env.MIXMAX_CACHE_BASE  ?? "appyvj8Xh10kGWbJN";
-const CACHE_TABLE = process.env.MIXMAX_CACHE_TABLE ?? "_mixmax_cache";
-const AIRTABLE_BASE = "https://api.airtable.com/v0";
+import { Redis } from "@upstash/redis";
+
+function getRedis(): Redis | null {
+  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+    return null;
+  }
+  return new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+}
+
+const REDIS_KEY = "mixmax:cache";
 
 export interface CacheFile {
   fetchedAt: string;
@@ -51,21 +56,10 @@ export interface CacheFile {
 
 export async function readCache(): Promise<CacheFile | null> {
   try {
-    const token = process.env.AIRTABLE_TOKEN;
-    if (!token) return null;
-    const url = `${AIRTABLE_BASE}/${CACHE_BASE}/${CACHE_TABLE}?filterByFormula={key}="mixmax"&maxRecords=1`;
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const record = json.records?.[0];
-    if (!record) return null;
-    const fetchedAt: string = record.fields.fetchedAt;
-    const payload: string = record.fields.payload;
-    if (!fetchedAt || !payload) return null;
-    return { fetchedAt, data: JSON.parse(payload) };
+    const redis = getRedis();
+    if (!redis) return null;
+    const value = await redis.get<CacheFile>(REDIS_KEY);
+    return value ?? null;
   } catch {
     return null;
   }
@@ -73,36 +67,11 @@ export async function readCache(): Promise<CacheFile | null> {
 
 export async function writeCache(data: MixmaxInsightsResponse): Promise<void> {
   try {
-    const token = process.env.AIRTABLE_TOKEN;
-    if (!token) return;
-
-    const fetchedAt = new Date().toISOString();
-    const payload = JSON.stringify(data);
-
-    // Check if record already exists
-    const searchUrl = `${AIRTABLE_BASE}/${CACHE_BASE}/${CACHE_TABLE}?filterByFormula={key}="mixmax"&maxRecords=1`;
-    const searchRes = await fetch(searchUrl, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-    });
-    const searchJson = await searchRes.json();
-    const existing = searchJson.records?.[0];
-
-    if (existing) {
-      // Update existing record
-      await fetch(`${AIRTABLE_BASE}/${CACHE_BASE}/${CACHE_TABLE}/${existing.id}`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: { fetchedAt, payload } }),
-      });
-    } else {
-      // Create new record
-      await fetch(`${AIRTABLE_BASE}/${CACHE_BASE}/${CACHE_TABLE}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ fields: { key: "mixmax", fetchedAt, payload } }),
-      });
-    }
+    const redis = getRedis();
+    if (!redis) return;
+    const entry: CacheFile = { fetchedAt: new Date().toISOString(), data };
+    // Keep for 7 days as a safety net; freshness is controlled by isCacheFresh
+    await redis.set(REDIS_KEY, entry, { ex: 7 * 24 * 60 * 60 });
   } catch (err) {
     console.error("[Mixmax] writeCache failed:", err);
   }
