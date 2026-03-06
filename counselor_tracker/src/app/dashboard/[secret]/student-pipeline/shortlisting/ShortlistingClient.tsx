@@ -40,6 +40,7 @@ function Modal({
 }) {
   const router = useRouter();
   const [callStatus, setCallStatus] = useState(applicant.callStatus);
+  const [callNotes, setCallNotes] = useState(applicant.callNotes);
   const [dropped, setDropped] = useState(applicant.followUpStatus === "Drop");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -55,6 +56,7 @@ function Modal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           callStatus,
+          callNotes,
           ...(dropped && applicant.followUpStatus !== "Drop" && {
             followUpStatus: "Drop",
           }),
@@ -231,6 +233,20 @@ function Modal({
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Call Notes */}
+          <div>
+            <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">
+              Call Notes
+            </p>
+            <textarea
+              value={callNotes}
+              onChange={(e) => setCallNotes(e.target.value)}
+              rows={3}
+              placeholder="Add call notes…"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none"
+            />
           </div>
 
           {/* Followup Stage */}
