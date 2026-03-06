@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type { ShortlistApplicant } from "./page";
 
-const CALL_STATUS_OPTIONS = ["Done", "Did Not Pick", "Pending", "NA"] as const;
+const CALL_STATUS_OPTIONS = ["Done", "Did not pick", "Pending", "NA"] as const;
 
 function formatDateTime(iso: string): string {
   if (!iso) return "";
@@ -33,29 +33,42 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function Modal({
   applicant,
-  secret,
   onClose,
 }: {
   applicant: ShortlistApplicant;
-  secret: string;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [callStatus, setCallStatus] = useState(applicant.callStatus);
+  const [dropped, setDropped] = useState(applicant.followUpStatus === "Drop");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
 
-  async function handleCallStatusChange(value: string) {
-    const newVal = callStatus === value ? "" : value;
-    setCallStatus(newVal);
+  async function handleSave() {
     setSaved(false);
+    setSaveError("");
     setSaving(true);
     try {
-      await fetch(`/api/student-pipeline/${applicant.recordId}`, {
+      const res = await fetch(`/api/student-pipeline/${applicant.recordId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-dashboard-secret": secret },
-        body: JSON.stringify({ callStatus: newVal }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callStatus,
+          ...(dropped && applicant.followUpStatus !== "Drop" && {
+            followUpStatus: "Drop",
+          }),
+        }),
       });
-      setSaved(true);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSaveError(data.error ?? `Error ${res.status}`);
+      } else {
+        setSaved(true);
+        router.refresh();
+      }
+    } catch {
+      setSaveError("Network error");
     } finally {
       setSaving(false);
     }
@@ -182,8 +195,9 @@ function Modal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100">
-          <div className="mb-3">
+        <div className="px-6 py-4 border-t border-gray-100 space-y-4">
+          {/* Call Status */}
+          <div>
             <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">
               Call Status
             </p>
@@ -202,7 +216,7 @@ function Modal({
                     name={`callStatus-${applicant.recordId}`}
                     value={option}
                     checked={callStatus === option}
-                    onChange={() => handleCallStatusChange(option)}
+                    onChange={() => setCallStatus(callStatus === option ? "" : option)}
                     className="sr-only"
                   />
                   {option}
@@ -210,23 +224,53 @@ function Modal({
               ))}
               {callStatus && (
                 <button
-                  onClick={() => handleCallStatusChange(callStatus)}
+                  onClick={() => setCallStatus("")}
                   className="px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 text-gray-400 hover:text-rise-brown hover:border-gray-300 transition-colors"
                 >
                   Clear
                 </button>
               )}
-              {saving && <span className="text-xs text-rise-brown self-center">Saving…</span>}
-              {saved && !saving && <span className="text-xs text-rise-green self-center">Saved</span>}
             </div>
           </div>
-          <div className="flex justify-end">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-rise-brown hover:text-rise-black transition-colors"
-            >
-              Close
-            </button>
+
+          {/* Followup Stage */}
+          <div>
+            <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">
+              Followup Stage
+            </p>
+            <label className="flex items-center gap-2 cursor-pointer w-fit">
+              <input
+                type="checkbox"
+                checked={dropped}
+                onChange={(e) => setDropped(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-rise-green accent-rise-green cursor-pointer"
+              />
+              <span className="text-sm text-rise-black">Drop</span>
+            </label>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-1">
+            <div>
+              {saving && <span className="text-xs text-rise-brown">Saving…</span>}
+              {saved && !saving && <span className="text-xs text-rise-green">Saved</span>}
+              {saveError && !saving && <span className="text-xs text-red-500">{saveError}</span>}
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-rise-brown hover:text-rise-black transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium bg-rise-green text-white rounded-lg hover:bg-rise-green/90 disabled:opacity-50 transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -245,8 +289,6 @@ export default function ShortlistingClient({
   statusFilters?: string[];
   emptyMessage?: string;
 }) {
-  const params = useParams<{ secret: string }>();
-  const secret = params.secret ?? "";
   const [selected, setSelected] = useState<ShortlistApplicant | null>(null);
   const [query, setQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
@@ -350,7 +392,7 @@ export default function ShortlistingClient({
       </div>
 
       {selected && (
-        <Modal applicant={selected} secret={secret} onClose={() => setSelected(null)} />
+        <Modal applicant={selected} onClose={() => setSelected(null)} />
       )}
 
     </>
