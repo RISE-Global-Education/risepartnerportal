@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import type { ShortlistApplicant } from "./page";
+
+const CALL_STATUS_OPTIONS = ["Done", "Did Not Pick", "Pending", "NA"] as const;
 
 function formatDateTime(iso: string): string {
   if (!iso) return "";
@@ -30,11 +33,34 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function Modal({
   applicant,
+  secret,
   onClose,
 }: {
   applicant: ShortlistApplicant;
+  secret: string;
   onClose: () => void;
 }) {
+  const [callStatus, setCallStatus] = useState(applicant.callStatus);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleCallStatusChange(value: string) {
+    const newVal = callStatus === value ? "" : value;
+    setCallStatus(newVal);
+    setSaved(false);
+    setSaving(true);
+    try {
+      await fetch(`/api/student-pipeline/${applicant.recordId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-dashboard-secret": secret },
+        body: JSON.stringify({ callStatus: newVal }),
+      });
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -156,13 +182,52 @@ function Modal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-rise-brown hover:text-rise-black transition-colors"
-          >
-            Close
-          </button>
+        <div className="px-6 py-4 border-t border-gray-100">
+          <div className="mb-3">
+            <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">
+              Call Status
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {CALL_STATUS_OPTIONS.map((option) => (
+                <label
+                  key={option}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer border transition-colors ${
+                    callStatus === option
+                      ? "bg-rise-green text-white border-rise-green"
+                      : "bg-white text-rise-brown border-gray-200 hover:border-rise-green hover:text-rise-green"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={`callStatus-${applicant.recordId}`}
+                    value={option}
+                    checked={callStatus === option}
+                    onChange={() => handleCallStatusChange(option)}
+                    className="sr-only"
+                  />
+                  {option}
+                </label>
+              ))}
+              {callStatus && (
+                <button
+                  onClick={() => handleCallStatusChange(callStatus)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 text-gray-400 hover:text-rise-brown hover:border-gray-300 transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+              {saving && <span className="text-xs text-rise-brown self-center">Saving…</span>}
+              {saved && !saving && <span className="text-xs text-rise-green self-center">Saved</span>}
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-rise-brown hover:text-rise-black transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -180,6 +245,8 @@ export default function ShortlistingClient({
   statusFilters?: string[];
   emptyMessage?: string;
 }) {
+  const params = useParams<{ secret: string }>();
+  const secret = params.secret ?? "";
   const [selected, setSelected] = useState<ShortlistApplicant | null>(null);
   const [query, setQuery] = useState("");
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
@@ -283,7 +350,7 @@ export default function ShortlistingClient({
       </div>
 
       {selected && (
-        <Modal applicant={selected} onClose={() => setSelected(null)} />
+        <Modal applicant={selected} secret={secret} onClose={() => setSelected(null)} />
       )}
 
     </>

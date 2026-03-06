@@ -22,6 +22,9 @@ export async function PATCH(
   if (body.acceptanceStatus !== undefined) {
     fields["Acceptance Status"] = body.acceptanceStatus;
   }
+  if (body.callStatus !== undefined) {
+    fields["Call Status"] = body.callStatus;
+  }
 
   if (Object.keys(fields).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });

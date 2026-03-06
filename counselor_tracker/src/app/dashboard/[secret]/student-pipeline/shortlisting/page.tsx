@@ -28,6 +28,7 @@ export interface ShortlistApplicant {
   acceptanceSentTime: string;
   interviewDate: string;
   notes: string;
+  callStatus: string;
 }
 
 export default async function ShortlistingPage() {
@@ -55,6 +56,7 @@ export default async function ShortlistingPage() {
       "Shortlist Email Sent Time",
       "Interview Date",
       "Notes",
+      "Call Status",
     ],
   });
 
@@ -82,6 +84,7 @@ export default async function ShortlistingPage() {
     acceptanceSentTime: "",
     interviewDate: getField<string>(r, "Interview Date") ?? "",
     notes: getField<string>(r, "Notes") ?? "",
+    callStatus: getField<string>(r, "Call Status") ?? "",
   }));
 
   return (

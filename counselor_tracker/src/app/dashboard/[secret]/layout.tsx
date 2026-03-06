@@ -10,13 +10,18 @@ export default async function DashboardLayout({
 }) {
   const { secret } = await params;
 
-  if (secret !== process.env.DASHBOARD_SECRET) {
+  const isAdmin = secret === process.env.DASHBOARD_SECRET;
+  const isUser = secret === process.env.USER_SECRET;
+
+  if (!isAdmin && !isUser) {
     notFound();
   }
 
+  const role = isAdmin ? "admin" : "user";
+
   return (
     <div className="min-h-screen bg-rise-cream">
-      <NavBar secret={secret} />
+      <NavBar secret={secret} role={role} />
       {children}
     </div>
   );

@@ -4,19 +4,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function NavBar({ secret }: { secret: string }) {
+export default function NavBar({ secret, role }: { secret: string; role: "admin" | "user" }) {
   const pathname = usePathname();
   const basePath = `/dashboard/${secret}`;
   const isSearch = pathname.endsWith("/search");
   const isInsights = pathname.includes("/insights");
   const isPipeline = pathname.includes("/student-pipeline");
 
-  const tabs = [
-    { label: "Dashboard", href: basePath, active: !isSearch && !isInsights && !isPipeline },
-    { label: "Search", href: `${basePath}/search`, active: isSearch },
-    { label: "Student Pipeline", href: `${basePath}/student-pipeline`, active: isPipeline },
-    { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights },
+  const allTabs = [
+    { label: "Dashboard", href: basePath, active: !isSearch && !isInsights && !isPipeline, adminOnly: true },
+    { label: "Search", href: `${basePath}/search`, active: isSearch, adminOnly: true },
+    { label: "Student Pipeline", href: `${basePath}/student-pipeline`, active: isPipeline, adminOnly: false },
+    { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights, adminOnly: true },
   ];
+
+  const tabs = role === "admin" ? allTabs : allTabs.filter((t) => !t.adminOnly);
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">

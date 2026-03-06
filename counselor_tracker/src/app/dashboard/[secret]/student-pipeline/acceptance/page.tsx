@@ -33,6 +33,7 @@ export default async function AcceptancePage() {
       "Acceptances Email Sent Time",
       "Interview Date",
       "Notes",
+      "Call Status",
     ],
   });
 
@@ -60,6 +61,7 @@ export default async function AcceptancePage() {
     acceptanceSentTime: getField<string>(r, "Acceptances Email Sent Time") ?? "",
     interviewDate: getField<string>(r, "Interview Date") ?? "",
     notes: getField<string>(r, "Notes") ?? "",
+    callStatus: getField<string>(r, "Call Status") ?? "",
   }));
 
   return (
