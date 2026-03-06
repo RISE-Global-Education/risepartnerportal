@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# PostCSS (replaced by postcss.config.js)
+postcss.config.mjs
+
 # Mixmax daily cache
 .mixmax-cache.json
 
