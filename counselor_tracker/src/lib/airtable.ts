@@ -18,6 +18,7 @@ export async function fetchAllRecords(
   options?: {
     fields?: string[];
     filterByFormula?: string;
+    view?: string;
   }
 ): Promise<AirtableRecord[]> {
   const allRecords: AirtableRecord[] = [];
@@ -32,6 +33,9 @@ export async function fetchAllRecords(
     }
     if (options?.filterByFormula) {
       params.set("filterByFormula", options.filterByFormula);
+    }
+    if (options?.view) {
+      params.set("view", options.view);
     }
     if (offset) {
       params.set("offset", offset);

@@ -1,0 +1,37 @@
+"use client";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+export default function SubTabNav({ secret }: { secret: string }) {
+  const pathname = usePathname();
+  const base = `/dashboard/${secret}/student-pipeline`;
+
+  const tabs = [
+    { label: "Interview Stage", href: base },
+    { label: "Shortlisting Stage", href: `${base}/shortlisting` },
+    { label: "Acceptance Stage", href: `${base}/acceptance` },
+  ];
+
+  return (
+    <div className="flex gap-1 mt-3 border-b border-gray-200">
+      {tabs.map((tab) => {
+        const active = tab.href === base
+          ? pathname === base
+          : pathname.startsWith(tab.href);
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              active
+                ? "border-rise-green text-rise-green"
+                : "border-transparent text-rise-brown hover:text-rise-black hover:border-gray-300"
+            }`}
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}

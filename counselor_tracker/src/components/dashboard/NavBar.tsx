@@ -9,10 +9,12 @@ export default function NavBar({ secret }: { secret: string }) {
   const basePath = `/dashboard/${secret}`;
   const isSearch = pathname.endsWith("/search");
   const isInsights = pathname.includes("/insights");
+  const isPipeline = pathname.includes("/student-pipeline");
 
   const tabs = [
-    { label: "Dashboard", href: basePath, active: !isSearch && !isInsights },
+    { label: "Dashboard", href: basePath, active: !isSearch && !isInsights && !isPipeline },
     { label: "Search", href: `${basePath}/search`, active: isSearch },
+    { label: "Student Pipeline", href: `${basePath}/student-pipeline`, active: isPipeline },
     { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights },
   ];
 

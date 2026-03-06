@@ -1,1 +1,19 @@
+# Claude
 .claude/settings.local.json
+.claude/projects/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (root-level junction created for tailwind resolution)
+node_modules/
+package.json
+
+# Misc
+.bin
+*.log
