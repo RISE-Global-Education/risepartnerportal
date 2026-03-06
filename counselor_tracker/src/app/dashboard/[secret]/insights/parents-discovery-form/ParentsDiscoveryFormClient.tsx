@@ -77,6 +77,19 @@ export default function ParentsDiscoveryFormClient({
     });
   }, [rows, cohortFilter, search, sortKey, sortDesc]);
 
+  const [showUninterested, setShowUninterested] = useState(false);
+
+  // Possibly uninterested: opened < sent
+  const uninterested = useMemo(() => {
+    const seen = new Set<string>();
+    return rows.filter((r) => {
+      if (seen.has(r.recordId)) return false;
+      seen.add(r.recordId);
+      if ((r.sent ?? 0) === 0) return false;
+      return (r.opened ?? 0) < (r.sent ?? 0);
+    });
+  }, [rows]);
+
   // Summary counts — de-duped by recordId
   const uniqueRecords = useMemo(() => {
     const seen = new Set<string>();
@@ -253,6 +266,48 @@ export default function ParentsDiscoveryFormClient({
           </div>
         </div>
       )}
+
+      {/* Possibly Uninterested */}
+      <section className="mt-10">
+        <button
+          onClick={() => setShowUninterested((v) => !v)}
+          className="flex items-center gap-2 text-xs font-semibold text-rose-700 uppercase tracking-wide mb-3 hover:opacity-70 transition-opacity"
+        >
+          <span className="bg-rose-100 text-rose-700 rounded-full px-2 py-0.5">{uninterested.length}</span>
+          Possibly Uninterested — sent but never opened
+          <span>{showUninterested ? "▲" : "▼"}</span>
+        </button>
+        {showUninterested && (
+          uninterested.length === 0 ? (
+            <p className="text-sm text-rise-brown">No uninterested records.</p>
+          ) : (
+            <div className="bg-white border border-rose-100 rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-rose-50">
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Student Name</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Parent Email</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Sent</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Opened</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uninterested.map((r, i) => (
+                      <tr key={`${r.recordId}-${i}`} className="border-b border-gray-50 hover:bg-rose-50/40 transition-colors">
+                        <td className="px-4 py-3 font-medium text-rise-black whitespace-nowrap">{r.studentName}</td>
+                        <td className="px-4 py-3 text-xs text-rise-brown">{r.parentEmail || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3 text-right text-rise-black">{r.sent}</td>
+                        <td className="px-4 py-3 text-right text-rose-600 font-semibold">{r.opened ?? 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        )}
+      </section>
     </div>
   );
 }

@@ -93,6 +93,19 @@ export default function ShortlistingInsightsClient({ rows, days, mixmaxCachedAt,
     });
   }, [rows, statusFilter, cohortFilter, search, sortKey, sortDesc]);
 
+  const [showUninterested, setShowUninterested] = useState(false);
+
+  // Possibly uninterested: opened < sent
+  const uninterested = useMemo(() => {
+    const seen = new Set<string>();
+    return rows.filter((r) => {
+      if (seen.has(r.applicantId)) return false;
+      seen.add(r.applicantId);
+      if ((r.sent ?? 0) === 0) return false;
+      return (r.opened ?? 0) < (r.sent ?? 0);
+    });
+  }, [rows]);
+
   // Summary counts — always over the full unfiltered dataset (de-duped by applicantId)
   const uniqueApplicants = useMemo(() => {
     const seen = new Set<string>();
@@ -316,6 +329,56 @@ export default function ShortlistingInsightsClient({ rows, days, mixmaxCachedAt,
           </div>
         </div>
       )}
+
+      {/* Possibly Uninterested */}
+      <section className="mt-10">
+        <button
+          onClick={() => setShowUninterested((v) => !v)}
+          className="flex items-center gap-2 text-xs font-semibold text-rose-700 uppercase tracking-wide mb-3 hover:opacity-70 transition-opacity"
+        >
+          <span className="bg-rose-100 text-rose-700 rounded-full px-2 py-0.5">{uninterested.length}</span>
+          Possibly Uninterested — opened less than stage
+          <span>{showUninterested ? "▲" : "▼"}</span>
+        </button>
+        {showUninterested && (
+          uninterested.length === 0 ? (
+            <p className="text-sm text-rise-brown">No uninterested applicants.</p>
+          ) : (
+            <div className="bg-white border border-rose-100 rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-rose-50">
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Applicant ID</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Name</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Email</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Stage</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Sent</th>
+                      <th className="text-right px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Opened</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uninterested.map((r, i) => (
+                        <tr key={`${r.applicantId}-${i}`} className="border-b border-gray-50 hover:bg-rose-50/40 transition-colors">
+                          <td className="px-4 py-3 font-mono text-xs text-rise-brown whitespace-nowrap">{r.applicantId}</td>
+                          <td className="px-4 py-3 font-medium text-rise-black whitespace-nowrap">{r.name}</td>
+                          <td className="px-4 py-3 text-xs text-rise-brown">{r.email}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${STATUS_COLORS[r.followUpStatus] ?? "bg-gray-100 text-gray-600"}`}>
+                              {r.followUpStatus}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-rise-black">{r.sent}</td>
+                          <td className="px-4 py-3 text-right text-rose-600 font-semibold">{r.opened ?? 0}</td>
+                        </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        )}
+      </section>
     </div>
   );
 }
