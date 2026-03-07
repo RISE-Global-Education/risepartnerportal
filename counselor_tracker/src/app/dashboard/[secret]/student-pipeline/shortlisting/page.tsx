@@ -9,6 +9,8 @@ export interface ShortlistApplicant {
   applicantId: string;
   name: string;
   phone: string;
+  parentName: string;
+  parentPhone: string;
   currentGrade: string;
   schoolCollege: string;
   city: string;
@@ -39,6 +41,8 @@ export default async function ShortlistingPage() {
       "Applicant ID",
       "Name",
       "Phone number",
+      "Parent Name",
+      "Parent Phone Number",
       "Current Grade",
       "School/ College",
       "City of Residence",
@@ -67,6 +71,8 @@ export default async function ShortlistingPage() {
     applicantId: getField<string>(r, "Applicant ID") ?? "—",
     name: getField<string>(r, "Name") ?? "Unknown",
     phone: getField<string>(r, "Phone number") ?? "",
+    parentName: getField<string>(r, "Parent Name") ?? "",
+    parentPhone: getField<string>(r, "Parent Phone Number") ?? "",
     currentGrade: getField<string>(r, "Current Grade") ?? "",
     schoolCollege: getField<string>(r, "School/ College") ?? "",
     city: getField<string>(r, "City of Residence") ?? "",

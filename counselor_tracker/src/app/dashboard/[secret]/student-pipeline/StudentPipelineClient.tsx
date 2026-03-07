@@ -106,6 +106,8 @@ function Modal({
                 <DetailRow label="Applicant ID" value={student.applicantId} />
                 <DetailRow label="Name" value={student.name} />
                 <DetailRow label="Phone Number" value={student.phone} />
+                <DetailRow label="Parent Name" value={student.parentName} />
+                <DetailRow label="Parent Phone Number" value={student.parentPhone} />
                 <DetailRow label="Current Grade" value={student.currentGrade} />
                 <DetailRow label="School / College" value={student.schoolCollege} />
                 <DetailRow label="City" value={student.city} />
