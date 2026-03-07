@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCounselorBySlug } from "@/lib/counselors";
+import { getCounselorBySlug, getContactsForCounselor } from "@/lib/counselors";
 import { getStudentsForCounselor, computeFunnelCounts } from "@/lib/students";
 import { getConversationsForCounselor } from "@/lib/conversations";
 import PartnerHeader from "@/components/PartnerHeader";
@@ -26,6 +26,8 @@ export default async function PartnerPage({
   const funnelCounts = computeFunnelCounts(students);
   const total = students.length;
 
+  const contacts = await getContactsForCounselor(counselor.pocRecordIds);
+
   let conversations = undefined;
   if (isCeoView) {
     conversations = await getConversationsForCounselor(counselor.id);
@@ -41,9 +43,10 @@ export default async function PartnerPage({
             partner.
           </div>
         )}
-        <PartnerHeader counselor={counselor} />
+        <PartnerHeader counselor={counselor} isCeoView={isCeoView} />
         <CounselorDetails
           counselor={counselor}
+          contacts={contacts}
           isCeoView={isCeoView}
           secret={process.env.DASHBOARD_SECRET!}
         />

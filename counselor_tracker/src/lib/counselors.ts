@@ -1,5 +1,5 @@
 import { fetchAllRecords, getField } from "./airtable";
-import type { Counselor } from "./types";
+import type { Counselor, Contact } from "./types";
 
 // Base IDs
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
@@ -8,6 +8,7 @@ const COUNSELOR_DB_BASE = "appU2cJpIWIHQI4up";
 // Table IDs
 const COUNSELOR_DB_TABLE = "tblxCiUOdN435Zfju"; // Counselor Database (Base 2)
 const COUNSELOR_RECORDS_TABLE = "tblzcy02PoVxhAXId"; // Counselor Records (Base 1)
+const CONTACTS_TABLE = "tbl6kgEdDr0C3lib4";
 
 export function generateSlug(companyName: string): string {
   return companyName
@@ -29,6 +30,7 @@ export async function getAllCounselors(): Promise<Counselor[]> {
       "Scholarship Amount",
       "Referral Amount",
       "POC (RISE)",
+      "POC",
       "Country",
       "Expected Number",
       "Follow Up Status",
@@ -50,6 +52,7 @@ export async function getAllCounselors(): Promise<Counselor[]> {
         scholarshipAmount: getField<number>(record, "Scholarship Amount"),
         referralAmount: getField<number>(record, "Referral Amount"),
         poc: getField<string[]>(record, "POC (RISE)") || [],
+        pocRecordIds: getField<string[]>(record, "POC") || [],
         country: getField<string>(record, "Country") || "",
         capacity: getField<string>(record, "Expected Number") || "",
         followUpStatus: getField<string>(record, "Follow Up Status") || "",
@@ -69,13 +72,11 @@ export async function getCounselorBySlug(
 ): Promise<{ counselor: Counselor; isCeoView: boolean } | null> {
   const counselors = await getAllCounselors();
 
-  // First try exact slug match (partner view)
   const exactMatch = counselors.find((c) => c.slug === slug);
   if (exactMatch) {
     return { counselor: exactMatch, isCeoView: false };
   }
 
-  // Try to find a CEO view match (slug-counselorId)
   for (const counselor of counselors) {
     const ceoSlug = `${counselor.slug}-${counselor.counselorId.toLowerCase()}`;
     if (slug.toLowerCase() === ceoSlug) {
@@ -86,8 +87,26 @@ export async function getCounselorBySlug(
   return null;
 }
 
-// Get the Counselor Records from Base 1 that match a counselor from Base 2
-// Returns the Airtable record IDs of linked students
+export async function getContactsForCounselor(recordIds: string[]): Promise<Contact[]> {
+  if (recordIds.length === 0) return [];
+
+  const formula = `OR(${recordIds.map((id) => `RECORD_ID()="${id}"`).join(",")})`;
+  const records = await fetchAllRecords(COUNSELOR_DB_BASE, CONTACTS_TABLE, {
+    fields: ["Name", "Email", "Position", "E_FNAME", "Email Opt-in", "Lead ID"],
+    filterByFormula: formula,
+  });
+
+  return records.map((record) => ({
+    id: record.id,
+    name: getField<string>(record, "Name") || "",
+    email: getField<string>(record, "Email") || "",
+    position: getField<string>(record, "Position") || "",
+    eFname: getField<string>(record, "E_FNAME") || "",
+    outreachOptIn: getField<string>(record, "Email Opt-in") !== "No",
+    leadId: getField<string>(record, "Lead ID") || "",
+  }));
+}
+
 export async function getCounselorStudentLinks(counselorId: string): Promise<{
   discoveryCallIds: string[];
   applicationIds: string[];

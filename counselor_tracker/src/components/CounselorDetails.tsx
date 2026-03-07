@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Counselor } from "@/lib/types";
+import type { Counselor, Contact } from "@/lib/types";
+
+// ─── Editable Field (counselor) ───────────────────────────────────────────────
 
 interface EditableFieldProps {
   label: string;
@@ -122,6 +124,351 @@ function EditableField({
     </div>
   );
 }
+
+// ─── Contacts Panel (batch edit + add) ───────────────────────────────────────
+
+interface ContactDraft {
+  id: string | null; // null = new, not yet saved
+  name: string;
+  email: string;
+  position: string;
+  eFname: string;
+  outreachOptIn: boolean;
+  leadId: string; // read-only display
+}
+
+function ContactsPanel({
+  contacts,
+  counselor,
+  secret,
+  isCeoView,
+  onSaved,
+}: {
+  contacts: Contact[];
+  counselor: Counselor;
+  secret: string;
+  isCeoView: boolean;
+  onSaved: () => void;
+}) {
+  const [drafts, setDrafts] = useState<ContactDraft[]>(() =>
+    contacts.map((c) => ({
+      id: c.id,
+      name: c.name,
+      email: c.email,
+      position: c.position,
+      eFname: c.eFname,
+      outreachOptIn: c.outreachOptIn,
+      leadId: c.leadId,
+    }))
+  );
+  // track which cards are in edit mode (by index)
+  const [editingCards, setEditingCards] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  function setCardEditing(i: number, on: boolean) {
+    setEditingCards((prev) => {
+      const next = new Set(prev);
+      on ? next.add(i) : next.delete(i);
+      return next;
+    });
+  }
+
+  const isDirty =
+    drafts.length !== contacts.length ||
+    drafts.some((d, i) => {
+      if (d.id === null) return true;
+      const orig = contacts[i];
+      return (
+        d.name !== orig.name ||
+        d.email !== orig.email ||
+        d.position !== orig.position ||
+        d.eFname !== orig.eFname ||
+        d.outreachOptIn !== orig.outreachOptIn
+      );
+    });
+
+  function update(index: number, field: keyof ContactDraft, value: string | boolean) {
+    setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, [field]: value } : d)));
+  }
+
+  function addNew() {
+    const nextIndex = drafts.length + 1;
+    setDrafts((prev) => [
+      ...prev,
+      {
+        id: null,
+        name: "",
+        email: "",
+        position: "",
+        eFname: "",
+        outreachOptIn: true,
+        leadId: `${counselor.companyName} — ${counselor.counselorId} — ${nextIndex}`,
+      },
+    ]);
+    setEditingCards((prev) => new Set(prev).add(drafts.length));
+  }
+
+  async function save() {
+    setSaving(true);
+    setError("");
+    try {
+      // Patch existing contacts
+      const existing = drafts.filter((d) => d.id !== null);
+      for (const draft of existing) {
+        const orig = contacts.find((c) => c.id === draft.id);
+        if (!orig) continue;
+        const changed =
+          draft.name !== orig.name ||
+          draft.email !== orig.email ||
+          draft.position !== orig.position ||
+          draft.eFname !== orig.eFname ||
+          draft.outreachOptIn !== orig.outreachOptIn;
+        if (!changed) continue;
+
+        const res = await fetch("/api/contacts", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            secret,
+            recordId: draft.id,
+            fields: {
+              Name: draft.name,
+              Email: draft.email,
+              Position: draft.position,
+              E_FNAME: draft.eFname,
+              "Email Opt-in": draft.outreachOptIn ? "Yes" : "No",
+            },
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to update contact");
+      }
+
+      // Create new contacts
+      const newDrafts = drafts.filter((d) => d.id === null && d.name.trim());
+      if (newDrafts.length > 0) {
+        const contactsPayload = newDrafts.map((d, i) => ({
+          name: d.name.trim(),
+          email: d.email.trim() || undefined,
+          position: d.position.trim() || undefined,
+          eFname: d.eFname.trim() || undefined,
+          outreachOptIn: d.outreachOptIn,
+          companyName: counselor.companyName,
+          counselorId: counselor.counselorId,
+          index: contacts.length + i + 1,
+        }));
+
+        const res = await fetch("/api/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ secret, contacts: contactsPayload }),
+        });
+        if (!res.ok) throw new Error("Failed to create contact");
+
+        // Link new contacts to counselor's POC field
+        const data = await res.json();
+        const newIds = (data.records as { id: string }[]).map((r) => r.id);
+        const allIds = [...counselor.pocRecordIds, ...newIds];
+        await fetch("/api/counselors", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            secret,
+            recordId: counselor.id,
+            fields: { POC: allIds },
+          }),
+        });
+      }
+
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wider">Contacts</h3>
+        {isCeoView && (
+          <button
+            type="button"
+            onClick={addNew}
+            className="text-xs text-rise-green hover:underline font-medium"
+          >
+            + Add POC
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        {drafts.map((draft, i) => {
+          const isEditing = editingCards.has(i);
+          return (
+            <div key={i} className="border border-gray-100 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                  POC {i + 1}
+                </p>
+                <div className="flex items-center gap-3">
+                  {isCeoView && !isEditing && draft.id !== null && (
+                    <button
+                      type="button"
+                      onClick={() => setCardEditing(i, true)}
+                      className="text-xs text-rise-green hover:text-rise-green/80"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {isCeoView && isEditing && draft.id !== null && (
+                    <button
+                      type="button"
+                      onClick={() => setCardEditing(i, false)}
+                      className="text-xs text-rise-brown hover:text-rise-black"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  {isCeoView && draft.id === null && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDrafts((prev) => prev.filter((_, j) => j !== i));
+                        setEditingCards((prev) => {
+                          const next = new Set<number>();
+                          prev.forEach((idx) => { if (idx < i) next.add(idx); else if (idx > i) next.add(idx - 1); });
+                          return next;
+                        });
+                      }}
+                      className="text-xs text-red-400 hover:text-red-600"
+                    >
+                      ✕ Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <span className="text-xs text-rise-brown uppercase tracking-wide">POC ID</span>
+                  <p className="text-sm font-medium text-rise-black mt-1">{draft.leadId || "—"}</p>
+                </div>
+                {isEditing ? (
+                  <>
+                    <div>
+                      <label className="text-xs text-rise-brown uppercase tracking-wide">Name</label>
+                      <input
+                        type="text"
+                        value={draft.name}
+                        onChange={(e) => update(i, "name", e.target.value)}
+                        className="mt-1 w-full px-2 py-1 text-sm border border-gray-200 rounded-md focus:border-rise-green focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-rise-brown uppercase tracking-wide">Email</label>
+                      <input
+                        type="text"
+                        value={draft.email}
+                        onChange={(e) => update(i, "email", e.target.value)}
+                        className="mt-1 w-full px-2 py-1 text-sm border border-gray-200 rounded-md focus:border-rise-green focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-rise-brown uppercase tracking-wide">Position</label>
+                      <input
+                        type="text"
+                        value={draft.position}
+                        onChange={(e) => update(i, "position", e.target.value)}
+                        className="mt-1 w-full px-2 py-1 text-sm border border-gray-200 rounded-md focus:border-rise-green focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-rise-brown uppercase tracking-wide">Name to use in email</label>
+                      <input
+                        type="text"
+                        value={draft.eFname}
+                        onChange={(e) => update(i, "eFname", e.target.value)}
+                        className="mt-1 w-full px-2 py-1 text-sm border border-gray-200 rounded-md focus:border-rise-green focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-rise-brown uppercase tracking-wide">Outreach Opt-in</span>
+                      <div className="flex gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => update(i, "outreachOptIn", true)}
+                          className={`px-3 py-1 text-xs rounded-lg border transition-colors ${
+                            draft.outreachOptIn
+                              ? "bg-rise-green text-white border-rise-green"
+                              : "bg-white text-rise-brown border-gray-200 hover:border-rise-green"
+                          }`}
+                        >
+                          Yes
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => update(i, "outreachOptIn", false)}
+                          className={`px-3 py-1 text-xs rounded-lg border transition-colors ${
+                            !draft.outreachOptIn
+                              ? "bg-red-500 text-white border-red-500"
+                              : "bg-white text-rise-brown border-gray-200 hover:border-red-300"
+                          }`}
+                        >
+                          No
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <span className="text-xs text-rise-brown uppercase tracking-wide">Name</span>
+                      <p className="text-sm font-medium text-rise-black mt-1">{draft.name || "—"}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-rise-brown uppercase tracking-wide">Email</span>
+                      <p className="text-sm font-medium text-rise-black mt-1">{draft.email || "—"}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-rise-brown uppercase tracking-wide">Position</span>
+                      <p className="text-sm font-medium text-rise-black mt-1">{draft.position || "—"}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-rise-brown uppercase tracking-wide">Name to use in email</span>
+                      <p className="text-sm font-medium text-rise-black mt-1">{draft.eFname || "—"}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-rise-brown uppercase tracking-wide">Outreach Opt-in</span>
+                      <p className={`text-sm font-medium mt-1 ${draft.outreachOptIn ? "text-rise-green" : "text-red-500"}`}>
+                        {draft.outreachOptIn ? "Yes" : "No"}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {isCeoView && isDirty && (
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-4 py-2 text-xs bg-rise-green text-white font-medium rounded-lg hover:bg-rise-green/90 disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+          {error && <p className="text-xs text-red-500">{error}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── MOU Section ──────────────────────────────────────────────────────────────
 
 function MouSection({
   mouUrl,
@@ -302,27 +649,15 @@ function MouPreviewModal({
         </div>
 
         <div className="space-y-4">
-          <Field label="Partner Name" value={partnerName} onChange={setPartnerName} />
-          <Field label="Date" value={date} onChange={setDate} />
+          <ModalField label="Partner Name" value={partnerName} onChange={setPartnerName} />
+          <ModalField label="Date" value={date} onChange={setDate} />
 
           {mouType === "scholarship" && (
-            <Field
-              label="Scholarship Amount (%)"
-              value={scholarshipAmount}
-              onChange={setScholarshipAmount}
-              type="number"
-            />
+            <ModalField label="Scholarship Amount (%)" value={scholarshipAmount} onChange={setScholarshipAmount} type="number" />
           )}
-
           {mouType === "referral-normal" && (
-            <Field
-              label="Referral Amount (%)"
-              value={referralAmount}
-              onChange={setReferralAmount}
-              type="number"
-            />
+            <ModalField label="Referral Amount (%)" value={referralAmount} onChange={setReferralAmount} type="number" />
           )}
-
           {mouType === "referral-tier" && (
             <div>
               <span className="text-xs text-rise-brown uppercase tracking-wide">Tier Rows</span>
@@ -345,26 +680,18 @@ function MouPreviewModal({
                       className="w-24 px-2 py-1 text-xs border border-gray-200 rounded-md focus:border-rise-green focus:outline-none"
                     />
                     {tiers.length > 1 && (
-                      <button
-                        onClick={() => removeTier(idx)}
-                        className="text-xs text-red-400 hover:text-red-600"
-                      >
-                        ×
-                      </button>
+                      <button onClick={() => removeTier(idx)} className="text-xs text-red-400 hover:text-red-600">×</button>
                     )}
                   </div>
                 ))}
-                <button
-                  onClick={addTier}
-                  className="text-xs text-rise-green hover:text-rise-green/80 mt-1"
-                >
+                <button onClick={addTier} className="text-xs text-rise-green hover:text-rise-green/80 mt-1">
                   + Add Tier
                 </button>
               </div>
             </div>
           )}
 
-          <Field label="Signatory Name" value={signatory} onChange={setSignatory} />
+          <ModalField label="Signatory Name" value={signatory} onChange={setSignatory} />
         </div>
 
         <div className="flex gap-3 mt-6">
@@ -387,7 +714,7 @@ function MouPreviewModal({
   );
 }
 
-function Field({
+function ModalField({
   label,
   value,
   onChange,
@@ -423,14 +750,7 @@ function ReferralMouPicker({
   const [selected, setSelected] = useState<"referral-normal" | "referral-tier" | null>(null);
 
   if (selected) {
-    return (
-      <MouPreviewModal
-        counselor={counselor}
-        secret={secret}
-        mouType={selected}
-        onClose={onClose}
-      />
-    );
+    return <MouPreviewModal counselor={counselor} secret={secret} mouType={selected} onClose={onClose} />;
   }
 
   return (
@@ -465,10 +785,12 @@ function ReferralMouPicker({
 
 export default function CounselorDetails({
   counselor,
+  contacts,
   isCeoView,
   secret,
 }: {
   counselor: Counselor;
+  contacts: Contact[];
   isCeoView: boolean;
   secret: string;
 }) {
@@ -480,7 +802,7 @@ export default function CounselorDetails({
     router.refresh();
   }
 
-  // Partners only see MOU download (if exists) — no collapsible section
+  // Partners only see MOU download (if exists)
   if (!isCeoView) {
     if (!counselor.mouUrl) return null;
     return (
@@ -522,118 +844,115 @@ export default function CounselorDetails({
           <span>{isOpen ? "Hide Details" : "Show Details"}</span>
           <span className="text-rise-brown">{isOpen ? "▲" : "▼"}</span>
         </button>
+
         {isOpen && (
-          <div className="px-6 pb-5 border-t border-gray-100 pt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <EditableField
-                label="First Name"
-                value={counselor.firstName}
-                fieldName="First Name"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                onSaved={onSaved}
-              />
-              <EditableField
-                label="Email"
-                value={counselor.email}
-                fieldName="Email ID (s)"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                onSaved={onSaved}
-              />
-              <EditableField
-                label="Phone"
-                value={counselor.phone}
-                fieldName="Phone Number"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                onSaved={onSaved}
-              />
-              <EditableField
-                label="Country"
-                value={counselor.country}
-                fieldName="Country"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                onSaved={onSaved}
-              />
-              <EditableField
-                label="Counselor ID"
-                value={counselor.counselorId}
-                fieldName="Counselor ID"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                onSaved={onSaved}
-              />
-              <EditableField
-                label="Scholarship Amount"
-                value={counselor.scholarshipAmount != null ? String(counselor.scholarshipAmount) : ""}
-                fieldName="Scholarship Amount"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                type="number"
-                suffix="%"
-                onSaved={onSaved}
-              />
-              <EditableField
-                label="Referral Amount"
-                value={counselor.referralAmount != null ? String(counselor.referralAmount * 100) : ""}
-                fieldName="Referral Amount"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                type="number"
-                suffix="%"
-                onSaved={onSaved}
-              />
-              <EditableField
-                label="Capacity"
-                value={counselor.capacity}
-                fieldName="Expected Number"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                onSaved={onSaved}
-              />
-              <EditableField
-                label="Partnership Status"
-                value={counselor.followUpStatus}
-                fieldName="Follow Up Status"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                type="select"
-                options={["Partnership", "MOU Signed", "Pending", "Rejected", "Unqualified"]}
-                onSaved={onSaved}
-              />
-              <EditableField
-                label="Student Interview Required"
-                value={counselor.studentInterview}
-                fieldName="Student Interview"
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                type="select"
-                options={["Yes", "No"]}
-                onSaved={onSaved}
-              />
-              <MouSection
-                mouUrl={counselor.mouUrl}
-                recordId={counselor.id}
-                secret={secret}
-                isCeoView={isCeoView}
-                onSaved={onSaved}
-              />
+          <div className="px-6 pb-5 border-t border-gray-100 pt-4 space-y-6">
+
+            {/* Basic Details */}
+            <div>
+              <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wider mb-3">Basic Details</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <EditableField
+                  label="Phone"
+                  value={counselor.phone}
+                  fieldName="Phone Number"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  onSaved={onSaved}
+                />
+                <EditableField
+                  label="Country"
+                  value={counselor.country}
+                  fieldName="Country"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  onSaved={onSaved}
+                />
+                <EditableField
+                  label="Counselor ID"
+                  value={counselor.counselorId}
+                  fieldName="Counselor ID"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  onSaved={onSaved}
+                />
+                <EditableField
+                  label="Scholarship Amount"
+                  value={counselor.scholarshipAmount != null ? String(counselor.scholarshipAmount) : ""}
+                  fieldName="Scholarship Amount"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  type="number"
+                  suffix="%"
+                  onSaved={onSaved}
+                />
+                <EditableField
+                  label="Referral Amount"
+                  value={counselor.referralAmount != null ? String(counselor.referralAmount * 100) : ""}
+                  fieldName="Referral Amount"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  type="number"
+                  suffix="%"
+                  onSaved={onSaved}
+                />
+                <EditableField
+                  label="Capacity"
+                  value={counselor.capacity}
+                  fieldName="Expected Number"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  onSaved={onSaved}
+                />
+                <EditableField
+                  label="Partnership Status"
+                  value={counselor.followUpStatus}
+                  fieldName="Follow Up Status"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  type="select"
+                  options={["Partnership", "MOU Signed", "Pending", "Rejected", "Unqualified"]}
+                  onSaved={onSaved}
+                />
+                <EditableField
+                  label="Student Interview Required"
+                  value={counselor.studentInterview}
+                  fieldName="Student Interview"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  type="select"
+                  options={["Yes", "No"]}
+                  onSaved={onSaved}
+                />
+                <MouSection
+                  mouUrl={counselor.mouUrl}
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  onSaved={onSaved}
+                />
+              </div>
             </div>
 
+            {/* POC Contacts */}
+            <ContactsPanel
+              contacts={contacts}
+              counselor={counselor}
+              secret={secret}
+              isCeoView={isCeoView}
+              onSaved={onSaved}
+            />
+
             {/* MOU Generation Buttons */}
-            <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
+            <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
               <button
                 onClick={() => setMouModal("scholarship")}
                 className="px-4 py-2 text-xs font-medium bg-rise-green/10 text-rise-green rounded-lg hover:bg-rise-green/20 transition-colors"

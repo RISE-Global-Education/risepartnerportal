@@ -10,6 +10,7 @@ export interface Counselor {
   scholarshipAmount: number | null;
   referralAmount: number | null;
   poc: string[]; // RISE point(s) of contact
+  pocRecordIds: string[]; // Linked contact record IDs from POC field
   country: string;
   capacity: string; // Expected Number field
   followUpStatus: string;
@@ -34,6 +35,16 @@ export interface Conversation {
   notes: string;
   attendee: string;
   companyName: string;
+}
+
+export interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  position: string;
+  eFname: string;
+  outreachOptIn: boolean;
+  leadId: string;
 }
 
 export interface PartnerData {

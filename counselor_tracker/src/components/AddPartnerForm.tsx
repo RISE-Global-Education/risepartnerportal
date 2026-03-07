@@ -2,8 +2,20 @@
 
 import { useState } from "react";
 
-const POC_OPTIONS = ["Yash", "Shreyans", "Prachi"];
 const STATUS_OPTIONS = ["Pending", "MOU Signed", "Partnership", "Rejected", "Unqualified"];
+const RISE_POC_OPTIONS = ["Yash", "Shreyans", "Prachi"];
+
+interface PocEntry {
+  name: string;
+  email: string;
+  position: string;
+  eFname: string;
+  outreachOptIn: boolean;
+}
+
+function emptyPoc(): PocEntry {
+  return { name: "", email: "", position: "", eFname: "", outreachOptIn: true };
+}
 
 export default function AddPartnerForm({ secret }: { secret: string }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,10 +25,9 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
 
   // Required
   const [companyName, setCompanyName] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [email, setEmail] = useState("");
   const [country, setCountry] = useState("");
-  const [poc, setPoc] = useState<string[]>([]);
+  const [risePoc, setRisePoc] = useState<string[]>([]);
+  const [pocs, setPocs] = useState<PocEntry[]>([emptyPoc()]);
   const [meetingNotes, setMeetingNotes] = useState("");
 
   // Optional
@@ -27,18 +38,30 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
   const [counselorId, setCounselorId] = useState("");
   const [followUpStatus, setFollowUpStatus] = useState("Pending");
 
-  function togglePoc(name: string) {
-    setPoc((prev) =>
+  function updatePoc(index: number, field: keyof PocEntry, value: string | boolean) {
+    setPocs((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
+  }
+
+  function addPoc() {
+    setPocs((prev) => [...prev, emptyPoc()]);
+  }
+
+  function removePoc(index: number) {
+    if (pocs.length === 1) return;
+    setPocs((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function toggleRisePoc(name: string) {
+    setRisePoc((prev) =>
       prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name]
     );
   }
 
   function resetForm() {
     setCompanyName("");
-    setFirstName("");
-    setEmail("");
     setCountry("");
-    setPoc([]);
+    setRisePoc([]);
+    setPocs([emptyPoc()]);
     setMeetingNotes("");
     setPhone("");
     setCapacity("");
@@ -51,8 +74,10 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!companyName.trim() || !firstName.trim() || !email.trim() || !country.trim() || poc.length === 0 || !meetingNotes.trim()) {
-      setError("Please fill in all required fields");
+
+    const primaryPoc = pocs[0];
+    if (!companyName.trim() || !country.trim() || risePoc.length === 0 || !primaryPoc.name.trim() || !meetingNotes.trim()) {
+      setError("Please fill in all required fields (Company Name, Country, POC (RISE), Contact Name, Meeting Notes)");
       return;
     }
 
@@ -67,10 +92,10 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
         body: JSON.stringify({
           secret,
           companyName: companyName.trim(),
-          firstName: firstName.trim(),
-          email: email.trim(),
+          firstName: primaryPoc.name.trim(),
+          email: primaryPoc.email.trim() || undefined,
           country: country.trim(),
-          poc,
+          poc: risePoc,
           phone: phone.trim() || undefined,
           capacity: capacity.trim() || undefined,
           scholarshipAmount: scholarshipAmount ? Number(scholarshipAmount) : undefined,
@@ -87,8 +112,45 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
 
       const { recordId, counselorId: finalCounselorId } = await counselorRes.json();
 
-      // Step 2: Create first conversation
-      const convRes = await fetch("/api/conversations", {
+      // Step 2: Create contacts (one per POC)
+      const contacts = pocs
+        .filter((p) => p.name.trim())
+        .map((p, i) => ({
+          name: p.name.trim(),
+          email: p.email.trim() || undefined,
+          position: p.position.trim() || undefined,
+          eFname: p.eFname.trim() || undefined,
+          outreachOptIn: p.outreachOptIn,
+          companyName: companyName.trim(),
+          counselorId: finalCounselorId,
+          index: i + 1,
+        }));
+
+      const contactsRes = await fetch("/api/contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ secret, contacts }),
+      });
+
+      // Step 2b: Link contacts to counselor's POC field
+      if (contactsRes.ok) {
+        const contactsData = await contactsRes.json();
+        const contactRecordIds = (contactsData.records as { id: string }[]).map((r) => r.id);
+        if (contactRecordIds.length > 0) {
+          await fetch("/api/counselors", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              secret,
+              recordId,
+              fields: { POC: contactRecordIds },
+            }),
+          });
+        }
+      }
+
+      // Step 3: Create first conversation
+      await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -97,16 +159,10 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           counselorName: companyName.trim(),
           date: new Date().toISOString().split("T")[0],
           notes: meetingNotes.trim(),
-          attendee: poc[0],
+          attendee: risePoc[0],
         }),
       });
 
-      if (!convRes.ok) {
-        // Counselor was created but conversation failed — not critical
-        console.error("Failed to create initial conversation");
-      }
-
-      // Generate the CEO slug
       const slug = companyName
         .trim()
         .toLowerCase()
@@ -167,7 +223,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
   }
 
   return (
-    <div className="mt-6 bg-white rounded-xl shadow-sm overflow-hidden max-w-2xl mx-auto">
+    <div className="mt-6 bg-white rounded-xl shadow-sm overflow-hidden max-w-4xl mx-auto">
       <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
         <h2 className="text-lg font-bold text-rise-black font-heading">Add New Partner</h2>
         <button
@@ -177,8 +233,9 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           Cancel
         </button>
       </div>
-      <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-        {/* Required fields */}
+      <form onSubmit={handleSubmit} className="px-6 py-4 space-y-5">
+
+        {/* Company Name + Country */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-rise-black mb-1">
@@ -190,30 +247,6 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
               onChange={(e) => setCompanyName(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
               placeholder="e.g. GradePerfect Education"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-rise-black mb-1">
-              First Name <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
-              placeholder="Contact first name"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-rise-black mb-1">
-              Email <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
-              placeholder="contact@example.com"
             />
           </div>
           <div>
@@ -230,18 +263,19 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           </div>
         </div>
 
+        {/* RISE POC */}
         <div>
-          <label className="block text-sm font-medium text-rise-black mb-1">
+          <label className="block text-sm font-medium text-rise-black mb-2">
             POC (RISE) <span className="text-red-400">*</span>
           </label>
           <div className="flex gap-2">
-            {POC_OPTIONS.map((name) => (
+            {RISE_POC_OPTIONS.map((name) => (
               <button
                 key={name}
                 type="button"
-                onClick={() => togglePoc(name)}
+                onClick={() => toggleRisePoc(name)}
                 className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                  poc.includes(name)
+                  risePoc.includes(name)
                     ? "bg-rise-green text-white border-rise-green"
                     : "bg-white text-rise-brown border-gray-200 hover:border-rise-green"
                 }`}
@@ -252,6 +286,117 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           </div>
         </div>
 
+        {/* Partner Contacts Section */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-rise-black">
+              Primary POC <span className="text-red-400">*</span>
+            </label>
+            <button
+              type="button"
+              onClick={addPoc}
+              className="text-xs text-rise-green hover:underline font-medium"
+            >
+              + Add another POC
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {pocs.map((poc, i) => (
+              <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                    {i === 0 ? "POC 1 (Primary)" : `POC ${i + 1}`}
+                  </span>
+                  {pocs.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePoc(i)}
+                      className="text-xs text-red-400 hover:text-red-600"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-rise-black mb-1">
+                      Name {i === 0 && <span className="text-red-400">*</span>}
+                    </label>
+                    <input
+                      type="text"
+                      value={poc.name}
+                      onChange={(e) => updatePoc(i, "name", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-rise-black mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={poc.email}
+                      onChange={(e) => updatePoc(i, "email", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-rise-black mb-1">Position</label>
+                    <input
+                      type="text"
+                      value={poc.position}
+                      onChange={(e) => updatePoc(i, "position", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
+                      placeholder="e.g. Director"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-rise-black mb-1">Name to use in email</label>
+                    <input
+                      type="text"
+                      value={poc.eFname}
+                      onChange={(e) => updatePoc(i, "eFname", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
+                      placeholder="First name for emails"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-medium text-rise-black">Outreach Opt-in</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => updatePoc(i, "outreachOptIn", true)}
+                      className={`px-3 py-1 text-xs rounded-lg border transition-colors ${
+                        poc.outreachOptIn
+                          ? "bg-rise-green text-white border-rise-green"
+                          : "bg-white text-rise-brown border-gray-200 hover:border-rise-green"
+                      }`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePoc(i, "outreachOptIn", false)}
+                      className={`px-3 py-1 text-xs rounded-lg border transition-colors ${
+                        !poc.outreachOptIn
+                          ? "bg-red-500 text-white border-red-500"
+                          : "bg-white text-rise-brown border-gray-200 hover:border-red-300"
+                      }`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* First Meeting Notes */}
         <div>
           <label className="block text-sm font-medium text-rise-black mb-1">
             First Meeting Notes <span className="text-red-400">*</span>
