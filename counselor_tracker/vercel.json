@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/daily-check",
-      "schedule": "40 5 * * *"
+      "schedule": "0 6 * * *"
     }
   ]
 }
