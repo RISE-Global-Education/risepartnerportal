@@ -37,6 +37,13 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    // Redirect bare /{secret} to /{secret}/dashboard
+    if (rest === "" || rest === "/") {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${secret}/dashboard`;
+      return NextResponse.redirect(url);
+    }
+
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 

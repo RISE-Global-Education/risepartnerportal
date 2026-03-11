@@ -10,9 +10,10 @@ export default function NavBar({ secret, role }: { secret: string; role: "admin"
   const isSearch = pathname.endsWith("/search");
   const isInsights = pathname.includes("/insights");
   const isPipeline = pathname.includes("/student-pipeline");
+  const isDashboard = pathname.includes("/dashboard") && !isSearch && !isInsights && !isPipeline;
 
   const allTabs = [
-    { label: "Dashboard", href: basePath, active: !isSearch && !isInsights && !isPipeline, adminOnly: true },
+    { label: "Dashboard", href: `${basePath}/dashboard`, active: isDashboard, adminOnly: true },
     { label: "Search", href: `${basePath}/search`, active: isSearch, adminOnly: true },
     { label: "Student Pipeline", href: `${basePath}/student-pipeline`, active: isPipeline, adminOnly: false },
     { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights, adminOnly: true },
@@ -23,7 +24,7 @@ export default function NavBar({ secret, role }: { secret: string; role: "admin"
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center h-14 gap-8">
-        <Link href={basePath} className="flex items-center gap-2 shrink-0">
+        <Link href={`${basePath}/dashboard`} className="flex items-center gap-2 shrink-0">
           <Image
             src="/rise-logo.png"
             alt="RISE Logo"

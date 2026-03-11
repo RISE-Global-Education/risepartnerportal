@@ -22,7 +22,7 @@ export default function LoginPage() {
     });
 
     if (res.ok) {
-      router.replace(`/${params.secret}`);
+      router.replace(`/${params.secret}/dashboard`);
     } else {
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "Invalid password.");
