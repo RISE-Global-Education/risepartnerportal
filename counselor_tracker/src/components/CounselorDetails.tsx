@@ -647,23 +647,37 @@ function MouPreviewModal({
         </div>
 
         <div className="space-y-4">
-          <ModalField label="Partner Name" value={partnerName} onChange={setPartnerName} />
+          {/* Read-only: Partner Name */}
           <div>
-            <label className="text-xs text-rise-brown uppercase tracking-wide">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-rise-green focus:outline-none"
-            />
+            <label className="text-xs text-rise-brown uppercase tracking-wide">Partner Name</label>
+            <p className="mt-1 px-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-md text-rise-black">{partnerName}</p>
           </div>
 
+          {/* Read-only: Amount (scholarship / referral-normal only) */}
           {mouType === "scholarship" && (
-            <ModalField label="Scholarship Amount (%)" value={scholarshipAmount} onChange={setScholarshipAmount} type="number" />
+            <div>
+              <div className="flex items-baseline justify-between mb-1">
+                <label className="text-xs text-rise-brown uppercase tracking-wide">Scholarship Amount</label>
+                <span className="text-xs text-rise-brown italic">To change, edit on the details page</span>
+              </div>
+              <p className="px-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-md text-rise-black">
+                {scholarshipAmount ? `${scholarshipAmount}%` : "—"}
+              </p>
+            </div>
           )}
           {mouType === "referral-normal" && (
-            <ModalField label="Referral Amount (%)" value={referralAmount} onChange={setReferralAmount} type="number" />
+            <div>
+              <div className="flex items-baseline justify-between mb-1">
+                <label className="text-xs text-rise-brown uppercase tracking-wide">Referral Amount</label>
+                <span className="text-xs text-rise-brown italic">To change, edit on the details page</span>
+              </div>
+              <p className="px-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-md text-rise-black">
+                {referralAmount ? `${referralAmount}%` : "—"}
+              </p>
+            </div>
           )}
+
+          {/* Tier rows (referral-tier only) */}
           {mouType === "referral-tier" && (
             <div>
               <span className="text-xs text-rise-brown uppercase tracking-wide">Tier Rows</span>
@@ -697,6 +711,16 @@ function MouPreviewModal({
             </div>
           )}
 
+          {/* Editable: Date & Signatory */}
+          <div>
+            <label className="text-xs text-rise-brown uppercase tracking-wide">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-rise-green focus:outline-none"
+            />
+          </div>
           <ModalField label="Signatory Name" value={signatory} onChange={setSignatory} />
         </div>
 
@@ -803,6 +827,7 @@ export default function CounselorDetails({
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [mouModal, setMouModal] = useState<"scholarship" | "referral" | null>(null);
+  const [outreachOpen, setOutreachOpen] = useState(false);
 
   function onSaved() {
     router.refresh();
@@ -927,17 +952,6 @@ export default function CounselorDetails({
                   options={["Partnership", "MOU Signed", "Pending", "Rejected", "Unqualified"]}
                   onSaved={onSaved}
                 />
-                <EditableField
-                  label="Student Interview Required"
-                  value={counselor.studentInterview}
-                  fieldName="Student Interview"
-                  recordId={counselor.id}
-                  secret={secret}
-                  isCeoView={isCeoView}
-                  type="select"
-                  options={["Yes", "No"]}
-                  onSaved={onSaved}
-                />
                 <MouSection
                   mouUrl={counselor.mouUrl}
                   recordId={counselor.id}
@@ -971,6 +985,43 @@ export default function CounselorDetails({
               >
                 Create Referral MOU
               </button>
+            </div>
+
+            {/* Student Outreach Details */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setOutreachOpen((v) => !v)}
+                className="w-full px-4 py-3 flex items-center justify-between text-sm font-medium text-rise-black hover:bg-gray-50 transition-colors"
+              >
+                <span>Student Outreach Details</span>
+                <span className="text-rise-brown text-xs">{outreachOpen ? "▲" : "▼"}</span>
+              </button>
+              {outreachOpen && (
+                <div className="px-4 pb-4 pt-2 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(
+                    [
+                      { label: "Student Interview", value: counselor.studentInterview, fieldName: "Student Interview" },
+                      { label: "Share Brochure", value: counselor.shareBrochure, fieldName: "Share Brochure" },
+                      { label: "Share Payment", value: counselor.sharePayment, fieldName: "Share Payment" },
+                      { label: "Student MixMax Addin", value: counselor.studentMixMaxAddin, fieldName: "Student MixMax Addin" },
+                    ] as { label: string; value: string; fieldName: string }[]
+                  ).map(({ label, value, fieldName }) => (
+                    <EditableField
+                      key={fieldName}
+                      label={label}
+                      value={value}
+                      fieldName={fieldName}
+                      recordId={counselor.id}
+                      secret={secret}
+                      isCeoView={isCeoView}
+                      type="select"
+                      options={["Yes", "No"]}
+                      onSaved={onSaved}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

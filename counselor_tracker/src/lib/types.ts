@@ -15,6 +15,9 @@ export interface Counselor {
   capacity: string; // Expected Number field
   followUpStatus: string;
   studentInterview: string;
+  shareBrochure: string;
+  sharePayment: string;
+  studentMixMaxAddin: string;
   mouUrl: string | null;
   slug: string; // auto-generated from company name
 }

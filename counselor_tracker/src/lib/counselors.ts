@@ -35,6 +35,9 @@ export async function getAllCounselors(): Promise<Counselor[]> {
       "Expected Number",
       "Follow Up Status",
       "Student Interview",
+      "Share Brochure",
+      "Share Payment",
+      "Student MixMax Addin",
       "MOU",
     ],
   });
@@ -57,6 +60,9 @@ export async function getAllCounselors(): Promise<Counselor[]> {
         capacity: getField<string>(record, "Expected Number") || "",
         followUpStatus: getField<string>(record, "Follow Up Status") || "",
         studentInterview: getField<string>(record, "Student Interview") || "",
+        shareBrochure: getField<string>(record, "Share Brochure") || "",
+        sharePayment: getField<string>(record, "Share Payment") || "",
+        studentMixMaxAddin: getField<string>(record, "Student MixMax Addin") || "",
         mouUrl: (() => {
           const attachments = getField<{ url: string }[]>(record, "MOU");
           return attachments && attachments.length > 0 ? attachments[0].url : null;
