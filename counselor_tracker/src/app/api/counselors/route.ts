@@ -29,7 +29,7 @@ async function generateNextCounselorId(): Promise<string> {
 // POST — Create new counselor
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { secret, companyName, firstName, email, country, poc, phone, capacity, scholarshipAmount, referralAmount, counselorId, followUpStatus } = body;
+  const { secret, companyName, firstName, email, country, poc, phone, capacity, scholarshipAmount, referralAmount, counselorId, followUpStatus, studentInterview, shareBrochure, sharePayment, studentMixMaxAddin } = body;
 
   if (secret !== process.env.DASHBOARD_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -58,6 +58,10 @@ export async function POST(request: NextRequest) {
   if (scholarshipAmount != null) fields["Scholarship Amount"] = Number(scholarshipAmount);
   if (referralAmount != null) fields["Referral Amount"] = Number(referralAmount) / 100;
   if (followUpStatus) fields["Follow Up Status"] = followUpStatus;
+  if (studentInterview) fields["Student Interview"] = studentInterview;
+  if (shareBrochure) fields["Share Brochure"] = shareBrochure;
+  if (sharePayment) fields["Share Payment"] = sharePayment;
+  if (studentMixMaxAddin) fields["Student MixMax Addin"] = studentMixMaxAddin;
 
   const record = await createRecord(COUNSELOR_DB_BASE, COUNSELOR_DB_TABLE, fields, getToken());
 

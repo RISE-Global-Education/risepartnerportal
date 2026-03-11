@@ -35,8 +35,14 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
   const [capacity, setCapacity] = useState("");
   const [scholarshipAmount, setScholarshipAmount] = useState("");
   const [referralAmount, setReferralAmount] = useState("");
-  const [counselorId, setCounselorId] = useState("");
   const [followUpStatus, setFollowUpStatus] = useState("Pending");
+
+  // Outreach Details
+  const [outreachOpen, setOutreachOpen] = useState(false);
+  const [studentInterview, setStudentInterview] = useState("Yes");
+  const [shareBrochure, setShareBrochure] = useState("Yes");
+  const [sharePayment, setSharePayment] = useState("Yes");
+  const [studentMixMaxAddin, setStudentMixMaxAddin] = useState("Yes");
 
   function updatePoc(index: number, field: keyof PocEntry, value: string | boolean) {
     setPocs((prev) => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
@@ -67,8 +73,11 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
     setCapacity("");
     setScholarshipAmount("");
     setReferralAmount("");
-    setCounselorId("");
     setFollowUpStatus("Pending");
+    setStudentInterview("Yes");
+    setShareBrochure("Yes");
+    setSharePayment("Yes");
+    setStudentMixMaxAddin("Yes");
     setError("");
   }
 
@@ -100,8 +109,11 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           capacity: capacity.trim() || undefined,
           scholarshipAmount: scholarshipAmount ? Number(scholarshipAmount) : undefined,
           referralAmount: referralAmount ? Number(referralAmount) : undefined,
-          counselorId: counselorId.trim() || undefined,
           followUpStatus,
+          studentInterview,
+          shareBrochure,
+          sharePayment,
+          studentMixMaxAddin,
         }),
       });
 
@@ -456,16 +468,6 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-rise-black mb-1">Counselor ID</label>
-              <input
-                type="text"
-                value={counselorId}
-                onChange={(e) => setCounselorId(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
-                placeholder="Auto-generated if blank"
-              />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-rise-black mb-1">Status</label>
               <select
                 value={followUpStatus}
@@ -479,6 +481,58 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
             </div>
           </div>
         </details>
+
+        {/* Outreach Details */}
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setOutreachOpen((v) => !v)}
+            className="w-full px-4 py-3 flex items-center justify-between text-sm font-medium text-rise-black hover:bg-gray-50 transition-colors"
+          >
+            <span>Outreach Details</span>
+            <span className="text-rise-brown text-xs">{outreachOpen ? "▲" : "▼"}</span>
+          </button>
+          {outreachOpen && (
+            <div className="px-4 pb-4 pt-2 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(
+                [
+                  { label: "Student Interview", value: studentInterview, setter: setStudentInterview },
+                  { label: "Share Brochure", value: shareBrochure, setter: setShareBrochure },
+                  { label: "Share Payment", value: sharePayment, setter: setSharePayment },
+                  { label: "Student MixMax Addin", value: studentMixMaxAddin, setter: setStudentMixMaxAddin },
+                ] as { label: string; value: string; setter: (v: string) => void }[]
+              ).map(({ label, value, setter }) => (
+                <div key={label}>
+                  <label className="block text-sm font-medium text-rise-black mb-1">{label}</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setter("Yes")}
+                      className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                        value === "Yes"
+                          ? "bg-rise-green text-white border-rise-green"
+                          : "bg-white text-rise-brown border-gray-200 hover:border-rise-green"
+                      }`}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setter("No")}
+                      className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                        value === "No"
+                          ? "bg-red-500 text-white border-red-500"
+                          : "bg-white text-rise-brown border-gray-200 hover:border-red-300"
+                      }`}
+                    >
+                      No
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 

@@ -106,17 +106,16 @@ async function handleGenerate(body: GenerateBody) {
   } else if (body.type === "referral-normal") {
     data.referral_amount = body.referralAmount ?? "";
   } else if (body.type === "referral-tier") {
-    const tiers = body.tiers ?? [];
-    data.referral_1 = tiers[0]?.amount ?? "";
-    data.referral_1_student_number = tiers[0]?.studentNumber ?? "";
-    const lastIdx = tiers.length;
-    for (let i = 2; i <= 5; i++) {
-      const t = tiers[i - 1];
-      if (!t?.amount) {
-        data[`tier_${i}_line`] = "";
+    const tiers = (body.tiers ?? []).filter((t) => t.amount?.trim());
+    const romanNumerals = ["I", "II", "III", "IV", "V"];
+    for (let i = 0; i < 5; i++) {
+      const t = tiers[i];
+      if (!t) {
+        data[`tier_${i + 1}_line`] = "";
       } else {
-        const prefix = i === lastIdx ? " and " : ", ";
-        data[`tier_${i}_line`] = `${prefix}${t.amount}% for ${t.studentNumber} students`;
+        const isLast = i === tiers.length - 1;
+        const suffix = isLast ? " or more students," : " students";
+        data[`tier_${i + 1}_line`] = `${romanNumerals[i]}.\t${t.amount}% for ${t.studentNumber}${suffix}`;
       }
     }
   }

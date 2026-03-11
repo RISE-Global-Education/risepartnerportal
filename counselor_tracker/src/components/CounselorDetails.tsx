@@ -564,12 +564,10 @@ function MouPreviewModal({
   mouType: MouType;
   onClose: () => void;
 }) {
-  const today = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit", month: "long", year: "numeric",
-  });
+  const todayIso = new Date().toISOString().split("T")[0]; // YYYY-MM-DD for input
 
   const [partnerName, setPartnerName] = useState(counselor.companyName);
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(todayIso);
   const [signatory, setSignatory] = useState(counselor.firstName);
   const [scholarshipAmount, setScholarshipAmount] = useState(
     counselor.scholarshipAmount != null ? String(counselor.scholarshipAmount) : ""
@@ -602,7 +600,7 @@ function MouPreviewModal({
           secret,
           type: mouType,
           partnerName,
-          date,
+          date: date ? date.split("-").reverse().join("/") : "",
           signatory,
           ...(mouType === "scholarship" && { scholarshipAmount }),
           ...(mouType === "referral-normal" && { referralAmount }),
@@ -650,7 +648,15 @@ function MouPreviewModal({
 
         <div className="space-y-4">
           <ModalField label="Partner Name" value={partnerName} onChange={setPartnerName} />
-          <ModalField label="Date" value={date} onChange={setDate} />
+          <div>
+            <label className="text-xs text-rise-brown uppercase tracking-wide">Date</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="mt-1 w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:border-rise-green focus:outline-none"
+            />
+          </div>
 
           {mouType === "scholarship" && (
             <ModalField label="Scholarship Amount (%)" value={scholarshipAmount} onChange={setScholarshipAmount} type="number" />
