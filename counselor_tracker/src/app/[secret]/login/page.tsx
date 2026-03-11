@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 
 export default function LoginPage() {
   const params = useParams<{ secret: string }>();
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,7 +21,7 @@ export default function LoginPage() {
     });
 
     if (res.ok) {
-      router.replace(`/${params.secret}/dashboard`);
+      window.location.href = `/${params.secret}/dashboard`;
     } else {
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "Invalid password.");
