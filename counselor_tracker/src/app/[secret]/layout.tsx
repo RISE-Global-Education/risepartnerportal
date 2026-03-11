@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import NavBar from "@/components/dashboard/NavBar";
 
@@ -18,6 +19,15 @@ export default async function DashboardLayout({
   }
 
   const role = isAdmin ? "admin" : "user";
+
+  // Don't render the NavBar on the login page
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "";
+  const isLoginPage = pathname.endsWith("/login");
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-rise-cream">

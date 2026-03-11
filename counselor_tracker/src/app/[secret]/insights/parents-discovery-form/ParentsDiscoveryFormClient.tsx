@@ -3,23 +3,10 @@
 import { useState, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { MappedRow } from "./page";
-import RefreshButton from "@/app/dashboard/[secret]/insights/mixmax/RefreshButton";
-
-const STATUS_COLORS: Record<string, string> = {
-  AWA1: "bg-purple-50 text-purple-700",
-  AWA2: "bg-purple-100 text-purple-800",
-  AWA3: "bg-purple-200 text-purple-900",
-  "Call Payment": "bg-emerald-100 text-emerald-800",
-};
+import RefreshButton from "@/app/[secret]/insights/mixmax/RefreshButton";
 
 type CohortFilter = "All" | "NotSent" | "SentNotOpened" | "OpenedNotReplied" | "Replied";
-type SortKey = "name" | "followUpStatus" | "sequenceName" | "acceptanceEmailSentTime" | "sent" | "opened" | "replied";
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-}
+type SortKey = "studentName" | "parentEmail" | "sequenceName" | "sent" | "opened" | "replied";
 
 function matchesCohort(r: MappedRow, cohort: CohortFilter): boolean {
   if (cohort === "All") return true;
@@ -39,46 +26,41 @@ function formatCachedAt(iso: string | null): string {
   }) + " IST";
 }
 
-export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fetchedAt }: { rows: MappedRow[]; days: 30 | 60 | 90; mixmaxCachedAt: string | null; fetchedAt: string }) {
+export default function ParentsDiscoveryFormClient({
+  rows,
+  days,
+  mixmaxCachedAt,
+  fetchedAt,
+}: {
+  rows: MappedRow[];
+  days: 30 | 60 | 90;
+  mixmaxCachedAt: string | null;
+  fetchedAt: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [seqFilter, setSeqFilter] = useState("All");
   const [cohortFilter, setCohortFilter] = useState<CohortFilter>("All");
-  const [sortKey, setSortKey] = useState<SortKey>("acceptanceEmailSentTime");
-  const [sortDesc, setSortDesc] = useState(true);
-
-  const sequences = useMemo(
-    () => ["All", ...Array.from(new Set(rows.map((r) => r.sequenceName ?? "—"))).sort()],
-    [rows]
-  );
-
-  const statuses = useMemo(
-    () => ["All", ...["AWA1", "AWA2", "AWA3", "Call Payment"].filter((s) => rows.some((r) => r.followUpStatus === s))],
-    [rows]
-  );
+  const [sortKey, setSortKey] = useState<SortKey>("studentName");
+  const [sortDesc, setSortDesc] = useState(false);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDesc((d) => !d);
     else {
       setSortKey(key);
-      setSortDesc(key === "sent" || key === "opened" || key === "replied" || key === "acceptanceEmailSentTime");
+      setSortDesc(key === "sent" || key === "opened" || key === "replied");
     }
   }
 
   const filtered = useMemo(() => {
     let base = rows;
-    if (statusFilter !== "All") base = base.filter((r) => r.followUpStatus === statusFilter);
-    if (seqFilter !== "All") base = base.filter((r) => (r.sequenceName ?? "—") === seqFilter);
     if (cohortFilter !== "All") base = base.filter((r) => matchesCohort(r, cohortFilter));
     if (search) {
       const q = search.toLowerCase();
       base = base.filter(
         (r) =>
-          r.name.toLowerCase().includes(q) ||
-          r.email.toLowerCase().includes(q) ||
-          r.applicantId.toLowerCase().includes(q)
+          r.studentName.toLowerCase().includes(q) ||
+          r.parentEmail.toLowerCase().includes(q)
       );
     }
 
@@ -88,17 +70,12 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
         const bv = b[sortKey] ?? -1;
         return sortDesc ? bv - av : av - bv;
       }
-      if (sortKey === "acceptanceEmailSentTime") {
-        const av = a.acceptanceEmailSentTime ? new Date(a.acceptanceEmailSentTime).getTime() : -1;
-        const bv = b.acceptanceEmailSentTime ? new Date(b.acceptanceEmailSentTime).getTime() : -1;
-        return sortDesc ? bv - av : av - bv;
-      }
       const av = (sortKey === "sequenceName" ? (a.sequenceName ?? "—") : a[sortKey]) ?? "";
       const bv = (sortKey === "sequenceName" ? (b.sequenceName ?? "—") : b[sortKey]) ?? "";
       const cmp = (av as string).localeCompare(bv as string);
       return sortDesc ? -cmp : cmp;
     });
-  }, [rows, statusFilter, seqFilter, cohortFilter, search, sortKey, sortDesc]);
+  }, [rows, cohortFilter, search, sortKey, sortDesc]);
 
   const [showUninterested, setShowUninterested] = useState(false);
 
@@ -106,42 +83,35 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
   const uninterested = useMemo(() => {
     const seen = new Set<string>();
     return rows.filter((r) => {
-      if (seen.has(r.applicantId)) return false;
-      seen.add(r.applicantId);
+      if (seen.has(r.recordId)) return false;
+      seen.add(r.recordId);
       if ((r.sent ?? 0) === 0) return false;
       return (r.opened ?? 0) < (r.sent ?? 0);
     });
   }, [rows]);
 
-  // Summary counts — always over the full unfiltered dataset (de-duped by applicantId)
-  const uniqueApplicants = useMemo(() => {
+  // Summary counts — de-duped by recordId
+  const uniqueRecords = useMemo(() => {
     const seen = new Set<string>();
     const out: typeof rows = [];
     for (const r of rows) {
-      if (!seen.has(r.applicantId)) { seen.add(r.applicantId); out.push(r); }
+      if (!seen.has(r.recordId)) { seen.add(r.recordId); out.push(r); }
     }
     return out;
   }, [rows]);
-  const total = uniqueApplicants.length;
-  const notSentAll = uniqueApplicants.filter((r) => matchesCohort(r, "NotSent")).length;
-  const sentNotOpenedAll = uniqueApplicants.filter((r) => matchesCohort(r, "SentNotOpened")).length;
-  const sentNotRepliedAll = uniqueApplicants.filter((r) => matchesCohort(r, "OpenedNotReplied")).length;
-  const repliedAll = uniqueApplicants.filter((r) => matchesCohort(r, "Replied")).length;
+
+  const total = uniqueRecords.length;
+  const notSentAll = uniqueRecords.filter((r) => matchesCohort(r, "NotSent")).length;
+  const sentNotOpenedAll = uniqueRecords.filter((r) => matchesCohort(r, "SentNotOpened")).length;
+  const sentNotRepliedAll = uniqueRecords.filter((r) => matchesCohort(r, "OpenedNotReplied")).length;
+  const repliedAll = uniqueRecords.filter((r) => matchesCohort(r, "Replied")).length;
 
   function SortIcon({ col }: { col: SortKey }) {
     if (sortKey !== col) return <span className="ml-1 opacity-25">↕</span>;
     return <span className="ml-1">{sortDesc ? "↓" : "↑"}</span>;
   }
 
-  function Th({
-    col,
-    label,
-    align = "left",
-  }: {
-    col: SortKey;
-    label: string;
-    align?: "left" | "right";
-  }) {
+  function Th({ col, label, align = "left" }: { col: SortKey; label: string; align?: "left" | "right" }) {
     return (
       <th
         onClick={() => toggleSort(col)}
@@ -154,10 +124,10 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
   }
 
   const COHORT_CARDS: { key: CohortFilter; label: string; count: number; bg: string; text: string; ring: string }[] = [
-    { key: "NotSent",         label: "Not Sent",           count: notSentAll,       bg: "bg-red-50",     text: "text-red-700",     ring: "ring-red-400" },
-    { key: "SentNotOpened",   label: "Sent, Not Opened",   count: sentNotOpenedAll, bg: "bg-amber-50",   text: "text-amber-700",   ring: "ring-amber-400" },
-    { key: "OpenedNotReplied",label: "Opened, Not Replied",count: sentNotRepliedAll,bg: "bg-blue-50",    text: "text-blue-700",    ring: "ring-blue-400" },
-    { key: "Replied",         label: "Replied",            count: repliedAll,       bg: "bg-emerald-50", text: "text-emerald-700", ring: "ring-emerald-400" },
+    { key: "NotSent",          label: "Not Sent",            count: notSentAll,       bg: "bg-red-50",     text: "text-red-700",     ring: "ring-red-400" },
+    { key: "SentNotOpened",    label: "Sent, Not Opened",    count: sentNotOpenedAll, bg: "bg-amber-50",   text: "text-amber-700",   ring: "ring-amber-400" },
+    { key: "OpenedNotReplied", label: "Opened, Not Replied", count: sentNotRepliedAll,bg: "bg-blue-50",    text: "text-blue-700",    ring: "ring-blue-400" },
+    { key: "Replied",          label: "Replied",             count: repliedAll,       bg: "bg-emerald-50", text: "text-emerald-700", ring: "ring-emerald-400" },
   ];
 
   return (
@@ -165,13 +135,12 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h1 className="text-lg font-bold text-rise-black font-heading">Acceptance Email Audit</h1>
+          <h1 className="text-lg font-bold text-rise-black font-heading">Parents Discovery — Application Form</h1>
           <p className="text-xs text-rise-brown mt-0.5">
-            AWA1 / AWA2 / AWA3 / Call Payment applicants with acceptance sent in the last 30 days × Mixmax
+            Discovery Call rows where Student Application Form = "Form Sent" × Mixmax sequence
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Day-range pills */}
           <div className="flex gap-1">
             {([30, 60, 90] as const).map((d) => (
               <button
@@ -187,7 +156,7 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
               </button>
             ))}
           </div>
-          <RefreshButton apiPath="/api/refresh/airtable" />
+          <RefreshButton apiPath="/api/refresh/parents-discovery-form" />
         </div>
       </div>
 
@@ -198,10 +167,10 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
         )}
       </p>
 
-      {/* Overview cards — clickable cohort filters */}
+      {/* Overview cards */}
       <section className="mb-6">
         <h2 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">
-          Overview — last {days} days · {total} applicants
+          Overview · {total} records
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {COHORT_CARDS.map(({ key, label, count, bg, text, ring }) => (
@@ -223,47 +192,11 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <input
           type="text"
-          placeholder="Search name, email or ID…"
+          placeholder="Search student name or parent email…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white placeholder:text-rise-brown/50 focus:outline-none focus:ring-2 focus:ring-rise-green/30 w-full sm:w-64"
+          className="text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white placeholder:text-rise-brown/50 focus:outline-none focus:ring-2 focus:ring-rise-green/30 w-full sm:w-72"
         />
-      </div>
-
-      {/* AWA stage pills */}
-      <div className="flex flex-wrap gap-2 mb-2">
-        {statuses.map((s) => (
-          <button
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              statusFilter === s
-                ? "bg-rise-black text-white border-rise-black"
-                : s === "All"
-                ? "bg-white text-rise-brown border-gray-200 hover:border-gray-400"
-                : `${STATUS_COLORS[s] ?? "bg-white text-rise-brown"} border-transparent hover:border-gray-300`
-            }`}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-
-      {/* Sequence pills */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        {sequences.map((s) => (
-          <button
-            key={s}
-            onClick={() => setSeqFilter(s)}
-            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-              seqFilter === s
-                ? "bg-rise-black text-white border-rise-black"
-                : "bg-white text-rise-brown border-gray-200 hover:border-gray-400"
-            }`}
-          >
-            {s}
-          </button>
-        ))}
       </div>
 
       {/* Table */}
@@ -277,15 +210,8 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-rise-brown uppercase tracking-wide">
-                    Applicant ID
-                  </th>
-                  <Th col="name" label="Name" />
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-rise-brown uppercase tracking-wide">
-                    Email
-                  </th>
-                  <Th col="followUpStatus" label="Stage" />
-                  <Th col="acceptanceEmailSentTime" label="Acceptance Sent" />
+                  <Th col="studentName" label="Student Name" />
+                  <Th col="parentEmail" label="Parent Email" />
                   <th className="text-left px-4 py-3 text-xs font-semibold text-rise-brown uppercase tracking-wide">
                     Email Status
                   </th>
@@ -300,27 +226,14 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
                   const emailSent = r.sequenceName !== null && (r.sent ?? 0) > 0;
                   return (
                     <tr
-                      key={`${r.applicantId}-${r.sequenceName}-${i}`}
+                      key={`${r.recordId}-${r.sequenceName}-${i}`}
                       className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-4 py-3 font-mono text-xs text-rise-brown whitespace-nowrap">
-                        {r.applicantId}
-                      </td>
                       <td className="px-4 py-3 font-medium text-rise-black whitespace-nowrap">
-                        {r.name}
+                        {r.studentName}
                       </td>
-                      <td className="px-4 py-3 text-xs text-rise-brown">{r.email}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${
-                            STATUS_COLORS[r.followUpStatus] ?? "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {r.followUpStatus}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-rise-brown whitespace-nowrap">
-                        {formatDate(r.acceptanceEmailSentTime)}
+                      <td className="px-4 py-3 text-xs text-rise-brown">
+                        {r.parentEmail || <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -361,40 +274,32 @@ export default function AirtableInsightsClient({ rows, days, mixmaxCachedAt, fet
           className="flex items-center gap-2 text-xs font-semibold text-rose-700 uppercase tracking-wide mb-3 hover:opacity-70 transition-opacity"
         >
           <span className="bg-rose-100 text-rose-700 rounded-full px-2 py-0.5">{uninterested.length}</span>
-          Possibly Uninterested — opened less than stage
+          Possibly Uninterested — sent but never opened
           <span>{showUninterested ? "▲" : "▼"}</span>
         </button>
         {showUninterested && (
           uninterested.length === 0 ? (
-            <p className="text-sm text-rise-brown">No uninterested applicants.</p>
+            <p className="text-sm text-rise-brown">No uninterested records.</p>
           ) : (
             <div className="bg-white border border-rose-100 rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100 bg-rose-50">
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Applicant ID</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Name</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Email</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Stage</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Student Name</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Parent Email</th>
                       <th className="text-right px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Sent</th>
                       <th className="text-right px-4 py-3 text-xs font-semibold text-rose-700 uppercase tracking-wide">Opened</th>
                     </tr>
                   </thead>
                   <tbody>
                     {uninterested.map((r, i) => (
-                        <tr key={`${r.applicantId}-${i}`} className="border-b border-gray-50 hover:bg-rose-50/40 transition-colors">
-                          <td className="px-4 py-3 font-mono text-xs text-rise-brown whitespace-nowrap">{r.applicantId}</td>
-                          <td className="px-4 py-3 font-medium text-rise-black whitespace-nowrap">{r.name}</td>
-                          <td className="px-4 py-3 text-xs text-rise-brown">{r.email}</td>
-                          <td className="px-4 py-3">
-                            <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${STATUS_COLORS[r.followUpStatus] ?? "bg-gray-100 text-gray-600"}`}>
-                              {r.followUpStatus}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right text-rise-black">{r.sent}</td>
-                          <td className="px-4 py-3 text-right text-rose-600 font-semibold">{r.opened ?? 0}</td>
-                        </tr>
+                      <tr key={`${r.recordId}-${i}`} className="border-b border-gray-50 hover:bg-rose-50/40 transition-colors">
+                        <td className="px-4 py-3 font-medium text-rise-black whitespace-nowrap">{r.studentName}</td>
+                        <td className="px-4 py-3 text-xs text-rise-brown">{r.parentEmail || <span className="text-gray-300">—</span>}</td>
+                        <td className="px-4 py-3 text-right text-rise-black">{r.sent}</td>
+                        <td className="px-4 py-3 text-right text-rose-600 font-semibold">{r.opened ?? 0}</td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>

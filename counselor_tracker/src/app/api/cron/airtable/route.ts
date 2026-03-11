@@ -7,10 +7,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  revalidatePath("/dashboard/[secret]/insights/airtable", "page");
-  revalidatePath("/dashboard/[secret]/insights/shortlisting", "page");
-  revalidatePath("/dashboard/[secret]/insights/parents-discovery-booking", "page");
-  revalidatePath("/dashboard/[secret]/insights/parents-discovery-form", "page");
+  revalidatePath("/[secret]/insights/airtable", "page");
+  revalidatePath("/[secret]/insights/shortlisting", "page");
+  revalidatePath("/[secret]/insights/parents-discovery-booking", "page");
+  revalidatePath("/[secret]/insights/parents-discovery-form", "page");
   console.log("[Cron] Airtable-backed insights pages revalidated at", new Date().toISOString());
 
   return NextResponse.json({ ok: true, revalidatedAt: new Date().toISOString() });

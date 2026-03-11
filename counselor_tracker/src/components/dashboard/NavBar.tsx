@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 export default function NavBar({ secret, role }: { secret: string; role: "admin" | "user" }) {
   const pathname = usePathname();
-  const basePath = `/dashboard/${secret}`;
+  const basePath = `/${secret}`;
   const isSearch = pathname.endsWith("/search");
   const isInsights = pathname.includes("/insights");
   const isPipeline = pathname.includes("/student-pipeline");

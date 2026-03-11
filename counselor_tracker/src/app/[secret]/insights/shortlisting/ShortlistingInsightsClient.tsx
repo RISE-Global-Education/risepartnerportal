@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { MappedRow } from "./page";
-import RefreshButton from "@/app/dashboard/[secret]/insights/mixmax/RefreshButton";
+import RefreshButton from "@/app/[secret]/insights/mixmax/RefreshButton";
 
 const STATUS_COLORS: Record<string, string> = {
   SWA1: "bg-sky-50 text-sky-700",

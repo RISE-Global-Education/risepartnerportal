@@ -6,7 +6,7 @@ import { usePathname, useParams } from "next/navigation";
 export default function InsightsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const params = useParams<{ secret: string }>();
-  const base = `/dashboard/${params.secret}/insights`;
+  const base = `/${params.secret}/insights`;
 
   const tabs = [
     { label: "Mixmax", href: `${base}/mixmax` },

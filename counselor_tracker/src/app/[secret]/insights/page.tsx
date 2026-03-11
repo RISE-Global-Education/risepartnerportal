@@ -6,5 +6,5 @@ export default async function InsightsIndex({
   params: Promise<{ secret: string }>;
 }) {
   const { secret } = await params;
-  redirect(`/dashboard/${secret}/insights/mixmax`);
+  redirect(`/${secret}/insights/mixmax`);
 }

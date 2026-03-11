@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 export default function SubTabNav({ secret }: { secret: string }) {
   const pathname = usePathname();
-  const base = `/dashboard/${secret}/student-pipeline`;
+  const base = `/${secret}/student-pipeline`;
 
   const tabs = [
     { label: "Interview Stage", href: base },

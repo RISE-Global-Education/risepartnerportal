@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { MappedRow } from "./page";
-import RefreshButton from "@/app/dashboard/[secret]/insights/mixmax/RefreshButton";
+import RefreshButton from "@/app/[secret]/insights/mixmax/RefreshButton";
 
 type CohortFilter = "All" | "NotSent" | "SentNotOpened" | "OpenedNotReplied" | "Replied";
 type SortKey = "studentName" | "parentEmail" | "sequenceName" | "sent" | "opened" | "replied";
@@ -26,7 +26,7 @@ function formatCachedAt(iso: string | null): string {
   }) + " IST";
 }
 
-export default function ParentsDiscoveryFormClient({
+export default function ParentsDiscoveryBookingClient({
   rows,
   days,
   mixmaxCachedAt,
@@ -135,9 +135,9 @@ export default function ParentsDiscoveryFormClient({
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h1 className="text-lg font-bold text-rise-black font-heading">Parents Discovery — Application Form</h1>
+          <h1 className="text-lg font-bold text-rise-black font-heading">Parents Discovery — Booking Link</h1>
           <p className="text-xs text-rise-brown mt-0.5">
-            Discovery Call rows where Student Application Form = "Form Sent" × Mixmax sequence
+            Discovery Call rows where Qualified = "Email Sent" × Mixmax sequence
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -156,7 +156,7 @@ export default function ParentsDiscoveryFormClient({
               </button>
             ))}
           </div>
-          <RefreshButton apiPath="/api/refresh/parents-discovery-form" />
+          <RefreshButton apiPath="/api/refresh/parents-discovery-booking" />
         </div>
       </div>
 

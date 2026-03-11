@@ -3,25 +3,56 @@ import { NextRequest, NextResponse } from "next/server";
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Only apply to dashboard routes
-  const match = pathname.match(/^\/dashboard\/([^/]+)(\/.*)?$/);
-  if (!match) return NextResponse.next();
+  // Forward pathname to server components via header
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", pathname);
+
+  // Match /{secret} and /{secret}/...
+  const match = pathname.match(/^\/([^/]+)(\/.*)?$/);
+  if (!match) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
 
   const secret = match[1];
   const rest = match[2] ?? "";
 
+  const isCeo = secret === process.env.DASHBOARD_SECRET;
   const isUser = secret === process.env.USER_SECRET;
+
+  // Ignore non-secret segments (api, partner, _next, favicon, etc.)
+  if (!isCeo && !isUser) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // CEO secret requires password login
+  if (isCeo) {
+    if (rest === "/login") {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
+    const authed = req.cookies.get("ceo_auth")?.value === "1";
+    if (!authed) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${secret}/login`;
+      return NextResponse.redirect(url);
+    }
+
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
 
   // User role can only access /student-pipeline routes
   if (isUser && !rest.startsWith("/student-pipeline")) {
     const url = req.nextUrl.clone();
-    url.pathname = `/dashboard/${secret}/student-pipeline`;
+    url.pathname = `/${secret}/student-pipeline`;
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {
-  matcher: "/dashboard/:secret*",
+  matcher: [
+    // Skip Next.js internals and static files
+    "/((?!_next/static|_next/image|favicon.ico|api/).*)",
+  ],
 };
