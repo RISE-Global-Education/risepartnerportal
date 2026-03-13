@@ -9,8 +9,9 @@ export interface Counselor {
   phone: string;
   scholarshipAmount: number | null;
   referralAmount: number | null;
-  poc: string[]; // RISE point(s) of contact
-  pocRecordIds: string[]; // Linked contact record IDs from POC field
+  pocNames: string[]; // Full Names (Contact DB) lookup
+  pocEmails: string[]; // Emails (Contact DB) lookup
+  pocRecordIds: string[]; // Linked contact record IDs from POC field (for writing back)
   country: string;
   capacity: string; // Expected Number field
   followUpStatus: string;

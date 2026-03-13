@@ -29,7 +29,8 @@ export async function getAllCounselors(): Promise<Counselor[]> {
       "Phone Number",
       "Scholarship Amount",
       "Referral Amount",
-      "POC (RISE)",
+      "Full Names (Contact DB)",
+      "Emails (Contact DB)",
       "POC",
       "Country",
       "Expected Number",
@@ -54,7 +55,8 @@ export async function getAllCounselors(): Promise<Counselor[]> {
         phone: getField<string>(record, "Phone Number") || "",
         scholarshipAmount: getField<number>(record, "Scholarship Amount"),
         referralAmount: getField<number>(record, "Referral Amount"),
-        poc: getField<string[]>(record, "POC (RISE)") || [],
+        pocNames: getField<string[]>(record, "Full Names (Contact DB)") || [],
+        pocEmails: getField<string[]>(record, "Emails (Contact DB)") || [],
         pocRecordIds: getField<string[]>(record, "POC") || [],
         country: getField<string>(record, "Country") || "",
         capacity: getField<string>(record, "Expected Number") || "",
@@ -100,6 +102,22 @@ export async function getContactsForCounselor(recordIds: string[]): Promise<Cont
   const records = await fetchAllRecords(COUNSELOR_DB_BASE, CONTACTS_TABLE, {
     fields: ["Name", "Email (Contact DB)", "Position", "E_FNAME", "Email Opt-in", "Lead ID"],
     filterByFormula: formula,
+  });
+
+  return records.map((record) => ({
+    id: record.id,
+    name: getField<string>(record, "Name") || "",
+    email: getField<string>(record, "Email (Contact DB)") || "",
+    position: getField<string>(record, "Position") || "",
+    eFname: getField<string>(record, "E_FNAME") || "",
+    outreachOptIn: getField<string>(record, "Email Opt-in") !== "No",
+    leadId: getField<string>(record, "Lead ID") || "",
+  }));
+}
+
+export async function getAllContacts(): Promise<Contact[]> {
+  const records = await fetchAllRecords(COUNSELOR_DB_BASE, CONTACTS_TABLE, {
+    fields: ["Name", "Email (Contact DB)", "Position", "E_FNAME", "Email Opt-in", "Lead ID"],
   });
 
   return records.map((record) => ({

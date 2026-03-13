@@ -3,17 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-interface ContactOption {
-  name: string;
-  email: string;
-}
-
 interface CounselorOption {
   companyName: string;
   slug: string;
   counselorId: string;
-  email: string;
-  contacts: ContactOption[];
+  pocNames: string[];
+  pocEmails: string[];
 }
 
 export default function SearchBar({
@@ -31,12 +26,8 @@ export default function SearchBar({
   const filtered = query.length > 0
     ? counselors.filter((c) =>
         c.companyName.toLowerCase().includes(q) ||
-        c.email.toLowerCase().includes(q) ||
-        c.contacts.some(
-          (contact) =>
-            contact.name.toLowerCase().includes(q) ||
-            contact.email.toLowerCase().includes(q)
-        )
+        c.pocNames.some((n) => n.toLowerCase().includes(q)) ||
+        c.pocEmails.some((e) => e.toLowerCase().includes(q))
       )
     : [];
 
@@ -97,16 +88,10 @@ export default function SearchBar({
                 {counselor.companyName}
               </p>
               <p className="text-xs text-rise-brown mt-0.5">
-                Contacts:{" "}
-                {counselor.contacts.length > 0
-                  ? counselor.contacts.map((c) => c.name).join(", ")
-                  : "—"}
+                Contacts: {counselor.pocNames.length > 0 ? counselor.pocNames.join(", ") : "—"}
               </p>
               <p className="text-xs text-rise-brown mt-0.5">
-                Email:{" "}
-                {counselor.contacts.length > 0
-                  ? counselor.contacts.map((c) => c.email).filter(Boolean).join(", ") || "—"
-                  : counselor.email || "—"}
+                Email: {counselor.pocEmails.length > 0 ? counselor.pocEmails.join(", ") : "—"}
               </p>
             </button>
           ))}
