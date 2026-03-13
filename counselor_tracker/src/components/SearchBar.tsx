@@ -3,12 +3,17 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+interface ContactOption {
+  name: string;
+  email: string;
+}
+
 interface CounselorOption {
   companyName: string;
   slug: string;
   counselorId: string;
-  poc: string[];
-  followUpStatus: string;
+  email: string;
+  contacts: ContactOption[];
 }
 
 export default function SearchBar({
@@ -22,9 +27,16 @@ export default function SearchBar({
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  const q = query.toLowerCase();
   const filtered = query.length > 0
     ? counselors.filter((c) =>
-        c.companyName.toLowerCase().includes(query.toLowerCase())
+        c.companyName.toLowerCase().includes(q) ||
+        c.email.toLowerCase().includes(q) ||
+        c.contacts.some(
+          (contact) =>
+            contact.name.toLowerCase().includes(q) ||
+            contact.email.toLowerCase().includes(q)
+        )
       )
     : [];
 
@@ -58,7 +70,7 @@ export default function SearchBar({
       <input
         ref={inputRef}
         type="text"
-        placeholder="Search for a partner..."
+        placeholder="Search by company, name, or email..."
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -66,7 +78,6 @@ export default function SearchBar({
         }}
         onFocus={() => setIsOpen(true)}
         onBlur={() => {
-          // Delay closing so click events on dropdown can fire
           setTimeout(() => setIsOpen(false), 200);
         }}
         onKeyDown={handleKeyDown}
@@ -78,23 +89,25 @@ export default function SearchBar({
             <button
               key={counselor.counselorId}
               onMouseDown={() => navigate(counselor)}
-              className={`w-full px-5 py-3 text-left hover:bg-rise-cream transition-colors flex items-center justify-between ${
+              className={`w-full px-5 py-3 text-left hover:bg-rise-cream transition-colors ${
                 index === selectedIndex ? "bg-rise-cream" : ""
               }`}
             >
-              <div>
-                <p className="font-medium text-rise-black">
-                  {counselor.companyName}
-                </p>
-                <p className="text-xs text-rise-brown mt-0.5">
-                  POC: {counselor.poc.length > 0 ? counselor.poc.join(", ") : "—"}
-                </p>
-              </div>
-              {counselor.followUpStatus && (
-                <span className="text-xs px-2 py-1 rounded-full bg-rise-cream text-rise-brown">
-                  {counselor.followUpStatus}
-                </span>
-              )}
+              <p className="font-medium text-rise-black">
+                {counselor.companyName}
+              </p>
+              <p className="text-xs text-rise-brown mt-0.5">
+                Contacts:{" "}
+                {counselor.contacts.length > 0
+                  ? counselor.contacts.map((c) => c.name).join(", ")
+                  : "—"}
+              </p>
+              <p className="text-xs text-rise-brown mt-0.5">
+                Email:{" "}
+                {counselor.contacts.length > 0
+                  ? counselor.contacts.map((c) => c.email).filter(Boolean).join(", ") || "—"
+                  : counselor.email || "—"}
+              </p>
             </button>
           ))}
         </div>

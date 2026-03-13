@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { getAllCounselors } from "@/lib/counselors";
+import { getAllCounselors, getContactsForCounselor } from "@/lib/counselors";
 import SearchBar from "@/components/SearchBar";
 import AddPartnerForm from "@/components/AddPartnerForm";
 
@@ -11,12 +11,19 @@ export default async function SearchPage({
   const { secret } = await params;
   const counselors = await getAllCounselors();
 
-  const counselorOptions = counselors.map((c) => ({
+  const contactsPerCounselor = await Promise.all(
+    counselors.map((c) => getContactsForCounselor(c.pocRecordIds))
+  );
+
+  const counselorOptions = counselors.map((c, i) => ({
     companyName: c.companyName,
     slug: c.slug,
     counselorId: c.counselorId,
-    poc: c.poc,
-    followUpStatus: c.followUpStatus,
+    email: c.email,
+    contacts: contactsPerCounselor[i].map((contact) => ({
+      name: contact.name,
+      email: contact.email,
+    })),
   }));
 
   return (

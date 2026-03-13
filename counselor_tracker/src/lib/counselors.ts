@@ -98,14 +98,14 @@ export async function getContactsForCounselor(recordIds: string[]): Promise<Cont
 
   const formula = `OR(${recordIds.map((id) => `RECORD_ID()="${id}"`).join(",")})`;
   const records = await fetchAllRecords(COUNSELOR_DB_BASE, CONTACTS_TABLE, {
-    fields: ["Name", "Email", "Position", "E_FNAME", "Email Opt-in", "Lead ID"],
+    fields: ["Name", "Email (Contact DB)", "Position", "E_FNAME", "Email Opt-in", "Lead ID"],
     filterByFormula: formula,
   });
 
   return records.map((record) => ({
     id: record.id,
     name: getField<string>(record, "Name") || "",
-    email: getField<string>(record, "Email") || "",
+    email: getField<string>(record, "Email (Contact DB)") || "",
     position: getField<string>(record, "Position") || "",
     eFname: getField<string>(record, "E_FNAME") || "",
     outreachOptIn: getField<string>(record, "Email Opt-in") !== "No",
