@@ -11,6 +11,7 @@ export interface Counselor {
   pocNames: string[]; // Full Names (Contact DB) lookup
   pocEmails: string[]; // Emails (Contact DB) lookup
   pocRecordIds: string[]; // Linked contact record IDs from POC field (for writing back)
+  risePoc: string[]; // POC (RISE) field — internal RISE team members assigned
   country: string;
   capacity: string; // Expected Number field
   followUpStatus: string;
@@ -19,6 +20,8 @@ export interface Counselor {
   sharePayment: string;
   studentMixMaxAddin: string;
   mouUrl: string | null;
+  partnerType: string;
+  workshopType: string;
   slug: string; // auto-generated from company name
 }
 

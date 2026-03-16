@@ -972,6 +972,16 @@ export default function CounselorDetails({
             <div>
               <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wider mb-3">Basic Details</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <span className="text-xs text-rise-brown uppercase tracking-wide">Partner Type</span>
+                  <p className="text-sm font-medium text-rise-black mt-1">{counselor.partnerType || "—"}</p>
+                </div>
+                {counselor.partnerType === "School" && (
+                  <div>
+                    <span className="text-xs text-rise-brown uppercase tracking-wide">Workshop Type</span>
+                    <p className="text-sm font-medium text-rise-black mt-1">{counselor.workshopType || "—"}</p>
+                  </div>
+                )}
                 <EditableField
                   label="Country"
                   value={counselor.country}

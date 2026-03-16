@@ -30,7 +30,7 @@ export default function PartnerHeader({
           <div>
             <span className="text-rise-brown">RISE Point of Contact</span>
             <p className="font-medium text-rise-black mt-1">
-              {counselor.pocNames.length > 0 ? counselor.pocNames.join(", ") : "—"}
+              {counselor.risePoc.length > 0 ? counselor.risePoc.join(", ") : "—"}
             </p>
           </div>
           <div>

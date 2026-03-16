@@ -31,6 +31,7 @@ export async function getAllCounselors(): Promise<Counselor[]> {
       "Full Names (Contact DB)",
       "Email (Contact DB)",
       "POC",
+      "POC (RISE)",
       "Country",
       "Expected Number",
       "Follow Up Status",
@@ -39,6 +40,8 @@ export async function getAllCounselors(): Promise<Counselor[]> {
       "Share Payment",
       "Student MixMax Addin",
       "MOU",
+      "Partner Type",
+      "Workshop Type",
     ],
   });
 
@@ -56,6 +59,7 @@ export async function getAllCounselors(): Promise<Counselor[]> {
         pocNames: getField<string[]>(record, "Full Names (Contact DB)") || [],
         pocEmails: getField<string[]>(record, "Email (Contact DB)") || [],
         pocRecordIds: getField<string[]>(record, "POC") || [],
+        risePoc: getField<string[]>(record, "POC (RISE)") || [],
         country: getField<string>(record, "Country") || "",
         capacity: getField<string>(record, "Expected Number") || "",
         followUpStatus: getField<string>(record, "Follow Up Status") || "",
@@ -67,6 +71,8 @@ export async function getAllCounselors(): Promise<Counselor[]> {
           const attachments = getField<{ url: string }[]>(record, "MOU");
           return attachments && attachments.length > 0 ? attachments[0].url : null;
         })(),
+        partnerType: getField<string>(record, "Partner Type") || "",
+        workshopType: getField<string>(record, "Workshop Type") || "",
         slug: generateSlug(companyName),
       };
     })

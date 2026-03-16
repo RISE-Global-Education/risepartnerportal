@@ -4,17 +4,20 @@ import { useState } from "react";
 
 const STATUS_OPTIONS = ["Pending", "MOU Signed", "Partnership", "Rejected", "Unqualified"];
 const RISE_POC_OPTIONS = ["Yash", "Shreyans", "Prachi"];
+const PARTNER_TYPE_OPTIONS = ["Counsellor", "School"];
+const WORKSHOP_TYPE_OPTIONS = ["Offline", "Online", "Both", "None"];
 
 interface PocEntry {
   name: string;
   email: string;
+  phone: string;
   position: string;
   eFname: string;
   outreachOptIn: boolean;
 }
 
 function emptyPoc(): PocEntry {
-  return { name: "", email: "", position: "", eFname: "", outreachOptIn: true };
+  return { name: "", email: "", phone: "", position: "", eFname: "", outreachOptIn: true };
 }
 
 export default function AddPartnerForm({ secret }: { secret: string }) {
@@ -24,6 +27,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
   const [success, setSuccess] = useState<{ slug: string; counselorId: string } | null>(null);
 
   // Required
+  const [partnerType, setPartnerType] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [country, setCountry] = useState("");
   const [risePoc, setRisePoc] = useState<string[]>([]);
@@ -31,7 +35,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
   const [meetingNotes, setMeetingNotes] = useState("");
 
   // Optional
-  const [phone, setPhone] = useState("");
+  const [workshopType, setWorkshopType] = useState("");
   const [capacity, setCapacity] = useState("");
   const [scholarshipAmount, setScholarshipAmount] = useState("");
   const [referralAmount, setReferralAmount] = useState("");
@@ -64,12 +68,13 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
   }
 
   function resetForm() {
+    setPartnerType("");
     setCompanyName("");
     setCountry("");
     setRisePoc([]);
+    setWorkshopType("");
     setPocs([emptyPoc()]);
     setMeetingNotes("");
-    setPhone("");
     setCapacity("");
     setScholarshipAmount("");
     setReferralAmount("");
@@ -85,8 +90,8 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
     e.preventDefault();
 
     const primaryPoc = pocs[0];
-    if (!companyName.trim() || !country.trim() || risePoc.length === 0 || !primaryPoc.name.trim() || !meetingNotes.trim()) {
-      setError("Please fill in all required fields (Company Name, Country, POC (RISE), Contact Name, Meeting Notes)");
+    if (!partnerType || !companyName.trim() || !country.trim() || risePoc.length === 0 || !primaryPoc.name.trim() || !meetingNotes.trim()) {
+      setError("Please fill in all required fields (Partner Type, Company Name, Country, POC (RISE), Contact Name, Meeting Notes)");
       return;
     }
 
@@ -101,11 +106,12 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
         body: JSON.stringify({
           secret,
           companyName: companyName.trim(),
+          partnerType,
+          workshopType: partnerType === "School" ? (workshopType || undefined) : undefined,
           firstName: primaryPoc.name.trim(),
           email: primaryPoc.email.trim() || undefined,
           country: country.trim(),
           poc: risePoc,
-          phone: phone.trim() || undefined,
           capacity: capacity.trim() || undefined,
           scholarshipAmount: scholarshipAmount ? Number(scholarshipAmount) : undefined,
           referralAmount: referralAmount ? Number(referralAmount) : undefined,
@@ -130,6 +136,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
         .map((p, i) => ({
           name: p.name.trim(),
           email: p.email.trim() || undefined,
+          phone: p.phone.trim() || undefined,
           position: p.position.trim() || undefined,
           eFname: p.eFname.trim() || undefined,
           outreachOptIn: p.outreachOptIn,
@@ -247,11 +254,34 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
       </div>
       <form onSubmit={handleSubmit} className="px-6 py-4 space-y-5">
 
+        {/* Partner Type */}
+        <div>
+          <label className="block text-sm font-medium text-rise-black mb-2">
+            Partner Type <span className="text-red-400">*</span>
+          </label>
+          <div className="flex gap-2">
+            {PARTNER_TYPE_OPTIONS.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => { setPartnerType(type); if (type !== "School") setWorkshopType(""); }}
+                className={`px-4 py-1.5 text-sm rounded-lg border transition-colors ${
+                  partnerType === type
+                    ? "bg-rise-green text-white border-rise-green"
+                    : "bg-white text-rise-brown border-gray-200 hover:border-rise-green"
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Company Name + Country */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-rise-black mb-1">
-              Company Name <span className="text-red-400">*</span>
+              {partnerType === "School" ? "School Name" : "Company/Counselor Name"} <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
@@ -355,6 +385,16 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
                     />
                   </div>
                   <div>
+                    <label className="block text-xs font-medium text-rise-black mb-1">Phone Number</label>
+                    <input
+                      type="text"
+                      value={poc.phone}
+                      onChange={(e) => updatePoc(i, "phone", e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
+                      placeholder="+91 98765 43210"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-xs font-medium text-rise-black mb-1">Position</label>
                     <input
                       type="text"
@@ -408,6 +448,29 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           </div>
         </div>
 
+        {/* Workshop Type — School only */}
+        {partnerType === "School" && (
+          <div>
+            <label className="block text-sm font-medium text-rise-black mb-2">Workshop Type</label>
+            <div className="flex gap-2 flex-wrap">
+              {WORKSHOP_TYPE_OPTIONS.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setWorkshopType(type)}
+                  className={`px-4 py-1.5 text-sm rounded-lg border transition-colors ${
+                    workshopType === type
+                      ? "bg-rise-green text-white border-rise-green"
+                      : "bg-white text-rise-brown border-gray-200 hover:border-rise-green"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* First Meeting Notes */}
         <div>
           <label className="block text-sm font-medium text-rise-black mb-1">
@@ -428,15 +491,6 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
             Optional fields
           </summary>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-            <div>
-              <label className="block text-sm font-medium text-rise-black mb-1">Phone</label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
-              />
-            </div>
             <div>
               <label className="block text-sm font-medium text-rise-black mb-1">Capacity</label>
               <input
