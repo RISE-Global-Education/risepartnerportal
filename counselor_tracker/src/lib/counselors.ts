@@ -22,11 +22,10 @@ export function generateSlug(companyName: string): string {
 export async function getAllCounselors(): Promise<Counselor[]> {
   const records = await fetchAllRecords(COUNSELOR_DB_BASE, COUNSELOR_DB_TABLE, {
     fields: [
-      "Company Name",
+      "Partner Name",
       "Counselor ID",
       "First Name",
       "Email ID (s)",
-      "Phone Number",
       "Scholarship Amount",
       "Referral Amount",
       "Full Names (Contact DB)",
@@ -45,14 +44,13 @@ export async function getAllCounselors(): Promise<Counselor[]> {
 
   return records
     .map((record) => {
-      const companyName = getField<string>(record, "Company Name") || "";
+      const companyName = getField<string>(record, "Partner Name") || "";
       return {
         id: record.id,
         counselorId: getField<string>(record, "Counselor ID") || "",
         companyName,
         firstName: getField<string>(record, "First Name") || "",
         email: getField<string>(record, "Email ID (s)") || "",
-        phone: getField<string>(record, "Phone Number") || "",
         scholarshipAmount: getField<number>(record, "Scholarship Amount"),
         referralAmount: getField<number>(record, "Referral Amount"),
         pocNames: getField<string[]>(record, "Full Names (Contact DB)") || [],
@@ -100,7 +98,7 @@ export async function getContactsForCounselor(recordIds: string[]): Promise<Cont
 
   const formula = `OR(${recordIds.map((id) => `RECORD_ID()="${id}"`).join(",")})`;
   const records = await fetchAllRecords(COUNSELOR_DB_BASE, CONTACTS_TABLE, {
-    fields: ["Name", "Email", "Position", "E_FNAME", "Email Opt-in", "Lead ID"],
+    fields: ["Name", "Email", "Phone Number", "Position", "E_FNAME", "Email Opt-in", "Lead ID"],
     filterByFormula: formula,
   });
 
@@ -108,6 +106,7 @@ export async function getContactsForCounselor(recordIds: string[]): Promise<Cont
     id: record.id,
     name: getField<string>(record, "Name") || "",
     email: getField<string>(record, "Email") || "",
+    phone: getField<string>(record, "Phone Number") || "",
     position: getField<string>(record, "Position") || "",
     eFname: getField<string>(record, "E_FNAME") || "",
     outreachOptIn: getField<string>(record, "Email Opt-in") !== "No",

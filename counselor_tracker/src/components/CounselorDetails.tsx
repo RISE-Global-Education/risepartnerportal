@@ -130,6 +130,7 @@ interface ContactDraft {
   id: string | null; // null = new, not yet saved
   name: string;
   email: string;
+  phone: string;
   position: string;
   eFname: string;
   outreachOptIn: boolean;
@@ -154,6 +155,7 @@ function ContactsPanel({
       id: c.id,
       name: c.name,
       email: c.email,
+      phone: c.phone,
       position: c.position,
       eFname: c.eFname,
       outreachOptIn: c.outreachOptIn,
@@ -183,6 +185,7 @@ function ContactsPanel({
       return (
         d.name !== orig.name ||
         d.email !== orig.email ||
+        d.phone !== orig.phone ||
         d.position !== orig.position ||
         d.eFname !== orig.eFname ||
         d.outreachOptIn !== orig.outreachOptIn
@@ -201,6 +204,7 @@ function ContactsPanel({
         id: null,
         name: "",
         email: "",
+        phone: "",
         position: "",
         eFname: "",
         outreachOptIn: true,
@@ -222,6 +226,7 @@ function ContactsPanel({
         const changed =
           draft.name !== orig.name ||
           draft.email !== orig.email ||
+          draft.phone !== orig.phone ||
           draft.position !== orig.position ||
           draft.eFname !== orig.eFname ||
           draft.outreachOptIn !== orig.outreachOptIn;
@@ -236,6 +241,7 @@ function ContactsPanel({
             fields: {
               Name: draft.name,
               Email: draft.email,
+              "Phone Number": draft.phone,
               Position: draft.position,
               E_FNAME: draft.eFname,
               "Email Opt-in": draft.outreachOptIn ? "Yes" : "No",
@@ -251,6 +257,7 @@ function ContactsPanel({
         const contactsPayload = newDrafts.map((d, i) => ({
           name: d.name.trim(),
           email: d.email.trim() || undefined,
+          phone: d.phone.trim() || undefined,
           position: d.position.trim() || undefined,
           eFname: d.eFname.trim() || undefined,
           outreachOptIn: d.outreachOptIn,
@@ -445,6 +452,15 @@ function ContactsPanel({
                       />
                     </div>
                     <div>
+                      <label className="text-xs text-rise-brown uppercase tracking-wide">Phone Number</label>
+                      <input
+                        type="text"
+                        value={draft.phone}
+                        onChange={(e) => update(i, "phone", e.target.value)}
+                        className="mt-1 w-full px-2 py-1 text-sm border border-gray-200 rounded-md focus:border-rise-green focus:outline-none"
+                      />
+                    </div>
+                    <div>
                       <label className="text-xs text-rise-brown uppercase tracking-wide">Position</label>
                       <input
                         type="text"
@@ -499,6 +515,10 @@ function ContactsPanel({
                     <div>
                       <span className="text-xs text-rise-brown uppercase tracking-wide">Email</span>
                       <p className="text-sm font-medium text-rise-black mt-1">{draft.email || "—"}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-rise-brown uppercase tracking-wide">Phone Number</span>
+                      <p className="text-sm font-medium text-rise-black mt-1">{draft.phone || "—"}</p>
                     </div>
                     <div>
                       <span className="text-xs text-rise-brown uppercase tracking-wide">Position</span>
@@ -952,15 +972,6 @@ export default function CounselorDetails({
             <div>
               <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wider mb-3">Basic Details</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <EditableField
-                  label="Phone"
-                  value={counselor.phone}
-                  fieldName="Phone Number"
-                  recordId={counselor.id}
-                  secret={secret}
-                  isCeoView={isCeoView}
-                  onSaved={onSaved}
-                />
                 <EditableField
                   label="Country"
                   value={counselor.country}

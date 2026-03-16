@@ -6,7 +6,6 @@ export interface Counselor {
   companyName: string;
   firstName: string;
   email: string;
-  phone: string;
   scholarshipAmount: number | null;
   referralAmount: number | null;
   pocNames: string[]; // Full Names (Contact DB) lookup
@@ -45,6 +44,7 @@ export interface Contact {
   id: string;
   name: string;
   email: string;
+  phone: string;
   position: string;
   eFname: string;
   outreachOptIn: boolean;

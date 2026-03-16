@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   const finalCounselorId = counselorId || await generateNextCounselorId();
 
   const fields: Record<string, unknown> = {
-    "Company Name": companyName,
+    "Partner Name": companyName,
     "Counselor ID": finalCounselorId,
     "First Name": firstName,
     "Email ID (s)": email,

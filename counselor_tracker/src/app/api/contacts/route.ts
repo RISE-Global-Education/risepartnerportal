@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   const results = [];
 
   for (const contact of contacts) {
-    const { name, email, position, eFname, outreachOptIn, companyName, counselorId, index } = contact;
+    const { name, email, phone, position, eFname, outreachOptIn, companyName, counselorId, index } = contact;
     const leadId = `${companyName} — ${counselorId} — ${index}`;
 
     if (!name) continue;
@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
     };
 
     if (email) fields["Email"] = email;
+    if (phone) fields["Phone Number"] = phone;
     if (position) fields["Position"] = position;
     if (eFname) fields["E_FNAME"] = eFname;
 
