@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { Counselor, Contact } from "@/lib/types";
 
 // ─── Editable Field (counselor) ───────────────────────────────────────────────
@@ -165,6 +164,8 @@ function ContactsPanel({
   const [editingCards, setEditingCards] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   function setCardEditing(i: number, on: boolean) {
     setEditingCards((prev) => {
@@ -288,8 +289,68 @@ function ContactsPanel({
     }
   }
 
+  async function deletePoc(index: number) {
+    const draft = drafts[index];
+    if (!draft.id) return;
+    setDeleting(true);
+    try {
+      const remainingPocIds = drafts
+        .filter((_, j) => j !== index)
+        .map((d) => d.id)
+        .filter((id): id is string => id !== null);
+
+      const res = await fetch("/api/contacts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret,
+          recordId: draft.id,
+          counselorRecordId: counselor.id,
+          remainingPocIds,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to delete contact");
+      onSaved();
+    } catch {
+      alert("Failed to delete contact. Please try again.");
+    } finally {
+      setDeleting(false);
+      setConfirmDeleteIndex(null);
+    }
+  }
+
   return (
     <div>
+      {confirmDeleteIndex !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <h2 className="text-base font-semibold text-rise-black mb-2">Delete POC?</h2>
+            <p className="text-sm text-rise-brown mb-6">
+              Are you sure you want to delete{" "}
+              <span className="font-medium text-rise-black">
+                {drafts[confirmDeleteIndex]?.name || "this contact"}
+              </span>
+              ? This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteIndex(null)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 text-sm text-rise-brown border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deletePoc(confirmDeleteIndex)}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wider">Contacts</h3>
         {isCeoView && (
@@ -323,13 +384,22 @@ function ContactsPanel({
                     </button>
                   )}
                   {isCeoView && isEditing && draft.id !== null && (
-                    <button
-                      type="button"
-                      onClick={() => setCardEditing(i, false)}
-                      className="text-xs text-rise-brown hover:text-rise-black"
-                    >
-                      Cancel
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteIndex(i)}
+                        className="text-xs text-red-400 hover:text-red-600"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCardEditing(i, false)}
+                        className="text-xs text-rise-brown hover:text-rise-black"
+                      >
+                        Cancel
+                      </button>
+                    </>
                   )}
                   {isCeoView && draft.id === null && (
                     <button
@@ -824,13 +894,12 @@ export default function CounselorDetails({
   isCeoView: boolean;
   secret: string;
 }) {
-  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [mouModal, setMouModal] = useState<"scholarship" | "referral" | null>(null);
   const [outreachOpen, setOutreachOpen] = useState(false);
 
   function onSaved() {
-    router.refresh();
+    window.location.reload();
   }
 
   // Partners only see MOU download (if exists)
