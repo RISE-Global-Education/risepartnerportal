@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getAllLeads, getAllApplications, getAllCounselorRecords, computeAnalytics } from "@/lib/analytics";
+import { getAllLeads, getAllApplications, getAllCounselorRecords, getAllDiscoveryCalls, computeAnalytics } from "@/lib/analytics";
 import { getAllCounselors } from "@/lib/counselors";
 import TimePeriodSelector from "@/components/dashboard/TimePeriodSelector";
 import FunnelOverviewCards from "@/components/dashboard/FunnelOverviewCards";
@@ -12,6 +12,10 @@ import DropOffChart from "@/components/dashboard/DropOffChart";
 import VelocityChart from "@/components/dashboard/VelocityChart";
 import TopCounselorsChart from "@/components/dashboard/TopCounselorsChart";
 import CounselorActivityChart from "@/components/dashboard/CounselorActivityChart";
+import DiscoveryOverviewCards from "@/components/dashboard/DiscoveryOverviewCards";
+import DiscoveryLeadsChart from "@/components/dashboard/DiscoveryLeadsChart";
+import DiscoveryConsultationsChart from "@/components/dashboard/DiscoveryConsultationsChart";
+import DiscoveryFormSentChart from "@/components/dashboard/DiscoveryFormSentChart";
 
 export default async function DashboardPage({
   searchParams,
@@ -20,11 +24,12 @@ export default async function DashboardPage({
 }) {
   const { period = "30d" } = await searchParams;
 
-  const [leads, applications, counselorRecords, counselors] = await Promise.all([
+  const [leads, applications, counselorRecords, counselors, discoveryCalls] = await Promise.all([
     getAllLeads(),
     getAllApplications(),
     getAllCounselorRecords(),
     getAllCounselors(),
+    getAllDiscoveryCalls(),
   ]);
 
   // Build counselorId → company name map
@@ -33,7 +38,7 @@ export default async function DashboardPage({
     counselorNameMap.set(c.counselorId, c.companyName);
   }
 
-  const analytics = computeAnalytics(leads, applications, counselorRecords, counselorNameMap, period);
+  const analytics = computeAnalytics(leads, applications, counselorRecords, counselorNameMap, period, discoveryCalls);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
@@ -86,7 +91,20 @@ export default async function DashboardPage({
         <VelocityChart data={analytics.velocity} />
       </section>
 
-      {/* Section 5: Counselor Insights */}
+      {/* Section 5: Discovery Call Analytics */}
+      <section className="mt-8">
+        <h2 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">Discovery Call Pipeline</h2>
+        <DiscoveryOverviewCards summary={analytics.discoverySummary} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+          <DiscoveryLeadsChart data={analytics.discoveryLeadsOverTime} />
+          <DiscoveryConsultationsChart data={analytics.discoveryConsultationsOverTime} />
+        </div>
+        <div className="mt-4">
+          <DiscoveryFormSentChart data={analytics.discoveryFormSentOverTime} />
+        </div>
+      </section>
+
+      {/* Section 6: Counselor Insights */}
       <section className="mt-8 pb-8">
         <h2 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">Counselor Insights</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

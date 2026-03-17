@@ -8,6 +8,14 @@ const COUNSELOR_RECORDS_TABLE = "tblzcy02PoVxhAXId";
 
 // --- Raw record types ---
 
+export interface DiscoveryCallRecord {
+  id: string;
+  createdDate: string; // ISO
+  consultationDate: string | null; // ISO
+  applicationFormStatus: string | null; // "Form Sent" | "Pending" | null
+  lastModified: string; // ISO
+}
+
 export interface LeadRecord {
   id: string;
   name: string;
@@ -32,6 +40,20 @@ export interface CounselorRecord {
 }
 
 // --- Fetchers ---
+
+export async function getAllDiscoveryCalls(): Promise<DiscoveryCallRecord[]> {
+  const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
+    fields: ["Created", "Consultation Date", "Student Application Form", "Last Modified"],
+  });
+
+  return records.map((r) => ({
+    id: r.id,
+    createdDate: getField<string>(r, "Created") || r.createdTime,
+    consultationDate: getField<string>(r, "Consultation Date") || null,
+    applicationFormStatus: getField<string>(r, "Student Application Form") || null,
+    lastModified: getField<string>(r, "Last Modified") || r.createdTime,
+  }));
+}
 
 export async function getAllLeads(): Promise<LeadRecord[]> {
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
@@ -149,6 +171,12 @@ export interface AnalyticsData {
   // Section 5: Counselor insights
   topCounselors: { name: string; total: number; Lead: number; Application: number; Interview: number; Client: number }[];
   counselorActivity: { name: string; lastReferralDate: string; totalStudents: number; isActive: boolean }[];
+
+  // Section 6: Discovery call analytics
+  discoveryLeadsOverTime: { date: string; count: number }[];
+  discoveryConsultationsOverTime: { date: string; count: number }[];
+  discoveryFormSentOverTime: { date: string; count: number }[];
+  discoverySummary: { totalLeads: number; totalConsultations: number; totalFormSent: number };
 }
 
 export function computeAnalytics(
@@ -156,7 +184,8 @@ export function computeAnalytics(
   applications: ApplicationRecord[],
   counselorRecords: CounselorRecord[],
   counselorNameMap: Map<string, string>,
-  period: string
+  period: string,
+  discoveryCalls: DiscoveryCallRecord[] = []
 ): AnalyticsData {
   const days = periodToDays(period);
   const periodStart = days ? daysAgo(days) : null;
@@ -182,11 +211,12 @@ export function computeAnalytics(
   }
 
   // Applications (including all non-drop statuses)
+  // Use lastModified so the period reflects when they *entered* their current stage, not when they applied
   for (const app of applications) {
     if (app.followUpStatus === "Drop") continue;
     const stage = getStageFromFollowUp(app.followUpStatus);
-    if (isInPeriod(app.createdDate, periodStart)) stageCounts[stage]++;
-    if (prevPeriodStart && isInPeriod(app.createdDate, prevPeriodStart) && !isInPeriod(app.createdDate, periodStart)) {
+    if (isInPeriod(app.lastModified, periodStart)) stageCounts[stage]++;
+    if (prevPeriodStart && isInPeriod(app.lastModified, prevPeriodStart) && !isInPeriod(app.lastModified, periodStart)) {
       stageCountsPrevious[stage]++;
     }
   }
@@ -222,8 +252,8 @@ export function computeAnalytics(
   }
 
   for (const app of applications) {
-    if (!isInPeriod(app.createdDate, periodStart)) continue;
-    const key = keyFn(app.createdDate);
+    if (!isInPeriod(app.lastModified, periodStart)) continue;
+    const key = keyFn(app.lastModified);
     const entry = leadsTimeMap.get(key) || { leads: 0, applications: 0 };
     entry.applications++;
     leadsTimeMap.set(key, entry);
@@ -246,9 +276,9 @@ export function computeAnalytics(
 
   for (const app of applications) {
     if (app.followUpStatus === "Drop") continue;
-    if (!isInPeriod(app.createdDate, periodStart)) continue;
+    if (!isInPeriod(app.lastModified, periodStart)) continue;
     const stage = getStageFromFollowUp(app.followUpStatus);
-    const key = keyFn(app.createdDate);
+    const key = keyFn(app.lastModified);
     const entry = stageTimeMap.get(key) || { Lead: 0, Application: 0, Interview: 0, Client: 0 };
     entry[stage]++;
     stageTimeMap.set(key, entry);
@@ -420,6 +450,48 @@ export function computeAnalytics(
     .filter((c) => c.totalStudents > 0)
     .sort((a, b) => b.lastReferralDate.localeCompare(a.lastReferralDate));
 
+  // --- DISCOVERY CALL ANALYTICS ---
+  const discoveryLeadsMap = new Map<string, number>();
+  const discoveryConsultationsMap = new Map<string, number>();
+  const discoveryFormSentMap = new Map<string, number>();
+
+  let discoveryTotalLeads = 0;
+  let discoveryTotalConsultations = 0;
+  let discoveryTotalFormSent = 0;
+
+  for (const dc of discoveryCalls) {
+    // Leads created in period
+    if (isInPeriod(dc.createdDate, periodStart)) {
+      const key = keyFn(dc.createdDate);
+      discoveryLeadsMap.set(key, (discoveryLeadsMap.get(key) || 0) + 1);
+      discoveryTotalLeads++;
+    }
+
+    // Consultations that happened in period (by consultationDate)
+    if (dc.consultationDate && isInPeriod(dc.consultationDate, periodStart)) {
+      const key = keyFn(dc.consultationDate);
+      discoveryConsultationsMap.set(key, (discoveryConsultationsMap.get(key) || 0) + 1);
+      discoveryTotalConsultations++;
+    }
+
+    // Form sent: status = "Form Sent", bucketed by lastModified
+    if (dc.applicationFormStatus === "Form Sent" && isInPeriod(dc.lastModified, periodStart)) {
+      const key = keyFn(dc.lastModified);
+      discoveryFormSentMap.set(key, (discoveryFormSentMap.get(key) || 0) + 1);
+      discoveryTotalFormSent++;
+    }
+  }
+
+  const toSortedArray = (map: Map<string, number>) =>
+    Array.from(map.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+  const discoveryLeadsOverTime = toSortedArray(discoveryLeadsMap);
+  const discoveryConsultationsOverTime = toSortedArray(discoveryConsultationsMap);
+  const discoveryFormSentOverTime = toSortedArray(discoveryFormSentMap);
+  const discoverySummary = { totalLeads: discoveryTotalLeads, totalConsultations: discoveryTotalConsultations, totalFormSent: discoveryTotalFormSent };
+
   return {
     stageCounts,
     stageCountsPrevious,
@@ -432,5 +504,9 @@ export function computeAnalytics(
     velocity,
     topCounselors,
     counselorActivity,
+    discoveryLeadsOverTime,
+    discoveryConsultationsOverTime,
+    discoveryFormSentOverTime,
+    discoverySummary,
   };
 }
