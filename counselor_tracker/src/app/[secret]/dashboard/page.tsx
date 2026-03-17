@@ -15,14 +15,13 @@ import CounselorActivityChart from "@/components/dashboard/CounselorActivityChar
 import DiscoveryOverviewCards from "@/components/dashboard/DiscoveryOverviewCards";
 import DiscoveryLeadsChart from "@/components/dashboard/DiscoveryLeadsChart";
 import DiscoveryConsultationsChart from "@/components/dashboard/DiscoveryConsultationsChart";
-import DiscoveryFormSentChart from "@/components/dashboard/DiscoveryFormSentChart";
 
 export default async function DashboardPage({
   searchParams,
 }: {
   searchParams: Promise<{ period?: string }>;
 }) {
-  const { period = "30d" } = await searchParams;
+  const { period = "7d" } = await searchParams;
 
   const [leads, applications, counselorRecords, counselors, discoveryCalls] = await Promise.all([
     getAllLeads(),
@@ -98,9 +97,6 @@ export default async function DashboardPage({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
           <DiscoveryLeadsChart data={analytics.discoveryLeadsOverTime} />
           <DiscoveryConsultationsChart data={analytics.discoveryConsultationsOverTime} />
-        </div>
-        <div className="mt-4">
-          <DiscoveryFormSentChart data={analytics.discoveryFormSentOverTime} />
         </div>
       </section>
 

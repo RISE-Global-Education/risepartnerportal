@@ -12,7 +12,8 @@ export interface DiscoveryCallRecord {
   id: string;
   createdDate: string; // ISO
   consultationDate: string | null; // ISO
-  applicationFormStatus: string | null; // "Form Sent" | "Pending" | null
+  applicationFormStatus: string | null; // "Form Sent" | "Don't Send" | "Drop" | null
+  notes: string | null;
   lastModified: string; // ISO
 }
 
@@ -43,7 +44,7 @@ export interface CounselorRecord {
 
 export async function getAllDiscoveryCalls(): Promise<DiscoveryCallRecord[]> {
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
-    fields: ["Created", "Consultation Date", "Student Application Form", "Last Modified"],
+    fields: ["Created", "Consultation Date", "Student Application Form", "Last Modified", "Notes"],
   });
 
   return records.map((r) => ({
@@ -51,6 +52,7 @@ export async function getAllDiscoveryCalls(): Promise<DiscoveryCallRecord[]> {
     createdDate: getField<string>(r, "Created") || r.createdTime,
     consultationDate: getField<string>(r, "Consultation Date") || null,
     applicationFormStatus: getField<string>(r, "Student Application Form") || null,
+    notes: getField<string>(r, "Notes") || null,
     lastModified: getField<string>(r, "Last Modified") || r.createdTime,
   }));
 }
@@ -174,9 +176,8 @@ export interface AnalyticsData {
 
   // Section 6: Discovery call analytics
   discoveryLeadsOverTime: { date: string; count: number }[];
-  discoveryConsultationsOverTime: { date: string; count: number }[];
-  discoveryFormSentOverTime: { date: string; count: number }[];
-  discoverySummary: { totalLeads: number; totalConsultations: number; totalFormSent: number };
+  discoveryConsultationsOverTime: { date: string; total: number; qualified: number; missed: number; unqualified: number }[];
+  discoverySummary: { totalLeads: number; totalConsultations: number };
 }
 
 export function computeAnalytics(
@@ -452,12 +453,10 @@ export function computeAnalytics(
 
   // --- DISCOVERY CALL ANALYTICS ---
   const discoveryLeadsMap = new Map<string, number>();
-  const discoveryConsultationsMap = new Map<string, number>();
-  const discoveryFormSentMap = new Map<string, number>();
-
+  type ConsultBucket = { total: number; qualified: number; missed: number; unqualified: number };
+  const discoveryConsultationsMap = new Map<string, ConsultBucket>();
   let discoveryTotalLeads = 0;
   let discoveryTotalConsultations = 0;
-  let discoveryTotalFormSent = 0;
 
   for (const dc of discoveryCalls) {
     // Leads created in period
@@ -470,15 +469,17 @@ export function computeAnalytics(
     // Consultations that happened in period (by consultationDate)
     if (dc.consultationDate && isInPeriod(dc.consultationDate, periodStart)) {
       const key = keyFn(dc.consultationDate);
-      discoveryConsultationsMap.set(key, (discoveryConsultationsMap.get(key) || 0) + 1);
+      const bucket = discoveryConsultationsMap.get(key) || { total: 0, qualified: 0, missed: 0, unqualified: 0 };
+      bucket.total++;
+      if (dc.applicationFormStatus === "Form Sent") {
+        bucket.qualified++;
+      } else if (dc.notes?.toLowerCase().includes("missed")) {
+        bucket.missed++;
+      } else if (dc.applicationFormStatus === "Don't Send" || dc.applicationFormStatus === "Drop") {
+        bucket.unqualified++;
+      }
+      discoveryConsultationsMap.set(key, bucket);
       discoveryTotalConsultations++;
-    }
-
-    // Form sent: status = "Form Sent", bucketed by lastModified
-    if (dc.applicationFormStatus === "Form Sent" && isInPeriod(dc.lastModified, periodStart)) {
-      const key = keyFn(dc.lastModified);
-      discoveryFormSentMap.set(key, (discoveryFormSentMap.get(key) || 0) + 1);
-      discoveryTotalFormSent++;
     }
   }
 
@@ -488,9 +489,10 @@ export function computeAnalytics(
       .sort((a, b) => a.date.localeCompare(b.date));
 
   const discoveryLeadsOverTime = toSortedArray(discoveryLeadsMap);
-  const discoveryConsultationsOverTime = toSortedArray(discoveryConsultationsMap);
-  const discoveryFormSentOverTime = toSortedArray(discoveryFormSentMap);
-  const discoverySummary = { totalLeads: discoveryTotalLeads, totalConsultations: discoveryTotalConsultations, totalFormSent: discoveryTotalFormSent };
+  const discoveryConsultationsOverTime = Array.from(discoveryConsultationsMap.entries())
+    .map(([date, bucket]) => ({ date, ...bucket }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const discoverySummary = { totalLeads: discoveryTotalLeads, totalConsultations: discoveryTotalConsultations };
 
   return {
     stageCounts,
@@ -506,7 +508,6 @@ export function computeAnalytics(
     counselorActivity,
     discoveryLeadsOverTime,
     discoveryConsultationsOverTime,
-    discoveryFormSentOverTime,
     discoverySummary,
   };
 }
