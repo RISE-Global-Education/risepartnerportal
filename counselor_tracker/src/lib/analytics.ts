@@ -253,8 +253,8 @@ export function computeAnalytics(
   }
 
   for (const app of applications) {
-    if (!isInPeriod(app.lastModified, periodStart)) continue;
-    const key = keyFn(app.lastModified);
+    if (!isInPeriod(app.createdDate, periodStart)) continue;
+    const key = keyFn(app.createdDate);
     const entry = leadsTimeMap.get(key) || { leads: 0, applications: 0 };
     entry.applications++;
     leadsTimeMap.set(key, entry);
