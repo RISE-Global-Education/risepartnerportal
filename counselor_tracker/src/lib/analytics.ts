@@ -160,7 +160,7 @@ export interface AnalyticsData {
 
   // Section 2: Flow over time
   leadsOverTime: { date: string; leads: number; applications: number }[];
-  stageEntriesOverTime: { date: string; Lead: number; Application: number; Interview: number; Client: number }[];
+  stageEntriesOverTime: { date: string; Lead: number; Application: number; Interview: number }[];
   interviewsOverTime: { date: string; count: number }[];
 
   // Section 3: Conversion & drop-off
@@ -200,8 +200,8 @@ export function computeAnalytics(
   const now = new Date();
 
   // --- STAGE COUNTS (current period) ---
-  const stageCounts: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0, Client: 0 };
-  const stageCountsPrevious: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0, Client: 0 };
+  const stageCounts: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0 };
+  const stageCountsPrevious: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0 };
 
   // Leads
   for (const lead of uniqueLeads) {
@@ -265,22 +265,31 @@ export function computeAnalytics(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // --- TIME SERIES: Stage entries ---
-  const stageTimeMap = new Map<string, { Lead: number; Application: number; Interview: number; Client: number }>();
+  const stageTimeMap = new Map<string, { Lead: number; Application: number; Interview: number }>();
 
   for (const lead of uniqueLeads) {
     if (!isInPeriod(lead.createdDate, periodStart)) continue;
     const key = keyFn(lead.createdDate);
-    const entry = stageTimeMap.get(key) || { Lead: 0, Application: 0, Interview: 0, Client: 0 };
+    const entry = stageTimeMap.get(key) || { Lead: 0, Application: 0, Interview: 0 };
     entry.Lead++;
     stageTimeMap.set(key, entry);
   }
 
   for (const app of applications) {
     if (app.followUpStatus === "Drop") continue;
-    if (!isInPeriod(app.lastModified, periodStart)) continue;
     const stage = getStageFromFollowUp(app.followUpStatus);
-    const key = keyFn(app.lastModified);
-    const entry = stageTimeMap.get(key) || { Lead: 0, Application: 0, Interview: 0, Client: 0 };
+    if (stage === "Client") continue;
+    let dateToUse: string;
+    if (stage === "Application") {
+      dateToUse = app.createdDate;
+    } else if (stage === "Interview" && app.interviewDate) {
+      dateToUse = app.interviewDate;
+    } else {
+      dateToUse = app.lastModified;
+    }
+    if (!isInPeriod(dateToUse, periodStart)) continue;
+    const key = keyFn(dateToUse);
+    const entry = stageTimeMap.get(key) || { Lead: 0, Application: 0, Interview: 0 };
     entry[stage]++;
     stageTimeMap.set(key, entry);
   }

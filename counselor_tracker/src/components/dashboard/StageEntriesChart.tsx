@@ -6,13 +6,12 @@ const COLORS = {
   Lead: "#f59e0b",
   Application: "#3b82f6",
   Interview: "#8b5cf6",
-  Client: "#10b981",
 };
 
 export default function StageEntriesChart({
   data,
 }: {
-  data: { date: string; Lead: number; Application: number; Interview: number; Client: number }[];
+  data: { date: string; Lead: number; Application: number; Interview: number }[];
 }) {
   return (
     <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
