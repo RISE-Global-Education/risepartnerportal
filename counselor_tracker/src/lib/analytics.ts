@@ -200,8 +200,8 @@ export function computeAnalytics(
   const now = new Date();
 
   // --- STAGE COUNTS (current period) ---
-  const stageCounts: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0 };
-  const stageCountsPrevious: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0 };
+  const stageCounts: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0, Client: 0 };
+  const stageCountsPrevious: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0, Client: 0 };
 
   // Leads
   for (const lead of uniqueLeads) {

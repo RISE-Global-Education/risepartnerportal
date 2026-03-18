@@ -15,7 +15,7 @@ export default function TimePeriodSelector() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const current = (searchParams.get("period") as TimePeriod) || "30d";
+  const current = (searchParams.get("period") as TimePeriod) || "7d";
 
   function select(value: TimePeriod) {
     const params = new URLSearchParams(searchParams.toString());
