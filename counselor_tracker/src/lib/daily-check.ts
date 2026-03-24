@@ -13,7 +13,7 @@ export const ACCEPTANCE_SEQUENCES = ["Acceptance Email - No Scholarship", "Accep
 export const SHORTLISTING_STATUSES = ["SWA1", "SWA2", "SWA3", "Call Shortlisting"];
 export const SHORTLISTING_SEQUENCES = ["Shortlisting Mail"];
 
-export const BOOKING_SEQUENCES = ["Parents  Discovery - Booking Link"];
+export const BOOKING_SEQUENCES = ["Parents  Discovery - Booking Link", "Parents Discovery - Booking Link (Updated)"];
 export const FORM_SEQUENCES = ["Parents  Discovery - Application Form"];
 
 export const DAYS = 30;
