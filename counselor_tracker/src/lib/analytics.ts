@@ -73,10 +73,8 @@ export async function getAllLeads(): Promise<LeadRecord[]> {
 
 function parseClientDate(raw: string | null): string | null {
   if (!raw) return null;
-  // Format: DD/MM/YYYY
-  const [day, month, year] = raw.split("/");
-  if (!day || !month || !year) return null;
-  return new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`).toISOString();
+  // Airtable returns ISO date string (YYYY-MM-DD)
+  return new Date(raw).toISOString();
 }
 
 export async function getAllApplications(): Promise<ApplicationRecord[]> {
