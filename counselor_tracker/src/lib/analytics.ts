@@ -32,6 +32,7 @@ export interface ApplicationRecord {
   createdDate: string; // ISO
   interviewDate: string | null;
   lastModified: string; // ISO
+  clientDate: string | null; // ISO, parsed from "Client Date" field (DD/MM/YYYY)
 }
 
 export interface CounselorRecord {
@@ -70,9 +71,17 @@ export async function getAllLeads(): Promise<LeadRecord[]> {
   }));
 }
 
+function parseClientDate(raw: string | null): string | null {
+  if (!raw) return null;
+  // Format: DD/MM/YYYY
+  const [day, month, year] = raw.split("/");
+  if (!day || !month || !year) return null;
+  return new Date(`${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`).toISOString();
+}
+
 export async function getAllApplications(): Promise<ApplicationRecord[]> {
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {
-    fields: ["Name", "Student Email ID", "Follow Up Status", "Created", "Interview Date", "Last Modified"],
+    fields: ["Name", "Student Email ID", "Follow Up Status", "Created", "Interview Date", "Last Modified", "Client Date"],
   });
 
   return records.map((r) => ({
@@ -83,6 +92,7 @@ export async function getAllApplications(): Promise<ApplicationRecord[]> {
     createdDate: getField<string>(r, "Created") || r.createdTime,
     interviewDate: getField<string>(r, "Interview Date") || null,
     lastModified: getField<string>(r, "Last Modified") || r.createdTime,
+    clientDate: parseClientDate(getField<string>(r, "Client Date") || null),
   }));
 }
 
@@ -212,13 +222,21 @@ export function computeAnalytics(
   }
 
   // Applications (including all non-drop statuses)
-  // Use lastModified so the period reflects when they *entered* their current stage, not when they applied
+  // For Client stage, use clientDate; for others, use lastModified
   for (const app of applications) {
     if (app.followUpStatus === "Drop") continue;
     const stage = getStageFromFollowUp(app.followUpStatus);
-    if (isInPeriod(app.lastModified, periodStart)) stageCounts[stage]++;
-    if (prevPeriodStart && isInPeriod(app.lastModified, prevPeriodStart) && !isInPeriod(app.lastModified, periodStart)) {
-      stageCountsPrevious[stage]++;
+    if (stage === "Client") {
+      if (!app.clientDate) continue;
+      if (isInPeriod(app.clientDate, periodStart)) stageCounts.Client++;
+      if (prevPeriodStart && isInPeriod(app.clientDate, prevPeriodStart) && !isInPeriod(app.clientDate, periodStart)) {
+        stageCountsPrevious.Client++;
+      }
+    } else {
+      if (isInPeriod(app.lastModified, periodStart)) stageCounts[stage]++;
+      if (prevPeriodStart && isInPeriod(app.lastModified, prevPeriodStart) && !isInPeriod(app.lastModified, periodStart)) {
+        stageCountsPrevious[stage]++;
+      }
     }
   }
 
