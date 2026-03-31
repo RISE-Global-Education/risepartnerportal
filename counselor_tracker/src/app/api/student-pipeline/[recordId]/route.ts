@@ -31,6 +31,9 @@ export async function PATCH(
   if (body.followUpStatus !== undefined) {
     fields["Follow Up Status"] = body.followUpStatus;
   }
+  if (body.mentorField !== undefined) {
+    fields["Mentor Field"] = body.mentorField;
+  }
 
   if (Object.keys(fields).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });

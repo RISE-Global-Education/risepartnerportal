@@ -27,6 +27,7 @@ export interface ScholarApplicant {
   researchPackage: string;
   interviewDate: string;
   notes: string;
+  mentorField: string;
 }
 
 export default async function StudentPipelinePage() {
@@ -54,6 +55,7 @@ export default async function StudentPipelinePage() {
       "Research Package",
       "Interview Date",
       "Notes",
+      "Mentor Field",
     ],
   });
 
@@ -80,6 +82,7 @@ export default async function StudentPipelinePage() {
     researchPackage: getField<string>(r, "Research Package") ?? "",
     interviewDate: getField<string>(r, "Interview Date") ?? "",
     notes: getField<string>(r, "Notes") ?? "",
+    mentorField: getField<string>(r, "Mentor Field") ?? "",
   }));
 
   return (

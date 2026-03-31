@@ -7,6 +7,7 @@ interface EditState {
   notes: string;
   interviewDate: string;
   acceptanceStatus: "" | "Send Acceptance" | "Send Rejection";
+  mentorField: string;
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -34,6 +35,7 @@ function Modal({
     notes: student.notes,
     interviewDate: student.interviewDate,
     acceptanceStatus: "",
+    mentorField: student.mentorField,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +49,7 @@ function Modal({
       const body: Record<string, unknown> = {
         notes: edit.notes,
         interviewDate: edit.interviewDate || null,
+        mentorField: edit.mentorField,
       };
       if (edit.acceptanceStatus) {
         body.acceptanceStatus = edit.acceptanceStatus;
@@ -177,6 +180,19 @@ function Modal({
                   rows={4}
                   placeholder="Add notes from the interview…"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">
+                  Mentor Field
+                </label>
+                <input
+                  type="text"
+                  value={edit.mentorField}
+                  onChange={(e) => setEdit((prev) => ({ ...prev, mentorField: e.target.value }))}
+                  placeholder="Assign a mentor…"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40"
                 />
               </div>
 
