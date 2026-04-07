@@ -42,18 +42,22 @@ function Modal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError(null);
+
+    if (!edit.interviewDate || !edit.notes.trim() || !edit.mentorField.trim() || !edit.acceptanceStatus) {
+      setError("Please fill in all required fields: Interview Date, Interview Notes, Mentor Field, and Acceptance Status.");
+      return;
+    }
+
+    setSaving(true);
 
     try {
       const body: Record<string, unknown> = {
         notes: edit.notes,
-        interviewDate: edit.interviewDate || null,
+        interviewDate: edit.interviewDate,
         mentorField: edit.mentorField,
+        acceptanceStatus: edit.acceptanceStatus,
       };
-      if (edit.acceptanceStatus) {
-        body.acceptanceStatus = edit.acceptanceStatus;
-      }
 
       const res = await fetch(`/api/student-pipeline/${student.recordId}`, {
         method: "PATCH",
