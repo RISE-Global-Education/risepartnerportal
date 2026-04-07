@@ -8,6 +8,7 @@ export default function DiscoverySubTabNav({ secret }: { secret: string }) {
 
   const tabs = [
     { label: "Upcoming", href: `${base}/upcoming` },
+    { label: "Unqualified", href: `${base}/unqualified` },
   ];
 
   return (
