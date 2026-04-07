@@ -75,22 +75,22 @@ export default function UnqualifiedClient({ rows }: { rows: UnqualifiedRow[] }) 
       />
 
       <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="min-w-full text-sm">
+        <table className="w-full text-xs">
           <thead className="bg-gray-50 text-rise-brown">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Student Name</th>
-              <th className="px-4 py-3 text-left font-medium">Student Email</th>
-              <th className="px-4 py-3 text-left font-medium">Parent Name</th>
-              <th className="px-4 py-3 text-left font-medium">Parent Email</th>
-              <th className="px-4 py-3 text-left font-medium">Host</th>
-              <th className="px-4 py-3 text-left font-medium">Upcoming Booking</th>
-              <th className="px-4 py-3 text-left font-medium">Action</th>
+              <th className="px-3 py-2.5 text-left font-medium whitespace-nowrap">Student Name</th>
+              <th className="px-3 py-2.5 text-left font-medium whitespace-nowrap">Student Email</th>
+              <th className="px-3 py-2.5 text-left font-medium whitespace-nowrap">Parent Name</th>
+              <th className="px-3 py-2.5 text-left font-medium whitespace-nowrap">Parent Email</th>
+              <th className="px-3 py-2.5 text-left font-medium whitespace-nowrap">Host</th>
+              <th className="px-3 py-2.5 text-left font-medium whitespace-nowrap">Upcoming Booking (UTC)</th>
+              <th className="px-3 py-2.5 text-left font-medium whitespace-nowrap">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-rise-brown">
+                <td colSpan={7} className="px-3 py-6 text-center text-rise-brown">
                   No records found.
                 </td>
               </tr>
@@ -99,37 +99,37 @@ export default function UnqualifiedClient({ rows }: { rows: UnqualifiedRow[] }) 
                 const isCancelled = r.bookingUid ? cancelled.has(r.bookingUid) : false;
                 return (
                   <tr key={r.recordId} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-rise-black whitespace-nowrap">
+                    <td className="px-3 py-2.5 font-medium text-rise-black whitespace-nowrap">
                       {r.studentName}
                     </td>
-                    <td className="px-4 py-3 text-rise-brown text-xs">
+                    <td className="px-3 py-2.5 text-rise-brown">
                       {r.studentEmail || <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-rise-brown">
+                    <td className="px-3 py-2.5 text-rise-brown whitespace-nowrap">
                       {r.parentName || <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-rise-brown text-xs">
+                    <td className="px-3 py-2.5 text-rise-brown">
                       {r.parentEmail || <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-rise-brown">
+                    <td className="px-3 py-2.5 text-rise-brown whitespace-nowrap">
                       {r.hostName || <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-3 py-2.5 max-w-[140px]">
                       {isCancelled ? (
-                        <span className="text-xs text-gray-400 italic">Cancelled</span>
+                        <span className="text-gray-400 italic">Cancelled</span>
                       ) : r.bookingStart ? (
-                        <span className="text-xs text-rise-black">{formatDateTime(r.bookingStart)}</span>
+                        <span className="text-rise-black break-words">{formatDateTime(r.bookingStart)}</span>
                       ) : (
-                        <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">
                           No booking
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5">
                       {r.bookingUid && !isCancelled ? (
                         <button
                           onClick={() => openModal(r.bookingUid!)}
-                          className="text-xs px-3 py-1.5 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors whitespace-nowrap"
+                          className="px-3 py-1.5 rounded-md border border-red-200 text-red-600 hover:bg-red-50 transition-colors whitespace-nowrap"
                         >
                           Cancel Booking
                         </button>
