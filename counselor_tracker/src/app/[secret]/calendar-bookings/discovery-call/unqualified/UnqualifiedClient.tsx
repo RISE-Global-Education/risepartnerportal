@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { UnqualifiedRow } from "./page";
 
 const DEFAULT_REASON =
-  "Our slots for this year are currently filled. Please reapply next year. Thank you, Team RISE.";
+  "Our slots for this year are currently filled. Please reapply next year.";
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
@@ -82,6 +82,7 @@ export default function UnqualifiedClient({ rows }: { rows: UnqualifiedRow[] }) 
               <th className="px-4 py-3 text-left font-medium">Student Email</th>
               <th className="px-4 py-3 text-left font-medium">Parent Name</th>
               <th className="px-4 py-3 text-left font-medium">Parent Email</th>
+              <th className="px-4 py-3 text-left font-medium">Host</th>
               <th className="px-4 py-3 text-left font-medium">Upcoming Booking</th>
               <th className="px-4 py-3 text-left font-medium">Action</th>
             </tr>
@@ -89,7 +90,7 @@ export default function UnqualifiedClient({ rows }: { rows: UnqualifiedRow[] }) 
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-rise-brown">
+                <td colSpan={7} className="px-4 py-6 text-center text-rise-brown">
                   No records found.
                 </td>
               </tr>
@@ -109,6 +110,9 @@ export default function UnqualifiedClient({ rows }: { rows: UnqualifiedRow[] }) 
                     </td>
                     <td className="px-4 py-3 text-rise-brown text-xs">
                       {r.parentEmail || <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-rise-brown">
+                      {r.hostName || <span className="text-gray-300">—</span>}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {isCancelled ? (

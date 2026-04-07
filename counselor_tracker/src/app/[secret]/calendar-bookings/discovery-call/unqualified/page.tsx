@@ -14,11 +14,12 @@ export interface UnqualifiedRow {
   // populated if a Cal.com booking matched
   bookingUid: string | null;
   bookingStart: string | null;
+  hostName: string | null;
 }
 
 async function fetchAllUpcomingBookings() {
   const take = 100;
-  const all: { uid: string; attendeeEmail: string; start: string }[] = [];
+  const all: { uid: string; attendeeEmail: string; start: string; hostName: string }[] = [];
   let page = 1;
   let hasMore = true;
 
@@ -44,7 +45,7 @@ async function fetchAllUpcomingBookings() {
     const json = await res.json();
     for (const b of json.data ?? []) {
       const email = b.attendees?.[0]?.email ?? "";
-      if (email) all.push({ uid: b.uid, attendeeEmail: email.toLowerCase().trim(), start: b.start });
+      if (email) all.push({ uid: b.uid, attendeeEmail: email.toLowerCase().trim(), start: b.start, hostName: b.hosts?.[0]?.name ?? "—" });
     }
 
     hasMore = json.pagination?.hasNextPage ?? false;
@@ -64,10 +65,10 @@ export default async function UnqualifiedPage() {
   ]);
 
   // Build a map: email → booking for fast lookup
-  const bookingByEmail = new Map<string, { uid: string; start: string }>();
+  const bookingByEmail = new Map<string, { uid: string; start: string; hostName: string }>();
   for (const b of bookings) {
     if (!bookingByEmail.has(b.attendeeEmail)) {
-      bookingByEmail.set(b.attendeeEmail, { uid: b.uid, start: b.start });
+      bookingByEmail.set(b.attendeeEmail, { uid: b.uid, start: b.start, hostName: b.hostName });
     }
   }
 
@@ -85,6 +86,7 @@ export default async function UnqualifiedPage() {
       parentEmail: getField<string>(r, "Parent Email ID") ?? "",
       bookingUid: match?.uid ?? null,
       bookingStart: match?.start ?? null,
+      hostName: match?.hostName ?? null,
     };
   });
 
