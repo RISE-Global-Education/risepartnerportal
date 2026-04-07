@@ -10,13 +10,15 @@ export default function NavBar({ secret, role }: { secret: string; role: "admin"
   const isSearch = pathname.endsWith("/search");
   const isInsights = pathname.includes("/insights");
   const isPipeline = pathname.includes("/student-pipeline");
-  const isDashboard = pathname.includes("/dashboard") && !isSearch && !isInsights && !isPipeline;
+  const isCalendar = pathname.includes("/calendar-bookings");
+  const isDashboard = pathname.includes("/dashboard") && !isSearch && !isInsights && !isPipeline && !isCalendar;
 
   const allTabs = [
     { label: "Dashboard", href: `${basePath}/dashboard`, active: isDashboard, adminOnly: true },
     { label: "Search", href: `${basePath}/search`, active: isSearch, adminOnly: true },
     { label: "Student Pipeline", href: `${basePath}/student-pipeline`, active: isPipeline, adminOnly: false },
     { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights, adminOnly: true },
+    { label: "Calendar Bookings", href: `${basePath}/calendar-bookings`, active: isCalendar, adminOnly: true },
   ];
 
   const tabs = role === "admin" ? allTabs : allTabs.filter((t) => !t.adminOnly);
