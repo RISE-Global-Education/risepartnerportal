@@ -252,18 +252,25 @@ function Modal({ lead, onClose }: { lead: DiscoveryLead; onClose: () => void }) 
   );
 }
 
+const COUNTRIES = [
+  "Afghanistan","Albania","Algeria","American Samoa","Andorra","Angola","Anguilla","Antigua and Barbuda","Argentina","Armenia","Aruba","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Barbados","Belarus","Belgium","Belize","Benin","Bermuda","Bhutan","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","British Virgin Islands","Brunei","Bulgaria","Burkina Faso","Burundi","Cabo Verde (Cape Verde)","Cambodia","Cameroon","Canada","Cayman Islands","Central African Republic","Chad","Chile","China","Colombia","Comoros","Cook Islands","Costa Rica","Croatia","Cuba","Cyprus","Czech Republic","Democratic Republic of the Congo","Denmark","Djibouti","Dominica","Dominican Republic","East Timor (Timor-Leste)","Ecuador","Egypt","El Salvador","Equatorial Guinea","Eritrea","Estonia","Eswatini (Swaziland)","Ethiopia","Fiji","Finland","France","Gabon","Gaza Strip","Georgia","Germany","Ghana","Gibraltar","Greece","Greenland","Grenada","Guatemala","Guinea","Guinea-Bissau","Guyana","Haiti","Honduras","Hong Kong","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kiribati","Kosovo","Kuwait","Kyrgyzstan","Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Liechtenstein","Lithuania","Luxembourg","Macau","Madagascar","Malawi","Malaysia","Maldives","Mali","Malta","Marshall Islands","Mauritania","Mauritius","Mexico","Micronesia","Moldova","Monaco","Mongolia","Montenegro","Morocco","Mozambique","Myanmar (Burma)","Namibia","Nauru","Nepal","Netherlands","New Zealand","Nicaragua","Niger","Nigeria","North Korea","North Macedonia","Norway","Oman","Other","Pakistan","Palau","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar","Republic of the Congo","Romania","Russia","Rwanda","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines","Samoa","San Marino","Saudi Arabia","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Slovakia","Slovenia","Solomon Islands","Somalia","South Africa","South Korea","South Sudan","Spain","Sri Lanka","Sudan","Suriname","Sweden","Switzerland","Syria","Taiwan","Tajikistan","Tanzania","Thailand","The Bahamas","The Gambia","Togo","Tonga","Trinidad and Tobago","Tunisia","Turkey","Turkmenistan","Tuvalu","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Uzbekistan","Vanuatu","Vatican City","Venezuela","Vietnam","West Bank","Yemen","Zambia","Zimbabwe",
+];
+
 export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] }) {
   const [selected, setSelected] = useState<DiscoveryLead | null>(null);
   const [query, setQuery] = useState("");
+  const [country, setCountry] = useState("");
 
   const filtered = leads.filter((l) => {
     const q = query.trim().toLowerCase();
-    return (
+    const matchesQuery =
       !q ||
       l.studentName.toLowerCase().includes(q) ||
-      l.applicantId.toLowerCase().includes(q) ||
-      l.parentName.toLowerCase().includes(q)
-    );
+      l.studentEmail.toLowerCase().includes(q) ||
+      l.parentName.toLowerCase().includes(q) ||
+      l.parentEmail.toLowerCase().includes(q);
+    const matchesCountry = !country || l.country.trim() === country;
+    return matchesQuery && matchesCountry;
   });
 
   if (leads.length === 0) {
@@ -278,14 +285,24 @@ export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] })
     <>
       {selected && <Modal lead={selected} onClose={() => setSelected(null)} />}
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap gap-3">
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name or applicant ID…"
-          className="w-full sm:w-80 border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+          placeholder="Search by student name, email, parent name or email…"
+          className="w-full sm:w-96 border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40"
         />
+        <select
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+        >
+          <option value="">All countries</option>
+          {COUNTRIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -310,7 +327,7 @@ export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] })
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-8 text-center text-rise-brown text-sm">
-                  No results for &ldquo;{query}&rdquo;
+                  No results{query || country ? " for current filters" : ""}
                 </td>
               </tr>
             ) : (
