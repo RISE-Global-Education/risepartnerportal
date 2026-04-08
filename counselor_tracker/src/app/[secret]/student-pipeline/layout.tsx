@@ -1,5 +1,6 @@
 import SubTabNav from "./SubTabNav";
 import RefreshButton from "./RefreshButton";
+import TimeZoneClocks from "./TimeZoneClocks";
 import { notFound } from "next/navigation";
 
 export default async function StudentPipelineLayout({
@@ -21,6 +22,7 @@ export default async function StudentPipelineLayout({
           <h1 className="text-lg font-bold text-rise-black font-heading">Student Pipeline</h1>
           <RefreshButton />
         </div>
+        <TimeZoneClocks />
         <SubTabNav secret={secret} />
       </div>
       {children}
