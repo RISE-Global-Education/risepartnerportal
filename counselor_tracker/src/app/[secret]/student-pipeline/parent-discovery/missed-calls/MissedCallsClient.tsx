@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { DiscoveryLead } from "./page";
 
@@ -37,13 +37,12 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Modal({ lead, onClose }: { lead: DiscoveryLead; onClose: () => void }) {
+function Modal({ lead, onClose, onSaved }: { lead: DiscoveryLead; onClose: () => void; onSaved: () => void }) {
   const router = useRouter();
   const [callNotes, setCallNotes] = useState(lead.callNotes);
   const [dropped, setDropped] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [saved, setSaved] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -69,8 +68,9 @@ function Modal({ lead, onClose }: { lead: DiscoveryLead; onClose: () => void }) 
         const data = await res.json().catch(() => ({}));
         setSaveError(data.error ?? `Error ${res.status}`);
       } else {
-        setSaved(true);
         router.refresh();
+        onSaved();
+        onClose();
       }
     } catch {
       setSaveError("Network error");
@@ -223,11 +223,6 @@ function Modal({ lead, onClose }: { lead: DiscoveryLead; onClose: () => void }) 
           <div className="flex items-center justify-between pt-1">
             <div>
               {saving && <span className="text-xs text-rise-brown">Saving…</span>}
-              {saved && !saving && (
-                <span className="text-xs text-rise-green">
-                  Saved — Last Contacted set to today
-                </span>
-              )}
               {saveError && !saving && <span className="text-xs text-red-500">{saveError}</span>}
             </div>
             <div className="flex items-center gap-3">
@@ -260,6 +255,13 @@ export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] })
   const [selected, setSelected] = useState<DiscoveryLead | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [toast, setToast] = useState(false);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(false), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const filtered = leads.filter((l) => {
     const q = query.trim().toLowerCase();
@@ -283,7 +285,12 @@ export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] })
 
   return (
     <>
-      {selected && <Modal lead={selected} onClose={() => setSelected(null)} />}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-rise-green text-white text-sm font-medium px-4 py-3 rounded-lg shadow-lg">
+          Changes saved — Last Contacted set to today
+        </div>
+      )}
+      {selected && <Modal lead={selected} onClose={() => setSelected(null)} onSaved={() => setToast(true)} />}
 
       <div className="mb-4 flex flex-wrap gap-3">
         <input

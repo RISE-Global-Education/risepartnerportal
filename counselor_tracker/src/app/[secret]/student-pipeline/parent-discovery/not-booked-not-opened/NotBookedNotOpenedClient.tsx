@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { NotBookedNotOpenedLead } from "./page";
 
@@ -42,7 +42,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Modal({ lead, onClose }: { lead: NotBookedNotOpenedLead; onClose: () => void }) {
+function Modal({ lead, onClose, onSaved }: { lead: NotBookedNotOpenedLead; onClose: () => void; onSaved: () => void }) {
   const router = useRouter();
   const [callNotes, setCallNotes] = useState(lead.callNotes);
   const [dropped, setDropped] = useState(false);
@@ -69,8 +69,9 @@ function Modal({ lead, onClose }: { lead: NotBookedNotOpenedLead; onClose: () =>
         const data = await res.json().catch(() => ({}));
         setSaveError(data.error ?? `Error ${res.status}`);
       } else {
-        setSaved(true);
         router.refresh();
+        onSaved();
+        onClose();
       }
     } catch {
       setSaveError("Network error");
@@ -222,7 +223,6 @@ function Modal({ lead, onClose }: { lead: NotBookedNotOpenedLead; onClose: () =>
           <div className="flex items-center justify-between pt-1">
             <div>
               {saving && <span className="text-xs text-rise-brown">Saving…</span>}
-              {saved && !saving && <span className="text-xs text-rise-green">Saved — Last Contacted set to today</span>}
               {saveError && !saving && <span className="text-xs text-red-500">{saveError}</span>}
             </div>
             <div className="flex items-center gap-3">
@@ -289,6 +289,13 @@ export default function NotBookedNotOpenedClient({
   const [country, setCountry] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [toast, setToast] = useState(false);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(false), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -330,7 +337,12 @@ export default function NotBookedNotOpenedClient({
 
   return (
     <>
-      {selected && <Modal lead={selected} onClose={() => setSelected(null)} />}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-rise-green text-white text-sm font-medium px-4 py-3 rounded-lg shadow-lg">
+          Changes saved — Last Contacted set to today
+        </div>
+      )}
+      {selected && <Modal lead={selected} onClose={() => setSelected(null)} onSaved={() => setToast(true)} />}
 
       <MixmaxBanner cachedAt={mixmaxCachedAt} onRefresh={handleRefresh} refreshing={refreshing} refreshError={refreshError} />
 
