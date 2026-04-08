@@ -87,6 +87,12 @@ export default async function MissedCallsPage() {
       };
     })
     .filter((lead) => {
+      // Exclude if last contacted within the past 7 days
+      if (lead.lastContacted) {
+        const lastContactedMs = new Date(lead.lastContacted).getTime();
+        if (lastContactedMs >= sevenDaysAgo.getTime()) return false;
+      }
+
       const noConsultation = !lead.consultationDate;
       const noNotes = !lead.notes.trim();
       const notesMissed = lead.notes.toLowerCase().includes("missed");
