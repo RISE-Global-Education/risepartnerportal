@@ -10,6 +10,7 @@ export default function SubTabNav({ secret }: { secret: string }) {
     { label: "Interview Stage", href: base },
     { label: "Shortlisting Stage", href: `${base}/shortlisting` },
     { label: "Acceptance Stage", href: `${base}/acceptance` },
+    { label: "Parent Discovery Stage", href: `${base}/parent-discovery` },
   ];
 
   return (
