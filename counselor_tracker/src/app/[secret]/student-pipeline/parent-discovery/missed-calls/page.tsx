@@ -93,10 +93,8 @@ export default async function MissedCallsPage() {
         if (lastContactedMs >= sevenDaysAgo.getTime()) return false;
       }
 
-      const noConsultation = !lead.consultationDate;
-      const noNotes = !lead.notes.trim();
       const notesMissed = lead.notes.toLowerCase().includes("missed");
-      return noConsultation || noNotes || notesMissed;
+      return notesMissed;
     });
 
   return (

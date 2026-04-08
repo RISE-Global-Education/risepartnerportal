@@ -126,11 +126,10 @@ export default async function NotBookedOpenedPage() {
         if (lastContactedMs >= sevenDaysAgo.getTime()) return false;
       }
 
-      // Same missed conditions
+      // Not booked conditions: pending consultation and no notes
       const noConsultation = !lead.consultationDate;
       const noNotes = !lead.notes.trim();
-      const notesMissed = lead.notes.toLowerCase().includes("missed");
-      return noConsultation || noNotes || notesMissed;
+      return noConsultation && noNotes;
     });
 
   return (

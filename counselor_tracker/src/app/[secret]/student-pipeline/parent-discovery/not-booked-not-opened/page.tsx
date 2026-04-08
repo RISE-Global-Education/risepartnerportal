@@ -133,11 +133,10 @@ export default async function NotBookedNotOpenedPage() {
         if (lastContactedMs >= sevenDaysAgo.getTime()) return false;
       }
 
-      // Same missed conditions
+      // Not booked conditions: pending consultation and no notes
       const noConsultation = !l.consultationDate;
       const noNotes = !l.notes.trim();
-      const notesMissed = l.notes.toLowerCase().includes("missed");
-      return noConsultation || noNotes || notesMissed;
+      return noConsultation && noNotes;
     })
     .map((lead) => {
       // Strip the temporary _openCount field
