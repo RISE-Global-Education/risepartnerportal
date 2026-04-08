@@ -379,7 +379,17 @@ export default function NotBookedOpenedClient({
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Student Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Parent Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Sequence</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Opens</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                <button
+                  onClick={cycleOpenSort}
+                  className="inline-flex items-center gap-1 hover:text-rise-black transition-colors"
+                >
+                  Opens
+                  <span className="text-base leading-none">
+                    {openSort === "asc" ? "↑" : openSort === "desc" ? "↓" : "↕"}
+                  </span>
+                </button>
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-rise-brown uppercase tracking-wide">Details</th>
             </tr>
           </thead>

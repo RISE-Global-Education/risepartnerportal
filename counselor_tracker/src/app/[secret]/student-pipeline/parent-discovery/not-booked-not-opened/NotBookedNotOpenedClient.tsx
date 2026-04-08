@@ -287,7 +287,12 @@ export default function NotBookedNotOpenedClient({
   const [selected, setSelected] = useState<NotBookedNotOpenedLead | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [sentSort, setSentSort] = useState<"asc" | "desc" | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  function cycleSentSort() {
+    setSentSort((s) => (s === null ? "asc" : s === "asc" ? "desc" : null));
+  }
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [toast, setToast] = useState(false);
 
@@ -314,17 +319,23 @@ export default function NotBookedNotOpenedClient({
     }
   }
 
-  const filtered = leads.filter((l) => {
-    const q = query.trim().toLowerCase();
-    const matchesQuery =
-      !q ||
-      l.studentName.toLowerCase().includes(q) ||
-      l.studentEmail.toLowerCase().includes(q) ||
-      l.parentName.toLowerCase().includes(q) ||
-      l.parentEmail.toLowerCase().includes(q);
-    const matchesCountry = !country || l.country.trim() === country;
-    return matchesQuery && matchesCountry;
-  });
+  const filtered = leads
+    .filter((l) => {
+      const q = query.trim().toLowerCase();
+      const matchesQuery =
+        !q ||
+        l.studentName.toLowerCase().includes(q) ||
+        l.studentEmail.toLowerCase().includes(q) ||
+        l.parentName.toLowerCase().includes(q) ||
+        l.parentEmail.toLowerCase().includes(q);
+      const matchesCountry = !country || l.country.trim() === country;
+      return matchesQuery && matchesCountry;
+    })
+    .sort((a, b) => {
+      if (sentSort === "asc") return a.sentCount - b.sentCount;
+      if (sentSort === "desc") return b.sentCount - a.sentCount;
+      return 0;
+    });
 
   if (leads.length === 0) {
     return (
@@ -374,7 +385,17 @@ export default function NotBookedNotOpenedClient({
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Student Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Parent Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Sequence</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Sent</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                <button
+                  onClick={cycleSentSort}
+                  className="inline-flex items-center gap-1 hover:text-rise-black transition-colors"
+                >
+                  Sent
+                  <span className="text-base leading-none">
+                    {sentSort === "asc" ? "↑" : sentSort === "desc" ? "↓" : "↕"}
+                  </span>
+                </button>
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-rise-brown uppercase tracking-wide">Details</th>
             </tr>
           </thead>
