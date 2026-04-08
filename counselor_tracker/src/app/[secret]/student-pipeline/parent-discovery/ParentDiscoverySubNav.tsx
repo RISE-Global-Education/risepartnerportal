@@ -8,8 +8,8 @@ export default function ParentDiscoverySubNav({ secret }: { secret: string }) {
 
   const tabs = [
     { label: "Missed Calls", href: `${base}/missed-calls` },
-    { label: "Not Booked Calls (Opened)", href: `${base}/not-booked-opened` },
-    { label: "Not Booked Calls (Not Opened)", href: `${base}/not-booked-not-opened` },
+    { label: "Not Booked Calls (Emails Opened)", href: `${base}/not-booked-opened` },
+    { label: "Not Booked Calls (Emails Not Opened)", href: `${base}/not-booked-not-opened` },
   ];
 
   return (
