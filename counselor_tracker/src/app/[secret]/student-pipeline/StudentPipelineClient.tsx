@@ -311,6 +311,9 @@ export default function StudentPipelineClient({
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Name
               </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                Country
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Details
               </th>
@@ -319,7 +322,7 @@ export default function StudentPipelineClient({
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-rise-brown text-sm">
+                <td colSpan={4} className="px-4 py-8 text-center text-rise-brown text-sm">
                   No results for &ldquo;{query}&rdquo;
                 </td>
               </tr>
@@ -329,6 +332,7 @@ export default function StudentPipelineClient({
                   {student.applicantId}
                 </td>
                 <td className="px-4 py-3 font-medium text-rise-black">{student.name}</td>
+                <td className="px-4 py-3 text-rise-brown">{student.country || "—"}</td>
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => setSelected(student)}

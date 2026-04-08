@@ -366,6 +366,9 @@ export default function ShortlistingClient({
                 Name
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                Country
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Status
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-rise-brown uppercase tracking-wide">
@@ -376,7 +379,7 @@ export default function ShortlistingClient({
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-rise-brown text-sm">
+                <td colSpan={5} className="px-4 py-8 text-center text-rise-brown text-sm">
                   No results for &ldquo;{query}&rdquo;
                 </td>
               </tr>
@@ -386,6 +389,7 @@ export default function ShortlistingClient({
                   {applicant.applicantId}
                 </td>
                 <td className="px-4 py-3 font-medium text-rise-black">{applicant.name}</td>
+                <td className="px-4 py-3 text-rise-brown">{applicant.country || "—"}</td>
                 <td className="px-4 py-3">
                   <span className="inline-block text-xs font-medium bg-rise-green/10 text-rise-green rounded-full px-2 py-0.5">
                     {applicant.followUpStatus}
