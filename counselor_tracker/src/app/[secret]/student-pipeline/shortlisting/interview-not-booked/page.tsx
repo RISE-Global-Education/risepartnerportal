@@ -115,9 +115,10 @@ export default async function InterviewNotBookedPage() {
       lastCallDate: getField<string>(r, "Last Call Date") ?? "",
     }))
     .filter((a) => {
-      // 1. Created Time > 5 days ago
-      const created = new Date(a.createdTime);
-      if (isNaN(created.getTime()) || created >= fiveDaysAgo) return false;
+      // 1. Shortlist Email Sent Time must exist and be > 5 days ago
+      if (!a.shortlistSentTime) return false;
+      const shortlistSent = new Date(a.shortlistSentTime);
+      if (isNaN(shortlistSent.getTime()) || shortlistSent >= fiveDaysAgo) return false;
 
       // 2. Interview Date is blank
       if (a.interviewDate) return false;
