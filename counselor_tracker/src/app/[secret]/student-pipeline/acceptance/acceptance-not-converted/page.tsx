@@ -39,7 +39,7 @@ export interface AcceptanceNotConvertedApplicant {
 
 export default async function AcceptanceNotConvertedPage() {
   const now = new Date();
-  const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
+  const fiveDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
   const EXCLUDED_STATUSES = new Set(["Drop", "Client"]);
