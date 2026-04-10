@@ -33,6 +33,7 @@ export interface InterviewNotBookedApplicant {
   notes: string;
   callStatus: string;
   callNotes: string;
+  shortlistingCallNotes: string;
   createdTime: string;
   lastCallDate: string;
 }
@@ -73,6 +74,7 @@ export default async function InterviewNotBookedPage() {
       "Notes",
       "Call Status",
       "Call Notes",
+      "Shortlisting Call Notes",
       "Created Time",
       "Last Call Date",
     ],
@@ -108,6 +110,7 @@ export default async function InterviewNotBookedPage() {
       notes: getField<string>(r, "Notes") ?? "",
       callStatus: getField<string>(r, "Call Status") ?? "",
       callNotes: getField<string>(r, "Call Notes") ?? "",
+      shortlistingCallNotes: getField<string>(r, "Shortlisting Call Notes") ?? "",
       createdTime: getField<string>(r, "Created Time") ?? r.createdTime,
       lastCallDate: getField<string>(r, "Last Call Date") ?? "",
     }))

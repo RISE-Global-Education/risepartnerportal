@@ -28,6 +28,9 @@ export async function PATCH(
   if (body.callNotes !== undefined) {
     fields["Call Notes"] = body.callNotes;
   }
+  if (body.shortlistingCallNotes !== undefined) {
+    fields["Shortlisting Call Notes"] = body.shortlistingCallNotes;
+  }
   if (body.followUpStatus !== undefined) {
     fields["Follow Up Status"] = body.followUpStatus;
   }

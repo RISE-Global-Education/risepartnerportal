@@ -39,7 +39,7 @@ function Modal({
   onSaved: () => void;
 }) {
   const router = useRouter();
-  const [callNotes, setCallNotes] = useState(applicant.callNotes);
+  const [callNotes, setCallNotes] = useState(applicant.shortlistingCallNotes);
   const [dropped, setDropped] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -51,7 +51,7 @@ function Modal({
     setSaving(true);
     try {
       const body: Record<string, unknown> = {
-        callNotes,
+        shortlistingCallNotes: callNotes,
         lastCallDate: today,
       };
       if (dropped) {
