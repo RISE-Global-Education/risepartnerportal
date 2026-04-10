@@ -34,6 +34,9 @@ export async function PATCH(
   if (body.mentorField !== undefined) {
     fields["Mentor Field"] = body.mentorField;
   }
+  if (body.lastCallDate !== undefined) {
+    fields["Last Call Date"] = body.lastCallDate || null;
+  }
 
   if (Object.keys(fields).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
