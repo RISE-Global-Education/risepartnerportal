@@ -4,8 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { InterviewNotBookedApplicant } from "./page";
 
-const CALL_STATUS_OPTIONS = ["Done", "Did not pick", "Pending", "NA"] as const;
-
 const COUNTRIES = [
   "Afghanistan","Albania","Algeria","American Samoa","Andorra","Angola","Anguilla","Antigua and Barbuda","Argentina","Armenia","Aruba","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Barbados","Belarus","Belgium","Belize","Benin","Bermuda","Bhutan","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","British Virgin Islands","Brunei","Bulgaria","Burkina Faso","Burundi","Cabo Verde (Cape Verde)","Cambodia","Cameroon","Canada","Cayman Islands","Central African Republic","Chad","Chile","China","Colombia","Comoros","Cook Islands","Costa Rica","Croatia","Cuba","Cyprus","Czech Republic","Democratic Republic of the Congo","Denmark","Djibouti","Dominica","Dominican Republic","East Timor (Timor-Leste)","Ecuador","Egypt","El Salvador","Equatorial Guinea","Eritrea","Estonia","Eswatini (Swaziland)","Ethiopia","Fiji","Finland","France","Gabon","Gaza Strip","Georgia","Germany","Ghana","Gibraltar","Greece","Greenland","Grenada","Guatemala","Guinea","Guinea-Bissau","Guyana","Haiti","Honduras","Hong Kong","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kiribati","Kosovo","Kuwait","Kyrgyzstan","Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Liechtenstein","Lithuania","Luxembourg","Macau","Madagascar","Malawi","Malaysia","Maldives","Mali","Malta","Marshall Islands","Mauritania","Mauritius","Mexico","Micronesia","Moldova","Monaco","Mongolia","Montenegro","Morocco","Mozambique","Myanmar (Burma)","Namibia","Nauru","Nepal","Netherlands","New Zealand","Nicaragua","Niger","Nigeria","North Korea","North Macedonia","Norway","Oman","Other","Pakistan","Palau","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar","Republic of the Congo","Romania","Russia","Rwanda","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines","Samoa","San Marino","Saudi Arabia","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Slovakia","Slovenia","Solomon Islands","Somalia","South Africa","South Korea","South Sudan","Spain","Sri Lanka","Sudan","Suriname","Sweden","Switzerland","Syria","Taiwan","Tajikistan","Tanzania","Thailand","The Bahamas","The Gambia","Togo","Tonga","Trinidad and Tobago","Tunisia","Turkey","Turkmenistan","Tuvalu","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Uzbekistan","Vanuatu","Vatican City","Venezuela","Vietnam","West Bank","Yemen","Zambia","Zimbabwe",
 ];
@@ -22,41 +20,56 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function formatDate(iso: string): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function Modal({
   applicant,
   onClose,
+  onSaved,
 }: {
   applicant: InterviewNotBookedApplicant;
   onClose: () => void;
+  onSaved: () => void;
 }) {
   const router = useRouter();
-  const [callStatus, setCallStatus] = useState(applicant.callStatus);
   const [callNotes, setCallNotes] = useState(applicant.callNotes);
   const [dropped, setDropped] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [saved, setSaved] = useState(false);
+
+  const today = new Date().toISOString().slice(0, 10);
 
   async function handleSave() {
-    setSaved(false);
     setSaveError("");
     setSaving(true);
     try {
+      const body: Record<string, unknown> = {
+        callNotes,
+        lastCallDate: today,
+      };
+      if (dropped) {
+        body.followUpStatus = "Drop";
+      }
+
       const res = await fetch(`/api/student-pipeline/${applicant.recordId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          callStatus,
-          callNotes,
-          ...(dropped && { followUpStatus: "Drop" }),
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setSaveError(data.error ?? `Error ${res.status}`);
       } else {
-        setSaved(true);
         router.refresh();
+        onSaved();
+        onClose();
       }
     } catch {
       setSaveError("Network error");
@@ -89,7 +102,7 @@ function Modal({
           </button>
         </div>
 
-        {/* Body */}
+        {/* Body — read-only */}
         <div className="overflow-y-auto flex-1 px-6 py-4">
           {/* Status strip */}
           <section className="mb-5 bg-rise-cream rounded-lg px-4 py-3 flex flex-wrap gap-x-6 gap-y-2">
@@ -99,134 +112,77 @@ function Modal({
                 <dd className="text-sm font-medium text-rise-green">{applicant.followUpStatus}</dd>
               </div>
             )}
-            {applicant.shortlistSentTime && (
-              <div>
-                <dt className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-0.5">Shortlist Sent</dt>
-                <dd className="text-sm text-rise-black">{applicant.shortlistSentTime}</dd>
-              </div>
-            )}
             {applicant.researchPackage && (
               <div>
                 <dt className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-0.5">Research Package</dt>
                 <dd className="text-sm text-rise-black">{applicant.researchPackage}</dd>
               </div>
             )}
+            {applicant.shortlistSentTime && (
+              <div>
+                <dt className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-0.5">Shortlist Sent</dt>
+                <dd className="text-sm text-rise-black">{formatDate(applicant.shortlistSentTime)}</dd>
+              </div>
+            )}
+            {applicant.lastCallDate && (
+              <div>
+                <dt className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-0.5">Last Call Date</dt>
+                <dd className="text-sm text-rise-black">{formatDate(applicant.lastCallDate)}</dd>
+              </div>
+            )}
           </section>
 
-          {/* Applicant details */}
+          {/* Student & Parent */}
           <section className="mb-5">
-            <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">
-              Student & Parent
-            </h3>
+            <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">Student & Parent</h3>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <DetailRow label="Applicant ID" value={applicant.applicantId} />
               <DetailRow label="Name" value={applicant.name} />
               <DetailRow label="Student Email" value={applicant.studentEmail} />
               <DetailRow label="Phone Number" value={applicant.phone} />
               <DetailRow label="Parent Name" value={applicant.parentName} />
-              <DetailRow label="Parent Phone Number" value={applicant.parentPhone} />
+              <DetailRow label="Parent Email" value={applicant.parentEmail} />
+              <DetailRow label="Parent Phone" value={applicant.parentPhone} />
               <DetailRow label="Current Grade" value={applicant.currentGrade} />
               <DetailRow label="School / College" value={applicant.schoolCollege} />
               <DetailRow label="City" value={applicant.city} />
               <DetailRow label="Country" value={applicant.country} />
               <DetailRow label="Cohort" value={applicant.cohort} />
               <DetailRow label="Previously Applied to RISE?" value={applicant.previouslyApplied} />
+            </dl>
+          </section>
+
+          {/* Application responses */}
+          <section className="mb-5 border-t border-gray-100 pt-4">
+            <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">Application</h3>
+            <dl className="flex flex-col gap-3">
+              <DetailRow label="Field(s) of Interest" value={applicant.fieldsOfInterest} />
               <DetailRow label="Academic Score" value={applicant.academicScore} />
               <DetailRow label="Standardized Test Scores" value={applicant.testScores} />
+              <DetailRow label="Motivation" value={applicant.motivation} />
+              <DetailRow label="Prior Experience / Relevant Coursework" value={applicant.priorExperience} />
               <DetailRow label="How Did They Hear About Us?" value={applicant.howHeard} />
               <DetailRow label="Referral Detail" value={applicant.howHeardDetail} />
             </dl>
           </section>
-
-          {applicant.fieldsOfInterest && (
-            <section className="mb-4">
-              <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">
-                Field(s) of Interest
-              </h3>
-              <p className="text-sm text-rise-black">{applicant.fieldsOfInterest}</p>
-            </section>
-          )}
-
-          {applicant.motivation && (
-            <section className="mb-4">
-              <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">
-                Motivation
-              </h3>
-              <p className="text-sm text-rise-black whitespace-pre-wrap">{applicant.motivation}</p>
-            </section>
-          )}
-
-          {applicant.priorExperience && (
-            <section className="mb-4">
-              <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">
-                Prior Experience / Relevant Coursework
-              </h3>
-              <p className="text-sm text-rise-black whitespace-pre-wrap">{applicant.priorExperience}</p>
-            </section>
-          )}
-
-          {applicant.notes && (
-            <section className="mb-4 pt-4 border-t border-gray-100">
-              <h3 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">Notes</h3>
-              <p className="text-sm text-rise-black whitespace-pre-wrap">{applicant.notes}</p>
-            </section>
-          )}
         </div>
 
-        {/* Footer */}
+        {/* Footer — editable */}
         <div className="px-6 py-4 border-t border-gray-100 space-y-4">
-          {/* Call Status */}
+          {/* Shortlisting Call Notes */}
           <div>
-            <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">
-              Call Status
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {CALL_STATUS_OPTIONS.map((option) => (
-                <label
-                  key={option}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer border transition-colors ${
-                    callStatus === option
-                      ? "bg-rise-green text-white border-rise-green"
-                      : "bg-white text-rise-brown border-gray-200 hover:border-rise-green hover:text-rise-green"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={`callStatus-${applicant.recordId}`}
-                    value={option}
-                    checked={callStatus === option}
-                    onChange={() => setCallStatus(callStatus === option ? "" : option)}
-                    className="sr-only"
-                  />
-                  {option}
-                </label>
-              ))}
-              {callStatus && (
-                <button
-                  onClick={() => setCallStatus("")}
-                  className="px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 text-gray-400 hover:text-rise-brown hover:border-gray-300 transition-colors"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Call Notes */}
-          <div>
-            <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">
-              Call Notes
-            </p>
+            <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
+              Shortlisting Call Notes
+            </label>
             <textarea
               value={callNotes}
               onChange={(e) => setCallNotes(e.target.value)}
-              rows={3}
+              rows={4}
               placeholder="Add call notes…"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none"
             />
           </div>
 
-          {/* Drop */}
+          {/* Drop checkbox */}
           <div>
             <label className="flex items-center gap-2 cursor-pointer w-fit">
               <input
@@ -243,7 +199,6 @@ function Modal({
           <div className="flex items-center justify-between pt-1">
             <div>
               {saving && <span className="text-xs text-rise-brown">Saving…</span>}
-              {saved && !saving && <span className="text-xs text-rise-green">Saved</span>}
               {saveError && !saving && <span className="text-xs text-red-500">{saveError}</span>}
             </div>
             <div className="flex items-center gap-3">
@@ -276,6 +231,12 @@ export default function InterviewNotBookedClient({
   const [selected, setSelected] = useState<InterviewNotBookedApplicant | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [toast, setToast] = useState(false);
+
+  function handleSaved() {
+    setToast(true);
+    setTimeout(() => setToast(false), 3000);
+  }
 
   const filtered = applicants.filter((a) => {
     const q = query.trim().toLowerCase();
@@ -298,7 +259,18 @@ export default function InterviewNotBookedClient({
 
   return (
     <>
-      {selected && <Modal applicant={selected} onClose={() => setSelected(null)} />}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-rise-green text-white text-sm font-medium px-4 py-3 rounded-lg shadow-lg">
+          Changes saved — Last Call Date set to today
+        </div>
+      )}
+      {selected && (
+        <Modal
+          applicant={selected}
+          onClose={() => setSelected(null)}
+          onSaved={handleSaved}
+        />
+      )}
 
       <div className="mb-4 flex flex-wrap gap-3">
         <input

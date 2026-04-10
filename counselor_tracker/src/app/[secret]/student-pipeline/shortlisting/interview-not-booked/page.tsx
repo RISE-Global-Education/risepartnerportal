@@ -11,6 +11,7 @@ export interface InterviewNotBookedApplicant {
   studentEmail: string;
   phone: string;
   parentName: string;
+  parentEmail: string;
   parentPhone: string;
   currentGrade: string;
   schoolCollege: string;
@@ -50,6 +51,7 @@ export default async function InterviewNotBookedPage() {
       "Student Email ID",
       "Phone number",
       "Parent Name",
+      "Parent Email ID",
       "Parent Phone Number",
       "Current Grade",
       "School/ College",
@@ -84,6 +86,7 @@ export default async function InterviewNotBookedPage() {
       studentEmail: getField<string>(r, "Student Email ID") ?? "",
       phone: getField<string>(r, "Phone number") ?? "",
       parentName: getField<string>(r, "Parent Name") ?? "",
+      parentEmail: getField<string>(r, "Parent Email ID") ?? "",
       parentPhone: getField<string>(r, "Parent Phone Number") ?? "",
       currentGrade: getField<string>(r, "Current Grade") ?? "",
       schoolCollege: getField<string>(r, "School/ College") ?? "",
