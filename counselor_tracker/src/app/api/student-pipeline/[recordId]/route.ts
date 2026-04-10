@@ -40,6 +40,9 @@ export async function PATCH(
   if (body.lastCallDate !== undefined) {
     fields["Last Call Date"] = body.lastCallDate || null;
   }
+  if (body.paymentCallNotes !== undefined) {
+    fields["Payment Call Notes"] = body.paymentCallNotes;
+  }
 
   if (Object.keys(fields).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
