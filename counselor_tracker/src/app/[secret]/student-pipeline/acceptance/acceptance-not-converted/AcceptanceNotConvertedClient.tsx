@@ -44,7 +44,7 @@ function Modal({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString();
 
   async function handleSave() {
     setSaveError("");

@@ -50,7 +50,7 @@ function Modal({ lead, onClose, onSaved }: { lead: NotBookedNotOpenedLead; onClo
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toISOString();
 
   async function handleSave() {
     setSaveError("");

@@ -29,7 +29,7 @@ export async function PATCH(
     fields["Student Application Form"] = body.studentApplicationForm || null;
   }
   if (body.lastContacted !== undefined) {
-    fields["Last Contacted"] = body.lastContacted || null;
+    fields["Last Call Date"] = body.lastContacted || null;
   }
 
   if (Object.keys(fields).length === 0) {

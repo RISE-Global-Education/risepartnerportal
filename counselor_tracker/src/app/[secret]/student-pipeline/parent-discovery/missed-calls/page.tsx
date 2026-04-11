@@ -55,7 +55,7 @@ export default async function MissedCallsPage() {
       "Company Name (from Counselor Source)",
       "Notes",
       "Call Notes",
-      "Last Contacted",
+      "Last Call Date",
       "POC",
     ],
   });
@@ -81,7 +81,7 @@ export default async function MissedCallsPage() {
         counselorSource: counselorArr.join(", "),
         notes: getField<string>(r, "Notes") ?? "",
         callNotes: getField<string>(r, "Call Notes") ?? "",
-        lastContacted: getField<string>(r, "Last Contacted") ?? "",
+        lastContacted: getField<string>(r, "Last Call Date") ?? "",
         createdTime: r.createdTime,
         poc: getField<string>(r, "POC") ?? "",
       };
