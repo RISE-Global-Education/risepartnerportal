@@ -62,6 +62,7 @@ function Modal({ lead, onClose, onSaved }: { lead: DiscoveryLead; onClose: () =>
         body.studentApplicationForm = "Drop";
       } else if (status === "dnp") {
         body.incrementDnp = true;
+        body.callNotes = callNotes.trim() ? callNotes.trimEnd() + "\ndnp" : "dnp";
       }
 
       const res = await fetch(`/api/parent-discovery/${lead.recordId}`, {

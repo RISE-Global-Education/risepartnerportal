@@ -62,7 +62,10 @@ function Modal({ lead, onClose, onSaved }: { lead: NotBookedNotOpenedLead; onClo
     try {
       const body: Record<string, unknown> = { callNotes, lastContacted: today };
       if (status === "drop") body.studentApplicationForm = "Drop";
-      else if (status === "dnp") body.incrementDnp = true;
+      else if (status === "dnp") {
+        body.incrementDnp = true;
+        body.callNotes = callNotes.trim() ? callNotes.trimEnd() + "\ndnp" : "dnp";
+      }
 
       const res = await fetch(`/api/parent-discovery/${lead.recordId}`, {
         method: "PATCH",

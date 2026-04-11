@@ -58,6 +58,7 @@ function Modal({
         body.followUpStatus = "Drop";
       } else if (status === "dnp") {
         body.incrementDnp = true;
+        body.paymentCallNotes = callNotes.trim() ? callNotes.trimEnd() + "\ndnp" : "dnp";
       }
 
       const res = await fetch(`/api/student-pipeline/${applicant.recordId}`, {
