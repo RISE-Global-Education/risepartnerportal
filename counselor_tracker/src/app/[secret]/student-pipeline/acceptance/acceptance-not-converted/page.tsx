@@ -41,6 +41,7 @@ export default async function AcceptanceNotConvertedPage() {
   const now = new Date();
   const fiveDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   const EXCLUDED_STATUSES = new Set(["Drop", "Client"]);
 
@@ -112,7 +113,13 @@ export default async function AcceptanceNotConvertedPage() {
       lastCallDate: getField<string>(r, "Last Call Date") ?? "",
     }))
     .filter((a) => {
-      // 1. Acceptance Email Sent Time > 5 days ago (must exist and be old enough)
+      const lastCallDate = a.lastCallDate ? new Date(a.lastCallDate) : null;
+
+      // DNP override: payment call notes contain "dnp" AND last call date > 24h ago
+      const hasDnp = a.paymentCallNotes.toLowerCase().includes("dnp");
+      if (hasDnp && lastCallDate && lastCallDate < oneDayAgo) return true;
+
+      // 1. Acceptance Email Sent Time > 7 days ago (must exist and be old enough)
       if (!a.acceptanceSentTime) return false;
       const acceptanceSent = new Date(a.acceptanceSentTime);
       if (isNaN(acceptanceSent.getTime()) || acceptanceSent >= fiveDaysAgo) return false;
@@ -121,10 +128,7 @@ export default async function AcceptanceNotConvertedPage() {
       if (EXCLUDED_STATUSES.has(a.followUpStatus)) return false;
 
       // 3. Last Call Date is blank OR more than 3 days ago
-      if (a.lastCallDate) {
-        const lastCall = new Date(a.lastCallDate);
-        if (!isNaN(lastCall.getTime()) && lastCall >= threeDaysAgo) return false;
-      }
+      if (lastCallDate && !isNaN(lastCallDate.getTime()) && lastCallDate >= threeDaysAgo) return false;
 
       return true;
     });

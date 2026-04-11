@@ -37,8 +37,10 @@ export interface NotBookedOpenedLead {
 }
 
 export default async function NotBookedOpenedPage() {
+  const now = new Date();
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const cutoff = sevenDaysAgo.toISOString();
 
   const [records, { recipients: allRecipients, cachedAt: mixmaxCachedAt }] = await Promise.all([
@@ -117,14 +119,17 @@ export default async function NotBookedOpenedPage() {
       };
     })
     .filter((lead) => {
+      const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;
+
+      // DNP override: call notes contain "dnp" AND last call date > 24h ago
+      const hasDnp = lead.callNotes.toLowerCase().includes("dnp");
+      if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
+
       // Must have opened the email at least once
       if (lead.openCount === 0) return false;
 
       // Exclude if last contacted within the past 7 days
-      if (lead.lastContacted) {
-        const lastContactedMs = new Date(lead.lastContacted).getTime();
-        if (lastContactedMs >= sevenDaysAgo.getTime()) return false;
-      }
+      if (lastContactedDate && lastContactedDate.getTime() >= sevenDaysAgo.getTime()) return false;
 
       // Not booked conditions: pending consultation and no notes
       const noConsultation = !lead.consultationDate;

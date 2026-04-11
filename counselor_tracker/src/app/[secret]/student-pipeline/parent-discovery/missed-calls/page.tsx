@@ -60,6 +60,9 @@ export default async function MissedCallsPage() {
     ],
   });
 
+  const now = new Date();
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
   const leads: DiscoveryLead[] = records
     .map((r) => {
       const counselorArr = getField<string[]>(r, "Company Name (from Counselor Source)") ?? [];
@@ -87,11 +90,14 @@ export default async function MissedCallsPage() {
       };
     })
     .filter((lead) => {
+      const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;
+
+      // DNP override: call notes contain "dnp" AND last call date > 24h ago
+      const hasDnp = lead.callNotes.toLowerCase().includes("dnp");
+      if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
+
       // Exclude if last contacted within the past 7 days
-      if (lead.lastContacted) {
-        const lastContactedMs = new Date(lead.lastContacted).getTime();
-        if (lastContactedMs >= sevenDaysAgo.getTime()) return false;
-      }
+      if (lastContactedDate && lastContactedDate.getTime() >= sevenDaysAgo.getTime()) return false;
 
       const notesMissed = lead.notes.toLowerCase().includes("missed");
       return notesMissed;
