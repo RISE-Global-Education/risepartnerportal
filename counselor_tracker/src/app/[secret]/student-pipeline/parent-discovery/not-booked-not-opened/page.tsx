@@ -124,15 +124,16 @@ export default async function NotBookedNotOpenedPage() {
     })
     .filter((lead) => {
       const l = lead as NotBookedNotOpenedLead & { _openCount: number };
+
+      // Hard gates — must always pass to avoid overlap with other sub-tabs
+      if (l.sentCount === 0) return false;
+      if (l._openCount > 0) return false;
+
       const lastContactedDate = l.lastContacted ? new Date(l.lastContacted) : null;
 
       // DNP override: call notes contain "dnp" AND last call date > 24h ago
       const hasDnp = l.callNotes.toLowerCase().includes("dnp");
       if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
-
-      // Must have been sent to but NOT opened
-      if (l.sentCount === 0) return false;
-      if (l._openCount > 0) return false;
 
       // Exclude if last contacted within the past 7 days
       if (lastContactedDate && lastContactedDate.getTime() >= sevenDaysAgo.getTime()) return false;

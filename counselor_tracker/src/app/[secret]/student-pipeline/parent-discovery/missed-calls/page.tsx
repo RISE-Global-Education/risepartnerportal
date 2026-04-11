@@ -90,17 +90,18 @@ export default async function MissedCallsPage() {
       };
     })
     .filter((lead) => {
+      // Hard gate — notes must contain "missed"
+      if (!lead.notes.toLowerCase().includes("missed")) return false;
+
       const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;
 
       // DNP override: call notes contain "dnp" AND last call date > 24h ago
       const hasDnp = lead.callNotes.toLowerCase().includes("dnp");
       if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
 
-      // Exclude if last contacted within the past 7 days
+      // Last call date blank OR > 7 days ago
       if (lastContactedDate && lastContactedDate.getTime() >= sevenDaysAgo.getTime()) return false;
-
-      const notesMissed = lead.notes.toLowerCase().includes("missed");
-      return notesMissed;
+      return true;
     });
 
   return (

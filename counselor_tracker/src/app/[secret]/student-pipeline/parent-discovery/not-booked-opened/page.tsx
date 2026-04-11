@@ -119,14 +119,14 @@ export default async function NotBookedOpenedPage() {
       };
     })
     .filter((lead) => {
+      // Hard gate — must always pass
+      if (lead.openCount === 0) return false;
+
       const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;
 
       // DNP override: call notes contain "dnp" AND last call date > 24h ago
       const hasDnp = lead.callNotes.toLowerCase().includes("dnp");
       if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
-
-      // Must have opened the email at least once
-      if (lead.openCount === 0) return false;
 
       // Exclude if last contacted within the past 7 days
       if (lastContactedDate && lastContactedDate.getTime() >= sevenDaysAgo.getTime()) return false;
