@@ -40,7 +40,7 @@ function Modal({
 }) {
   const router = useRouter();
   const [callNotes, setCallNotes] = useState(applicant.shortlistingCallNotes);
-  const [dropped, setDropped] = useState(false);
+  const [status, setStatus] = useState<"none" | "drop" | "dnp">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -54,8 +54,10 @@ function Modal({
         shortlistingCallNotes: callNotes,
         lastCallDate: today,
       };
-      if (dropped) {
+      if (status === "drop") {
         body.followUpStatus = "Drop";
+      } else if (status === "dnp") {
+        body.incrementDnp = true;
       }
 
       const res = await fetch(`/api/student-pipeline/${applicant.recordId}`, {
@@ -182,17 +184,26 @@ function Modal({
             />
           </div>
 
-          {/* Drop checkbox */}
+          {/* Status radio */}
           <div>
-            <label className="flex items-center gap-2 cursor-pointer w-fit">
-              <input
-                type="checkbox"
-                checked={dropped}
-                onChange={(e) => setDropped(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-rise-green accent-rise-green cursor-pointer"
-              />
-              <span className="text-sm text-rise-black">Drop</span>
-            </label>
+            <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
+            <div className="flex items-center gap-5">
+              {(["none", "drop", "dnp"] as const).map((val) => (
+                <label key={val} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value={val}
+                    checked={status === val}
+                    onChange={() => setStatus(val)}
+                    className="accent-rise-green cursor-pointer"
+                  />
+                  <span className="text-sm text-rise-black">
+                    {val === "none" ? "None" : val === "drop" ? "Drop" : "Did Not Pick Up"}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* Actions */}

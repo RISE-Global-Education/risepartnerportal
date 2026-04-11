@@ -45,7 +45,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function Modal({ lead, onClose, onSaved }: { lead: NotBookedOpenedLead; onClose: () => void; onSaved: () => void }) {
   const router = useRouter();
   const [callNotes, setCallNotes] = useState(lead.callNotes);
-  const [dropped, setDropped] = useState(false);
+  const [status, setStatus] = useState<"none" | "drop" | "dnp">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -61,7 +61,8 @@ function Modal({ lead, onClose, onSaved }: { lead: NotBookedOpenedLead; onClose:
     setSaving(true);
     try {
       const body: Record<string, unknown> = { callNotes, lastContacted: today };
-      if (dropped) body.studentApplicationForm = "Drop";
+      if (status === "drop") body.studentApplicationForm = "Drop";
+      else if (status === "dnp") body.incrementDnp = true;
 
       const res = await fetch(`/api/parent-discovery/${lead.recordId}`, {
         method: "PATCH",
@@ -206,15 +207,24 @@ function Modal({ lead, onClose, onSaved }: { lead: NotBookedOpenedLead; onClose:
           </div>
 
           <div>
-            <label className="flex items-center gap-2 cursor-pointer w-fit">
-              <input
-                type="checkbox"
-                checked={dropped}
-                onChange={(e) => setDropped(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-rise-green accent-rise-green cursor-pointer"
-              />
-              <span className="text-sm text-rise-black">Drop</span>
-            </label>
+            <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
+            <div className="flex items-center gap-5">
+              {(["none", "drop", "dnp"] as const).map((val) => (
+                <label key={val} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value={val}
+                    checked={status === val}
+                    onChange={() => setStatus(val)}
+                    className="accent-rise-green cursor-pointer"
+                  />
+                  <span className="text-sm text-rise-black">
+                    {val === "none" ? "None" : val === "drop" ? "Drop" : "Did Not Pick Up"}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-center justify-between pt-1">
