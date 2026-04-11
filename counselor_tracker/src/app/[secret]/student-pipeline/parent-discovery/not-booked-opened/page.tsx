@@ -28,6 +28,7 @@ export interface NotBookedOpenedLead {
   counselorSource: string;
   notes: string;
   callNotes: string;
+  callStatus: string;
   lastContacted: string;
   createdTime: string;
   poc: string;
@@ -67,6 +68,7 @@ export default async function NotBookedOpenedPage() {
         "Company Name (from Counselor Source)",
         "Notes",
         "Call Notes",
+        "Call Status",
         "Last Call Date",
         "POC",
       ],
@@ -111,6 +113,7 @@ export default async function NotBookedOpenedPage() {
         counselorSource: counselorArr.join(", "),
         notes: getField<string>(r, "Notes") ?? "",
         callNotes: getField<string>(r, "Call Notes") ?? "",
+        callStatus: getField<string>(r, "Call Status") ?? "",
         lastContacted: getField<string>(r, "Last Call Date") ?? "",
         createdTime: r.createdTime,
         poc: getField<string>(r, "POC") ?? "",
@@ -119,8 +122,9 @@ export default async function NotBookedOpenedPage() {
       };
     })
     .filter((lead) => {
-      // Hard gate — must always pass
+      // Hard gates — must always pass
       if (lead.openCount === 0) return false;
+      if (["Call Booked", "Call Completed"].includes(lead.callStatus)) return false;
 
       const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;
 

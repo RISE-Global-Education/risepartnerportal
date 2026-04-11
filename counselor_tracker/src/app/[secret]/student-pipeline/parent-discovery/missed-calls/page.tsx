@@ -4,6 +4,8 @@ import MissedCallsClient from "./MissedCallsClient";
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
 
+const EXCLUDED_CALL_STATUSES = new Set(["Call Booked", "Call Completed"]);
+
 export interface DiscoveryLead {
   recordId: string;
   applicantId: string;
@@ -22,6 +24,7 @@ export interface DiscoveryLead {
   counselorSource: string;
   notes: string;
   callNotes: string;
+  callStatus: string;
   lastContacted: string;
   createdTime: string;
   poc: string;
@@ -31,6 +34,8 @@ export default async function MissedCallsPage() {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const cutoff = sevenDaysAgo.toISOString();
+  const now = new Date();
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
     filterByFormula: `AND(
@@ -55,13 +60,11 @@ export default async function MissedCallsPage() {
       "Company Name (from Counselor Source)",
       "Notes",
       "Call Notes",
+      "Call Status",
       "Last Call Date",
       "POC",
     ],
   });
-
-  const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   const leads: DiscoveryLead[] = records
     .map((r) => {
@@ -84,14 +87,16 @@ export default async function MissedCallsPage() {
         counselorSource: counselorArr.join(", "),
         notes: getField<string>(r, "Notes") ?? "",
         callNotes: getField<string>(r, "Call Notes") ?? "",
+        callStatus: getField<string>(r, "Call Status") ?? "",
         lastContacted: getField<string>(r, "Last Call Date") ?? "",
         createdTime: r.createdTime,
         poc: getField<string>(r, "POC") ?? "",
       };
     })
     .filter((lead) => {
-      // Hard gate — notes must contain "missed"
+      // Hard gates
       if (!lead.notes.toLowerCase().includes("missed")) return false;
+      if (EXCLUDED_CALL_STATUSES.has(lead.callStatus)) return false;
 
       const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;
 
