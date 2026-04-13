@@ -116,24 +116,20 @@ export default async function InterviewNotBookedPage() {
       lastCallDate: getField<string>(r, "Last Call Date") ?? "",
     }))
     .filter((a) => {
+      // Hard gates — always required
+      if (!a.shortlistSentTime) return false;
+      const shortlistSent = new Date(a.shortlistSentTime);
+      if (isNaN(shortlistSent.getTime()) || shortlistSent >= fiveDaysAgo) return false;
+      if (a.interviewDate) return false;
+      if (EXCLUDED_STATUSES.has(a.followUpStatus)) return false;
+
       const lastCallDate = a.lastCallDate ? new Date(a.lastCallDate) : null;
 
       // DNP override: shortlisting call notes contain "dnp" AND last call date > 24h ago
       const hasDnp = a.shortlistingCallNotes.toLowerCase().includes("dnp");
       if (hasDnp && lastCallDate && lastCallDate < oneDayAgo) return true;
 
-      // 1. Shortlist Email Sent Time must exist and be > 5 days ago
-      if (!a.shortlistSentTime) return false;
-      const shortlistSent = new Date(a.shortlistSentTime);
-      if (isNaN(shortlistSent.getTime()) || shortlistSent >= fiveDaysAgo) return false;
-
-      // 2. Interview Date is blank
-      if (a.interviewDate) return false;
-
-      // 3. Follow Up Status not in excluded set
-      if (EXCLUDED_STATUSES.has(a.followUpStatus)) return false;
-
-      // 4. Last Call Date is blank OR more than 3 days ago
+      // Last Call Date is blank OR more than 3 days ago
       if (lastCallDate && !isNaN(lastCallDate.getTime()) && lastCallDate >= threeDaysAgo) return false;
 
       return true;
