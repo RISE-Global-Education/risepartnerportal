@@ -317,7 +317,7 @@ export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] })
       )}
       {selected && <Modal lead={selected} onClose={() => setSelected(null)} onSaved={() => setToast(true)} />}
 
-      <div className="mb-4 flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-wrap gap-3 items-center">
         <input
           type="search"
           value={query}
@@ -335,6 +335,14 @@ export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] })
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
+        <a
+          href="https://docs.google.com/document/d/1LiVJyi05C1bDaoW7hNg4y2BDa_8V3PUxF3-9dmZABkU/edit?tab=t.q84zp926nf25"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg text-rise-brown hover:text-rise-black hover:border-gray-400 transition-colors"
+        >
+          Calling Script
+        </a>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -353,9 +361,6 @@ export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] })
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Country
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
-                Script
-              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Details
               </th>
@@ -364,7 +369,7 @@ export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] })
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-rise-brown text-sm">
+                <td colSpan={5} className="px-4 py-8 text-center text-rise-brown text-sm">
                   No results{query || country ? " for current filters" : ""}
                 </td>
               </tr>
@@ -375,16 +380,6 @@ export default function MissedCallsClient({ leads }: { leads: DiscoveryLead[] })
                   <td className="px-4 py-3 font-medium text-rise-black">{lead.studentName}</td>
                   <td className="px-4 py-3 text-rise-brown">{lead.parentName || "—"}</td>
                   <td className="px-4 py-3 text-rise-brown">{lead.country || "—"}</td>
-                  <td className="px-4 py-3">
-                    <a
-                      href="https://docs.google.com/document/d/1LiVJyi05C1bDaoW7hNg4y2BDa_8V3PUxF3-9dmZABkU/edit?tab=t.q84zp926nf25"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-medium text-rise-brown/70 hover:text-rise-black border border-gray-200 rounded-md px-2 py-1 hover:border-gray-400 transition-colors"
-                    >
-                      Calling Script
-                    </a>
-                  </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => setSelected(lead)}
