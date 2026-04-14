@@ -121,8 +121,11 @@ export default async function PendingOutreachPage() {
 
   return (
     <div>
-      <p className="text-sm text-rise-brown mb-4">
+      <p className="text-sm text-rise-brown mb-1">
         {applicants.length} student{applicants.length !== 1 ? "s" : ""} — 2025 cohort pending outreach
+      </p>
+      <p className="text-xs text-rise-brown/70 mb-4">
+        2025 applicants marked as Pending Outreach who haven&apos;t been contacted in 3+ days (or were marked Did Not Pick Up 24+ hours ago).
       </p>
       <PendingOutreachClient applicants={applicants} />
     </div>

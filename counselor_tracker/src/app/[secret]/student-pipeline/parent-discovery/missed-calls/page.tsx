@@ -111,8 +111,11 @@ export default async function MissedCallsPage() {
 
   return (
     <div>
-      <p className="text-sm text-rise-brown mb-4">
+      <p className="text-sm text-rise-brown mb-1">
         {leads.length} missed lead{leads.length !== 1 ? "s" : ""}
+      </p>
+      <p className="text-xs text-rise-brown/70 mb-4">
+        Leads where the notes mention a missed call, haven&apos;t been called back in 7+ days (or were marked Did Not Pick Up 24+ hours ago), and haven&apos;t booked or completed a call.
       </p>
       <MissedCallsClient leads={leads} />
     </div>

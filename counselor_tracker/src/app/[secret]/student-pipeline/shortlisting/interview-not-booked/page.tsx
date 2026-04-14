@@ -139,8 +139,11 @@ export default async function InterviewNotBookedPage() {
 
   return (
     <div>
-      <p className="text-sm text-rise-brown mb-4">
+      <p className="text-sm text-rise-brown mb-1">
         {applicants.length} student{applicants.length !== 1 ? "s" : ""} — interview not yet booked
+      </p>
+      <p className="text-xs text-rise-brown/70 mb-4">
+        Students shortlisted 5+ days ago who haven&apos;t booked an interview, haven&apos;t been called in 3+ days (or were marked Did Not Pick Up 24+ hours ago), and applied in 2026.
       </p>
       <InterviewNotBookedClient applicants={applicants} />
     </div>
