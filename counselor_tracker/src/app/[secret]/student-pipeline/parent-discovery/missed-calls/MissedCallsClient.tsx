@@ -91,7 +91,7 @@ function Modal({ lead, onClose, onSaved }: { lead: DiscoveryLead; onClose: () =>
       style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
@@ -110,7 +110,7 @@ function Modal({ lead, onClose, onSaved }: { lead: DiscoveryLead; onClose: () =>
         </div>
 
         {/* Body — read-only info */}
-        <div className="overflow-y-auto flex-1 px-6 py-4">
+        <div className="px-6 py-4">
           {/* Status strip */}
           <section className="mb-5 bg-rise-cream rounded-lg px-4 py-3 flex flex-wrap gap-x-6 gap-y-2">
             {lead.qualified && (
