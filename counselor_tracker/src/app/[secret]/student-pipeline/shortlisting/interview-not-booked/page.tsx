@@ -43,6 +43,7 @@ export default async function InterviewNotBookedPage() {
   const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
   const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const jan2026 = new Date("2026-01-01T00:00:00.000Z");
 
   const EXCLUDED_STATUSES = new Set(["Drop", "Client", "Interview Booked"]);
 
@@ -117,6 +118,7 @@ export default async function InterviewNotBookedPage() {
     }))
     .filter((a) => {
       // Hard gates — always required
+      if (new Date(a.createdTime) < jan2026) return false;
       if (!a.shortlistSentTime) return false;
       const shortlistSent = new Date(a.shortlistSentTime);
       if (isNaN(shortlistSent.getTime()) || shortlistSent >= fiveDaysAgo) return false;
