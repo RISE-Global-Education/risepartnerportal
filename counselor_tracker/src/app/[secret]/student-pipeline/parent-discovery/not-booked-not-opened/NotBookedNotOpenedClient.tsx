@@ -405,7 +405,7 @@ export default function NotBookedNotOpenedClient({
           href="https://docs.google.com/document/d/1LiVJyi05C1bDaoW7hNg4y2BDa_8V3PUxF3-9dmZABkU/edit?tab=t.q84zp926nf25"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg text-rise-brown hover:text-rise-black hover:border-gray-400 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-rise-green text-white rounded-lg hover:bg-rise-green/90 transition-colors"
         >
           Calling Script
         </a>
