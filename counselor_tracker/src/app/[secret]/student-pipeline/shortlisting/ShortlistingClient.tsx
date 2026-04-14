@@ -267,6 +267,11 @@ function Modal({
             </label>
           </div>
 
+          {/* Instructions */}
+          <div className="text-xs text-rise-brown/70 border-t border-gray-100 pt-3">
+            <p><span className="font-semibold text-rise-brown">Drop:</span> This person will be removed from the pipeline. Please confirm with the team before marking anyone as Drop.</p>
+          </div>
+
           {/* Actions */}
           <div className="flex items-center justify-between pt-1">
             <div>

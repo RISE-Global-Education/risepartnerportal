@@ -40,7 +40,7 @@ function Modal({
 }) {
   const router = useRouter();
   const [callNotes, setCallNotes] = useState(applicant.shortlistingCallNotes);
-  const [status, setStatus] = useState<"none" | "dnp">("none");
+  const [status, setStatus] = useState<"none" | "dnp" | "drop">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -57,6 +57,8 @@ function Modal({
       if (status === "dnp") {
         body.incrementDnp = true;
         body.shortlistingCallNotes = callNotes.trim() ? callNotes.trimEnd() + "\ndnp" : "dnp";
+      } else if (status === "drop") {
+        body.followUpStatus = "Drop";
       }
 
       const res = await fetch(`/api/student-pipeline/${applicant.recordId}`, {
@@ -187,7 +189,7 @@ function Modal({
           <div>
             <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
             <div className="flex items-center gap-5">
-              {(["none", "dnp"] as const).map((val) => (
+              {(["none", "dnp", "drop"] as const).map((val) => (
                 <label key={val} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -198,7 +200,7 @@ function Modal({
                     className="accent-rise-green cursor-pointer"
                   />
                   <span className="text-sm text-rise-black">
-                    {val === "none" ? "None" : "Did Not Pick Up"}
+                    {val === "none" ? "None" : val === "dnp" ? "Did Not Pick Up" : "Drop"}
                   </span>
                 </label>
               ))}
@@ -206,10 +208,10 @@ function Modal({
           </div>
 
           {/* Instructions */}
-          <div className="text-xs text-rise-brown/70 border-t border-gray-100 pt-3">
-            <p>
-              If you want to send a rejection to this student, please reach out to the team.
-            </p>
+          <div className="text-xs text-rise-brown/70 space-y-1.5 border-t border-gray-100 pt-3">
+            <p><span className="font-semibold text-rise-brown">Did Not Pick Up:</span> Mark this if the person didn't answer your call. They will be ready to call again tomorrow.</p>
+            <p><span className="font-semibold text-rise-brown">Drop:</span> This person will be removed from the pipeline. Please confirm with the team before marking anyone as Drop.</p>
+            <p>If you want to send a rejection to this student, please reach out to the team.</p>
           </div>
 
           {/* Actions */}

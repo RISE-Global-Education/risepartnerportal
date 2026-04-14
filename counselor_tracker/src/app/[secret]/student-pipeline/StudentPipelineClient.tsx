@@ -6,7 +6,7 @@ import type { ScholarApplicant } from "./page";
 interface EditState {
   notes: string;
   interviewDate: string;
-  acceptanceStatus: "" | "Send Acceptance" | "Send Rejection";
+  acceptanceStatus: "" | "Send Acceptance";
   mentorField: string;
 }
 
@@ -44,8 +44,8 @@ function Modal({
     e.preventDefault();
     setError(null);
 
-    if (!edit.interviewDate || !edit.notes.trim() || !edit.mentorField.trim() || !edit.acceptanceStatus) {
-      setError("Please fill in all required fields: Interview Date, Interview Notes, Mentor Field, and Acceptance Status.");
+    if (!edit.interviewDate || !edit.notes.trim() || !edit.mentorField.trim()) {
+      setError("Please fill in all required fields: Interview Date, Interview Notes, and Mentor Field.");
       return;
     }
 
@@ -205,19 +205,17 @@ function Modal({
                   Acceptance Status
                 </label>
                 <div className="flex flex-col gap-2">
-                  {(["Send Acceptance", "Send Rejection"] as const).map((option) => (
-                    <label key={option} className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="radio"
-                        name="acceptanceStatus"
-                        value={option}
-                        checked={edit.acceptanceStatus === option}
-                        onChange={() => setEdit((prev) => ({ ...prev, acceptanceStatus: option }))}
-                        className="w-4 h-4 border-gray-300 text-rise-green focus:ring-rise-green/40"
-                      />
-                      <span className="text-sm text-rise-black">{option}</span>
-                    </label>
-                  ))}
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="acceptanceStatus"
+                      value="Send Acceptance"
+                      checked={edit.acceptanceStatus === "Send Acceptance"}
+                      onChange={() => setEdit((prev) => ({ ...prev, acceptanceStatus: "Send Acceptance" }))}
+                      className="w-4 h-4 border-gray-300 text-rise-green focus:ring-rise-green/40"
+                    />
+                    <span className="text-sm text-rise-black">Send Acceptance</span>
+                  </label>
                   {edit.acceptanceStatus && (
                     <button
                       type="button"
@@ -228,6 +226,7 @@ function Modal({
                     </button>
                   )}
                 </div>
+                <p className="mt-3 text-xs text-rise-brown/70">If you want to send a rejection to this student, please reach out to the team.</p>
               </div>
             </section>
           </form>
