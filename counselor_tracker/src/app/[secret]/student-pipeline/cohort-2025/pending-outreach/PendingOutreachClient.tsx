@@ -182,6 +182,7 @@ function Modal({
               placeholder="Please add your call notes here with what was discussed in the call. If the person did not pick up, please mark them 'Did Not Pick Up' at the bottom."
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none"
             />
+            <p className="mt-1 text-xs text-rise-brown/60 italic">Please don&apos;t remove any notes. If you want to add any notes, please add them on the next line.</p>
           </div>
 
           {/* Status radio */}
