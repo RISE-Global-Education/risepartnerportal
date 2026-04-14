@@ -395,6 +395,7 @@ export default function NotBookedOpenedClient({
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Student Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Parent Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Country</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Script</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 <button
                   onClick={cycleOpenSort}
@@ -412,7 +413,7 @@ export default function NotBookedOpenedClient({
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-rise-brown text-sm">
+                <td colSpan={7} className="px-4 py-8 text-center text-rise-brown text-sm">
                   No results{query || country ? " for current filters" : ""}
                 </td>
               </tr>
@@ -423,6 +424,16 @@ export default function NotBookedOpenedClient({
                   <td className="px-4 py-3 font-medium text-rise-black">{lead.studentName}</td>
                   <td className="px-4 py-3 text-rise-brown">{lead.parentName || "—"}</td>
                   <td className="px-4 py-3 text-xs text-rise-brown">{lead.country || "—"}</td>
+                  <td className="px-4 py-3">
+                    <a
+                      href="https://docs.google.com/document/d/1LiVJyi05C1bDaoW7hNg4y2BDa_8V3PUxF3-9dmZABkU/edit?tab=t.q84zp926nf25"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-rise-brown/70 hover:text-rise-black border border-gray-200 rounded-md px-2 py-1 hover:border-gray-400 transition-colors"
+                    >
+                      Calling Script
+                    </a>
+                  </td>
                   <td className="px-4 py-3">
                     <span className="inline-block text-xs font-medium bg-blue-50 text-blue-700 rounded-full px-2 py-0.5">
                       {lead.openCount} {lead.openCount === 1 ? "open" : "opens"}
