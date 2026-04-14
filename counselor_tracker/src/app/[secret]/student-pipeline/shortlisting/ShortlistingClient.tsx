@@ -246,7 +246,7 @@ function Modal({
               value={callNotes}
               onChange={(e) => setCallNotes(e.target.value)}
               rows={3}
-              placeholder="Add call notes…"
+              placeholder="Please add your call notes here with what was discussed in the call. If the person did not pick up, please mark them 'Did Not Pick Up' at the bottom."
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none"
             />
           </div>

@@ -186,7 +186,7 @@ function Modal({
               value={callNotes}
               onChange={(e) => setCallNotes(e.target.value)}
               rows={4}
-              placeholder="Add call notes…"
+              placeholder="Please add your call notes here with what was discussed in the call. If the person did not pick up, please mark them 'Did Not Pick Up' at the bottom."
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none"
             />
           </div>
@@ -211,6 +211,16 @@ function Modal({
                 </label>
               ))}
             </div>
+          </div>
+
+          {/* Instructions */}
+          <div className="text-xs text-rise-brown/70 space-y-1.5 border-t border-gray-100 pt-3">
+            <p>
+              <span className="font-semibold text-rise-brown">Did Not Pick Up:</span> Mark this if the person didn&apos;t answer your call. They will be ready to call again tomorrow.
+            </p>
+            <p>
+              <span className="font-semibold text-rise-brown">Drop:</span> This person will be removed from the pipeline. Please confirm with the team before marking anyone as Drop.
+            </p>
           </div>
 
           {/* Actions */}
