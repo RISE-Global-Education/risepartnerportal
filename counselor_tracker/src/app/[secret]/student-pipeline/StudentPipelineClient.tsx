@@ -6,7 +6,6 @@ import type { ScholarApplicant } from "./page";
 interface EditState {
   notes: string;
   interviewDate: string;
-  acceptanceStatus: "" | "Send Acceptance";
   mentorField: string;
 }
 
@@ -34,7 +33,6 @@ function Modal({
   const [edit, setEdit] = useState<EditState>({
     notes: student.notes,
     interviewDate: student.interviewDate,
-    acceptanceStatus: "",
     mentorField: student.mentorField,
   });
   const [saving, setSaving] = useState(false);
@@ -56,7 +54,7 @@ function Modal({
         notes: edit.notes,
         interviewDate: edit.interviewDate,
         mentorField: edit.mentorField,
-        acceptanceStatus: edit.acceptanceStatus,
+        acceptanceStatus: "Send Acceptance",
       };
 
       const res = await fetch(`/api/student-pipeline/${student.recordId}`, {
@@ -200,34 +198,6 @@ function Modal({
                 />
               </div>
 
-              <div className="mb-2">
-                <label className="block text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">
-                  Acceptance Status
-                </label>
-                <div className="flex flex-col gap-2">
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="radio"
-                      name="acceptanceStatus"
-                      value="Send Acceptance"
-                      checked={edit.acceptanceStatus === "Send Acceptance"}
-                      onChange={() => setEdit((prev) => ({ ...prev, acceptanceStatus: "Send Acceptance" }))}
-                      className="w-4 h-4 border-gray-300 text-rise-green focus:ring-rise-green/40"
-                    />
-                    <span className="text-sm text-rise-black">Send Acceptance</span>
-                  </label>
-                  {edit.acceptanceStatus && (
-                    <button
-                      type="button"
-                      onClick={() => setEdit((prev) => ({ ...prev, acceptanceStatus: "" }))}
-                      className="text-xs text-rise-brown hover:text-rise-black w-fit"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                <p className="mt-3 text-xs text-rise-brown/70">If you want to send a rejection to this student, please reach out to the team.</p>
-              </div>
             </section>
           </form>
 
@@ -251,7 +221,7 @@ function Modal({
             disabled={saving}
             className="px-5 py-2 text-sm font-semibold bg-rise-green text-white rounded-lg hover:bg-rise-green/90 transition-colors disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Sending…" : "Send Acceptance"}
           </button>
         </div>
       </div>
