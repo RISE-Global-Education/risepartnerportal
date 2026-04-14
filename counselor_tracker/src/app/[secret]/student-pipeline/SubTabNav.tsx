@@ -11,6 +11,7 @@ export default function SubTabNav({ secret }: { secret: string }) {
     { label: "Shortlisting Stage", href: `${base}/shortlisting` },
     { label: "Acceptance Stage", href: `${base}/acceptance` },
     { label: "Parent Discovery Stage", href: `${base}/parent-discovery` },
+    { label: "2025 Cohort", href: `${base}/cohort-2025` },
   ];
 
   return (
