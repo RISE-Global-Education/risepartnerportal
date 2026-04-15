@@ -242,6 +242,7 @@ export default function StudentPipelineClient({
   const [students, setStudents] = useState(initialStudents);
   const [selected, setSelected] = useState<ScholarApplicant | null>(null);
   const [query, setQuery] = useState("");
+  const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
 
   function handleSuccess(recordId: string) {
     // Remove the student from the list (they now have an Acceptance Status set)
@@ -249,12 +250,17 @@ export default function StudentPipelineClient({
     setSelected(null);
   }
 
-  const filtered = query.trim()
-    ? students.filter((s) => {
-        const q = query.trim().toLowerCase();
-        return s.name.toLowerCase().includes(q) || s.applicantId.toLowerCase().includes(q);
-      })
-    : students;
+  const filtered = students
+    .filter((s) => {
+      if (!query.trim()) return true;
+      const q = query.trim().toLowerCase();
+      return s.name.toLowerCase().includes(q) || s.applicantId.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      if (idSort === "asc") return a.applicantId.localeCompare(b.applicantId);
+      if (idSort === "desc") return b.applicantId.localeCompare(a.applicantId);
+      return 0;
+    });
 
   if (students.length === 0) {
     return (
@@ -280,7 +286,9 @@ export default function StudentPipelineClient({
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
-                Applicant ID
+                <button onClick={() => setIdSort((s) => (s === null ? "asc" : s === "asc" ? "desc" : null))} className="inline-flex items-center gap-1 hover:text-rise-black transition-colors">
+                  Applicant ID <span className="text-base leading-none">{idSort === "asc" ? "↑" : idSort === "desc" ? "↓" : "↕"}</span>
+                </button>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Name

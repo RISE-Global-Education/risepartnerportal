@@ -282,6 +282,7 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
   const [selected, setSelected] = useState<DiscoveryLead | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
   const [toast, setToast] = useState(false);
 
   useEffect(() => {
@@ -290,17 +291,23 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
     return () => clearTimeout(t);
   }, [toast]);
 
-  const filtered = leads.filter((l) => {
-    const q = query.trim().toLowerCase();
-    const matchesQuery =
-      !q ||
-      l.studentName.toLowerCase().includes(q) ||
-      l.studentEmail.toLowerCase().includes(q) ||
-      l.parentName.toLowerCase().includes(q) ||
-      l.parentEmail.toLowerCase().includes(q);
-    const matchesCountry = !country || l.country.trim() === country;
-    return matchesQuery && matchesCountry;
-  });
+  const filtered = leads
+    .filter((l) => {
+      const q = query.trim().toLowerCase();
+      const matchesQuery =
+        !q ||
+        l.studentName.toLowerCase().includes(q) ||
+        l.studentEmail.toLowerCase().includes(q) ||
+        l.parentName.toLowerCase().includes(q) ||
+        l.parentEmail.toLowerCase().includes(q);
+      const matchesCountry = !country || l.country.trim() === country;
+      return matchesQuery && matchesCountry;
+    })
+    .sort((a, b) => {
+      if (idSort === "asc") return a.applicantId.localeCompare(b.applicantId);
+      if (idSort === "desc") return b.applicantId.localeCompare(a.applicantId);
+      return 0;
+    });
 
   if (leads.length === 0) {
     return (
@@ -352,7 +359,9 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
-                Applicant ID
+                <button onClick={() => setIdSort((s) => (s === null ? "asc" : s === "asc" ? "desc" : null))} className="inline-flex items-center gap-1 hover:text-rise-black transition-colors">
+                  Applicant ID <span className="text-base leading-none">{idSort === "asc" ? "↑" : idSort === "desc" ? "↓" : "↕"}</span>
+                </button>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Student Name

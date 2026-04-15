@@ -310,6 +310,7 @@ export default function NotBookedOpenedClient({
   const [selected, setSelected] = useState<NotBookedOpenedLead | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
   const [openSort, setOpenSort] = useState<"asc" | "desc" | null>(null);
 
   function cycleOpenSort() {
@@ -355,6 +356,8 @@ export default function NotBookedOpenedClient({
       return matchesQuery && matchesCountry;
     })
     .sort((a, b) => {
+      if (idSort === "asc") return a.applicantId.localeCompare(b.applicantId);
+      if (idSort === "desc") return b.applicantId.localeCompare(a.applicantId);
       if (openSort === "asc") return a.openCount - b.openCount;
       if (openSort === "desc") return b.openCount - a.openCount;
       return 0;
@@ -412,7 +415,11 @@ export default function NotBookedOpenedClient({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Applicant ID</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                <button onClick={() => setIdSort((s) => (s === null ? "asc" : s === "asc" ? "desc" : null))} className="inline-flex items-center gap-1 hover:text-rise-black transition-colors">
+                  Applicant ID <span className="text-base leading-none">{idSort === "asc" ? "↑" : idSort === "desc" ? "↓" : "↕"}</span>
+                </button>
+              </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Student Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Parent Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Country</th>

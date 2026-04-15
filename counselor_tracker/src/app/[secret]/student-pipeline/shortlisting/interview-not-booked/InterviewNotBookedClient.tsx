@@ -255,6 +255,7 @@ export default function InterviewNotBookedClient({
   const [selected, setSelected] = useState<InterviewNotBookedApplicant | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
   const [toast, setToast] = useState(false);
 
   function handleSaved() {
@@ -262,16 +263,22 @@ export default function InterviewNotBookedClient({
     setTimeout(() => setToast(false), 3000);
   }
 
-  const filtered = applicants.filter((a) => {
-    const q = query.trim().toLowerCase();
-    const matchesQuery =
-      !q ||
-      a.name.toLowerCase().includes(q) ||
-      a.studentEmail.toLowerCase().includes(q) ||
-      a.applicantId.toLowerCase().includes(q);
-    const matchesCountry = !country || a.country.trim() === country;
-    return matchesQuery && matchesCountry;
-  });
+  const filtered = applicants
+    .filter((a) => {
+      const q = query.trim().toLowerCase();
+      const matchesQuery =
+        !q ||
+        a.name.toLowerCase().includes(q) ||
+        a.studentEmail.toLowerCase().includes(q) ||
+        a.applicantId.toLowerCase().includes(q);
+      const matchesCountry = !country || a.country.trim() === country;
+      return matchesQuery && matchesCountry;
+    })
+    .sort((a, b) => {
+      if (idSort === "asc") return a.applicantId.localeCompare(b.applicantId);
+      if (idSort === "desc") return b.applicantId.localeCompare(a.applicantId);
+      return 0;
+    });
 
   if (applicants.length === 0) {
     return (
@@ -330,7 +337,9 @@ export default function InterviewNotBookedClient({
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
-                Applicant ID
+                <button onClick={() => setIdSort((s) => (s === null ? "asc" : s === "asc" ? "desc" : null))} className="inline-flex items-center gap-1 hover:text-rise-black transition-colors">
+                  Applicant ID <span className="text-base leading-none">{idSort === "asc" ? "↑" : idSort === "desc" ? "↓" : "↕"}</span>
+                </button>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Student Name

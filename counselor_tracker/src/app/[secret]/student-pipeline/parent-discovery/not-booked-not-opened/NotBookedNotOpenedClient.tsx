@@ -316,6 +316,7 @@ export default function NotBookedNotOpenedClient({
   const [selected, setSelected] = useState<NotBookedNotOpenedLead | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
   const [sentSort, setSentSort] = useState<"asc" | "desc" | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -361,6 +362,8 @@ export default function NotBookedNotOpenedClient({
       return matchesQuery && matchesCountry;
     })
     .sort((a, b) => {
+      if (idSort === "asc") return a.applicantId.localeCompare(b.applicantId);
+      if (idSort === "desc") return b.applicantId.localeCompare(a.applicantId);
       if (sentSort === "asc") return a.sentCount - b.sentCount;
       if (sentSort === "desc") return b.sentCount - a.sentCount;
       return 0;
@@ -418,7 +421,11 @@ export default function NotBookedNotOpenedClient({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50/50">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Applicant ID</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                <button onClick={() => setIdSort((s) => (s === null ? "asc" : s === "asc" ? "desc" : null))} className="inline-flex items-center gap-1 hover:text-rise-black transition-colors">
+                  Applicant ID <span className="text-base leading-none">{idSort === "asc" ? "↑" : idSort === "desc" ? "↓" : "↕"}</span>
+                </button>
+              </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Student Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Parent Name</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">Country</th>
