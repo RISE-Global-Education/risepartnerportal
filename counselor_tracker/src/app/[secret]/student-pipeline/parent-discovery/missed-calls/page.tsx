@@ -36,6 +36,7 @@ export default async function MissedCallsPage() {
   const cutoff = sevenDaysAgo.toISOString();
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
+  const lastCallCutoff = new Date(now.getTime() - 69 * 60 * 60 * 1000);
 
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
     filterByFormula: `AND(
@@ -105,7 +106,7 @@ export default async function MissedCallsPage() {
       if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
 
       // Last call date blank OR > 7 days ago
-      if (lastContactedDate && lastContactedDate.getTime() >= sevenDaysAgo.getTime()) return false;
+      if (lastContactedDate && lastContactedDate.getTime() >= lastCallCutoff.getTime()) return false;
       return true;
     });
 

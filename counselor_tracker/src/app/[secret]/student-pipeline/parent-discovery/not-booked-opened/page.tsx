@@ -42,6 +42,7 @@ export default async function NotBookedOpenedPage() {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
+  const lastCallCutoff = new Date(now.getTime() - 69 * 60 * 60 * 1000);
   const cutoff = sevenDaysAgo.toISOString();
 
   const [records, { recipients: allRecipients, cachedAt: mixmaxCachedAt }] = await Promise.all([
@@ -133,7 +134,7 @@ export default async function NotBookedOpenedPage() {
       if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
 
       // Exclude if last contacted within the past 7 days
-      if (lastContactedDate && lastContactedDate.getTime() >= sevenDaysAgo.getTime()) return false;
+      if (lastContactedDate && lastContactedDate.getTime() >= lastCallCutoff.getTime()) return false;
 
       // Not booked conditions: pending consultation and no notes
       const noConsultation = !lead.consultationDate;
