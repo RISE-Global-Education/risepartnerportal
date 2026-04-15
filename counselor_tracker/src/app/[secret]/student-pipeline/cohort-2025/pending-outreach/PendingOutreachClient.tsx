@@ -79,12 +79,12 @@ function Modal({
 }: {
   applicant: PendingOutreachApplicant;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (addedToPd: boolean) => void;
   userName: string;
 }) {
   const router = useRouter();
   const [outreachNotes, setOutreachNotes] = useState(applicant.outreachNotes2025);
-  const [status, setStatus] = useState<"none" | "drop" | "dnp">("none");
+  const [status, setStatus] = useState<"none" | "drop" | "dnp" | "add_to_pd">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -104,21 +104,46 @@ function Modal({
       } else if (status === "dnp") {
         body.incrementDnp = true;
         body.outreachNotes2025 = outreachNotes.trim() ? outreachNotes.trimEnd() + "\ndnp" : "dnp";
+      } else if (status === "add_to_pd") {
+        body.outreach2025 = "Interested";
       }
 
-      const res = await fetch(`/api/student-pipeline/${applicant.recordId}`, {
+      const patchRes = await fetch(`/api/student-pipeline/${applicant.recordId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setSaveError(data.error ?? `Error ${res.status}`);
-      } else {
-        router.refresh();
-        onSaved();
-        onClose();
+      if (!patchRes.ok) {
+        const data = await patchRes.json().catch(() => ({}));
+        setSaveError(data.error ?? `Error ${patchRes.status}`);
+        return;
       }
+
+      if (status === "add_to_pd") {
+        const pdRes = await fetch("/api/parent-discovery", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            studentName: applicant.name,
+            studentEmail: applicant.studentEmail,
+            parentName: applicant.parentName,
+            parentEmail: applicant.parentEmail,
+            parentPhone: applicant.parentPhone,
+            currentGrade: applicant.currentGrade,
+            country: applicant.country,
+            schoolCollege: applicant.schoolCollege,
+          }),
+        });
+        if (!pdRes.ok) {
+          const data = await pdRes.json().catch(() => ({}));
+          setSaveError(data.error ?? `Error creating PD record: ${pdRes.status}`);
+          return;
+        }
+      }
+
+      router.refresh();
+      onSaved(status === "add_to_pd");
+      onClose();
     } catch {
       setSaveError("Network error");
     } finally {
@@ -233,8 +258,8 @@ function Modal({
           {/* Status radio */}
           <div>
             <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
-            <div className="flex items-center gap-5">
-              {(["none", "drop", "dnp"] as const).map((val) => (
+            <div className="flex items-center flex-wrap gap-5">
+              {(["none", "drop", "dnp", "add_to_pd"] as const).map((val) => (
                 <label key={val} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -245,7 +270,7 @@ function Modal({
                     className="accent-rise-green cursor-pointer"
                   />
                   <span className="text-sm text-rise-black">
-                    {val === "none" ? "None" : val === "drop" ? "Drop" : "Did Not Pick Up"}
+                    {val === "none" ? "None" : val === "drop" ? "Drop" : val === "dnp" ? "Did Not Pick Up" : "Add to Parent Discovery"}
                   </span>
                 </label>
               ))}
@@ -259,6 +284,9 @@ function Modal({
             </p>
             <p>
               <span className="font-semibold text-rise-brown">Drop:</span> This person will be removed from the pipeline. Please confirm with the team before marking anyone as Drop.
+            </p>
+            <p>
+              <span className="font-semibold text-rise-brown">Add to Parent Discovery:</span> Marks this lead as Interested and creates a new record in the Parent Discovery table.
             </p>
           </div>
 
@@ -300,11 +328,11 @@ export default function PendingOutreachClient({
   const [selected, setSelected] = useState<PendingOutreachApplicant | null>(null);
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("");
-  const [toast, setToast] = useState(false);
+  const [toast, setToast] = useState<"saved" | "pd" | null>(null);
 
-  function handleSaved() {
-    setToast(true);
-    setTimeout(() => setToast(false), 3000);
+  function handleSaved(addedToPd: boolean) {
+    setToast(addedToPd ? "pd" : "saved");
+    setTimeout(() => setToast(null), 3000);
   }
 
   const filtered = applicants.filter((a) => {
@@ -330,7 +358,9 @@ export default function PendingOutreachClient({
     <>
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 bg-rise-green text-white text-sm font-medium px-4 py-3 rounded-lg shadow-lg">
-          Changes saved — Last Call Date set to today
+          {toast === "pd"
+            ? "Added to Parent Discovery — marked as Interested"
+            : "Changes saved — Last Call Date set to today"}
         </div>
       )}
       {selected && (
