@@ -33,6 +33,7 @@ function Modal({
   applicant,
   onClose,
   onSaved,
+  userName,
 }: {
   applicant: InterviewNotBookedApplicant;
   onClose: () => void;
