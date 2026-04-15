@@ -47,11 +47,25 @@ export function middleware(req: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // User role can only access /student-pipeline routes
-  if (isUser && !rest.startsWith("/student-pipeline")) {
-    const url = req.nextUrl.clone();
-    url.pathname = `/${secret}/student-pipeline`;
-    return NextResponse.redirect(url);
+  // User secret requires team login
+  if (isUser) {
+    if (rest === "/login") {
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+
+    const authed = !!req.cookies.get("team_auth")?.value;
+    if (!authed) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${secret}/login`;
+      return NextResponse.redirect(url);
+    }
+
+    // Restrict to student-pipeline only
+    if (!rest.startsWith("/student-pipeline")) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${secret}/student-pipeline`;
+      return NextResponse.redirect(url);
+    }
   }
 
   return NextResponse.next({ request: { headers: requestHeaders } });

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function NavBar({ secret, role }: { secret: string; role: "admin" | "user" }) {
+export default function NavBar({ secret, role, teamName }: { secret: string; role: "admin" | "user"; teamName?: string | null }) {
   const pathname = usePathname();
   const basePath = `/${secret}`;
   const isSearch = pathname.endsWith("/search");
@@ -53,6 +53,19 @@ export default function NavBar({ secret, role }: { secret: string; role: "admin"
             </Link>
           ))}
         </div>
+
+        {teamName && (
+          <div className="ml-auto flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-rise-green/10 flex items-center justify-center">
+              <span className="text-xs font-semibold text-rise-green">
+                {teamName.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <span className="text-sm font-medium text-rise-black hidden sm:inline">
+              {teamName}
+            </span>
+          </div>
+        )}
       </div>
     </nav>
   );

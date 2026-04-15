@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import NavBar from "@/components/dashboard/NavBar";
 
@@ -29,9 +29,13 @@ export default async function DashboardLayout({
     return <>{children}</>;
   }
 
+  // Read team member name from cookie for display in NavBar
+  const cookieStore = await cookies();
+  const teamName = isUser ? (cookieStore.get("team_auth")?.value ?? null) : null;
+
   return (
     <div className="min-h-screen bg-rise-cream">
-      <NavBar secret={secret} role={role} />
+      <NavBar secret={secret} role={role} teamName={teamName} />
       {children}
     </div>
   );
