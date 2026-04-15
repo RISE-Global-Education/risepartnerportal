@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { fetchAllRecords, getField } from "@/lib/airtable";
 import InterviewNotBookedClient from "./InterviewNotBookedClient";
 
@@ -39,6 +40,8 @@ export interface InterviewNotBookedApplicant {
 }
 
 export default async function InterviewNotBookedPage() {
+  const cookieStore = await cookies();
+  const userName = cookieStore.get("team_auth")?.value ?? "";
   const now = new Date();
   const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
   const threeDaysAgo = new Date(now.getTime() - 69 * 60 * 60 * 1000);
@@ -145,7 +148,7 @@ export default async function InterviewNotBookedPage() {
       <p className="text-xs text-rise-brown/70 mb-4">
         Students shortlisted 5+ days ago who haven&apos;t booked an interview, haven&apos;t been called in 3+ days (or were marked Did Not Pick Up 24+ hours ago), and applied in 2026.
       </p>
-      <InterviewNotBookedClient applicants={applicants} />
+      <InterviewNotBookedClient applicants={applicants} userName={userName} />
     </div>
   );
 }

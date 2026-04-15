@@ -1,5 +1,6 @@
 import { fetchAllRecords, getField } from "@/lib/airtable";
 import { getMixmaxData } from "@/lib/mixmax";
+import { cookies } from "next/headers";
 import NotBookedNotOpenedClient from "./NotBookedNotOpenedClient";
 
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
@@ -38,6 +39,8 @@ export interface NotBookedNotOpenedLead {
 }
 
 export default async function NotBookedNotOpenedPage() {
+  const cookieStore = await cookies();
+  const userName = cookieStore.get("team_auth")?.value ?? "";
   const now = new Date();
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -163,7 +166,7 @@ export default async function NotBookedNotOpenedPage() {
       <p className="text-xs text-rise-brown/70 mb-4">
         Leads who received a booking email but haven&apos;t opened it, haven&apos;t been followed up in 7+ days (or were marked Did Not Pick Up 24+ hours ago), and haven&apos;t booked or completed a call.
       </p>
-      <NotBookedNotOpenedClient leads={leads} mixmaxCachedAt={mixmaxCachedAt} />
+      <NotBookedNotOpenedClient leads={leads} mixmaxCachedAt={mixmaxCachedAt} userName={userName} />
     </div>
   );
 }

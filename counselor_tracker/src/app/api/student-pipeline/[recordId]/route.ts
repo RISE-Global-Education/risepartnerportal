@@ -49,6 +49,12 @@ export async function PATCH(
   if (body.outreach2025 !== undefined) {
     fields["2025 Outreach"] = body.outreach2025;
   }
+  if (body.callPoc !== undefined) {
+    fields["Call POC"] = body.callPoc;
+  }
+  if (body.interviewPoc !== undefined) {
+    fields["Interview POC"] = body.interviewPoc;
+  }
 
   // DNP counter increment: fetch current value then add 1
   if (body.incrementDnp === true) {

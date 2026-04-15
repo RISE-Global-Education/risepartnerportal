@@ -31,6 +31,9 @@ export async function PATCH(
   if (body.lastContacted !== undefined) {
     fields["Last Call Date"] = body.lastContacted || null;
   }
+  if (body.callPoc !== undefined) {
+    fields["Call POC"] = body.callPoc;
+  }
 
   // DNP counter increment: fetch current value then add 1
   if (body.incrementDnp === true) {

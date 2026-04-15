@@ -33,10 +33,12 @@ function Modal({
   applicant,
   onClose,
   onSaved,
+  userName,
 }: {
   applicant: AcceptanceNotConvertedApplicant;
   onClose: () => void;
   onSaved: () => void;
+  userName: string;
 }) {
   const router = useRouter();
   const [callNotes, setCallNotes] = useState(applicant.paymentCallNotes);
@@ -53,6 +55,7 @@ function Modal({
       const body: Record<string, unknown> = {
         paymentCallNotes: callNotes,
         lastCallDate: today,
+        ...(userName && { callPoc: userName }),
       };
       if (status === "drop") {
         body.followUpStatus = "Drop";
@@ -254,8 +257,10 @@ function Modal({
 
 export default function AcceptanceNotConvertedClient({
   applicants,
+  userName,
 }: {
   applicants: AcceptanceNotConvertedApplicant[];
+  userName: string;
 }) {
   const [selected, setSelected] = useState<AcceptanceNotConvertedApplicant | null>(null);
   const [query, setQuery] = useState("");
@@ -298,6 +303,7 @@ export default function AcceptanceNotConvertedClient({
           applicant={selected}
           onClose={() => setSelected(null)}
           onSaved={handleSaved}
+          userName={userName}
         />
       )}
 

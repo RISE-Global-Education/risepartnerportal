@@ -42,7 +42,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Modal({ lead, onClose, onSaved }: { lead: NotBookedNotOpenedLead; onClose: () => void; onSaved: () => void }) {
+function Modal({ lead, onClose, onSaved, userName }: { lead: NotBookedNotOpenedLead; onClose: () => void; onSaved: () => void; userName: string }) {
   const router = useRouter();
   const [callNotes, setCallNotes] = useState(lead.callNotes);
   const [status, setStatus] = useState<"none" | "drop" | "dnp">("none");
@@ -60,7 +60,7 @@ function Modal({ lead, onClose, onSaved }: { lead: NotBookedNotOpenedLead; onClo
     }
     setSaving(true);
     try {
-      const body: Record<string, unknown> = { callNotes, lastContacted: today };
+      const body: Record<string, unknown> = { callNotes, lastContacted: today, ...(userName && { callPoc: userName }) };
       if (status === "drop") body.studentApplicationForm = "Drop";
       else if (status === "dnp") {
         body.incrementDnp = true;
@@ -306,9 +306,11 @@ function MixmaxBanner({
 export default function NotBookedNotOpenedClient({
   leads,
   mixmaxCachedAt,
+  userName,
 }: {
   leads: NotBookedNotOpenedLead[];
   mixmaxCachedAt: string | null;
+  userName: string;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<NotBookedNotOpenedLead | null>(null);
@@ -380,7 +382,7 @@ export default function NotBookedNotOpenedClient({
           Changes saved — Last Contacted set to today
         </div>
       )}
-      {selected && <Modal lead={selected} onClose={() => setSelected(null)} onSaved={() => setToast(true)} />}
+      {selected && <Modal lead={selected} onClose={() => setSelected(null)} onSaved={() => setToast(true)} userName={userName} />}
 
       <MixmaxBanner cachedAt={mixmaxCachedAt} onRefresh={handleRefresh} refreshing={refreshing} refreshError={refreshError} />
 

@@ -1,4 +1,5 @@
 import { fetchAllRecords, getField } from "@/lib/airtable";
+import { cookies } from "next/headers";
 import MissedCallsClient from "./MissedCallsClient";
 
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
@@ -31,6 +32,8 @@ export interface DiscoveryLead {
 }
 
 export default async function MissedCallsPage() {
+  const cookieStore = await cookies();
+  const userName = cookieStore.get("team_auth")?.value ?? "";
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const cutoff = sevenDaysAgo.toISOString();
@@ -118,7 +121,7 @@ export default async function MissedCallsPage() {
       <p className="text-xs text-rise-brown/70 mb-4">
         Leads where the notes mention a missed call, haven&apos;t been called back in 7+ days (or were marked Did Not Pick Up 24+ hours ago), and haven&apos;t booked or completed a call.
       </p>
-      <MissedCallsClient leads={leads} />
+      <MissedCallsClient leads={leads} userName={userName} />
     </div>
   );
 }

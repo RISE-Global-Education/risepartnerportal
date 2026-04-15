@@ -25,10 +25,12 @@ function Modal({
   student,
   onClose,
   onSuccess,
+  userName,
 }: {
   student: ScholarApplicant;
   onClose: () => void;
   onSuccess: (recordId: string) => void;
+  userName: string;
 }) {
   const [edit, setEdit] = useState<EditState>({
     notes: student.notes,
@@ -55,6 +57,7 @@ function Modal({
         interviewDate: edit.interviewDate,
         mentorField: edit.mentorField,
         acceptanceStatus: "Send Acceptance",
+        ...(userName && { interviewPoc: userName }),
       };
 
       const res = await fetch(`/api/student-pipeline/${student.recordId}`, {
@@ -231,8 +234,10 @@ function Modal({
 
 export default function StudentPipelineClient({
   students: initialStudents,
+  userName,
 }: {
   students: ScholarApplicant[];
+  userName: string;
 }) {
   const [students, setStudents] = useState(initialStudents);
   const [selected, setSelected] = useState<ScholarApplicant | null>(null);
@@ -335,6 +340,7 @@ export default function StudentPipelineClient({
           student={selected}
           onClose={() => setSelected(null)}
           onSuccess={handleSuccess}
+          userName={userName}
         />
       )}
     </>

@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { fetchAllRecords, getField } from "@/lib/airtable";
 import PendingOutreachClient from "./PendingOutreachClient";
 
@@ -35,6 +36,9 @@ export interface PendingOutreachApplicant {
 }
 
 export default async function PendingOutreachPage() {
+  const cookieStore = await cookies();
+  const userName = cookieStore.get("team_auth")?.value ?? "";
+
   const now = new Date();
   const threeDaysAgo = new Date(now.getTime() - 69 * 60 * 60 * 1000);
   const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
@@ -127,7 +131,7 @@ export default async function PendingOutreachPage() {
       <p className="text-xs text-rise-brown/70 mb-4">
         2025 applicants marked as Pending Outreach who haven&apos;t been contacted in 3+ days (or were marked Did Not Pick Up 24+ hours ago).
       </p>
-      <PendingOutreachClient applicants={applicants} />
+      <PendingOutreachClient applicants={applicants} userName={userName} />
     </div>
   );
 }

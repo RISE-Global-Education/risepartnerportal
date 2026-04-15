@@ -37,6 +37,7 @@ function Modal({
   applicant: InterviewNotBookedApplicant;
   onClose: () => void;
   onSaved: () => void;
+  userName: string;
 }) {
   const router = useRouter();
   const [callNotes, setCallNotes] = useState(applicant.shortlistingCallNotes);
@@ -53,6 +54,7 @@ function Modal({
       const body: Record<string, unknown> = {
         shortlistingCallNotes: callNotes,
         lastCallDate: today,
+        ...(userName && { callPoc: userName }),
       };
       if (status === "dnp") {
         body.incrementDnp = true;
@@ -244,8 +246,10 @@ function Modal({
 
 export default function InterviewNotBookedClient({
   applicants,
+  userName,
 }: {
   applicants: InterviewNotBookedApplicant[];
+  userName: string;
 }) {
   const [selected, setSelected] = useState<InterviewNotBookedApplicant | null>(null);
   const [query, setQuery] = useState("");
@@ -288,6 +292,7 @@ export default function InterviewNotBookedClient({
           applicant={selected}
           onClose={() => setSelected(null)}
           onSaved={handleSaved}
+          userName={userName}
         />
       )}
 

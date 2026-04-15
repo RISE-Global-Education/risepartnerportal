@@ -75,10 +75,12 @@ function Modal({
   applicant,
   onClose,
   onSaved,
+  userName,
 }: {
   applicant: PendingOutreachApplicant;
   onClose: () => void;
   onSaved: () => void;
+  userName: string;
 }) {
   const router = useRouter();
   const [outreachNotes, setOutreachNotes] = useState(applicant.outreachNotes2025);
@@ -95,6 +97,7 @@ function Modal({
       const body: Record<string, unknown> = {
         outreachNotes2025: outreachNotes,
         lastCallDate: today,
+        ...(userName && { callPoc: userName }),
       };
       if (status === "drop") {
         body.outreach2025 = "Dropped";
@@ -289,8 +292,10 @@ function Modal({
 
 export default function PendingOutreachClient({
   applicants,
+  userName,
 }: {
   applicants: PendingOutreachApplicant[];
+  userName: string;
 }) {
   const [selected, setSelected] = useState<PendingOutreachApplicant | null>(null);
   const [query, setQuery] = useState("");
@@ -333,6 +338,7 @@ export default function PendingOutreachClient({
           applicant={selected}
           onClose={() => setSelected(null)}
           onSaved={handleSaved}
+          userName={userName}
         />
       )}
 

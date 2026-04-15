@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { fetchAllRecords, getField } from "@/lib/airtable";
 import AcceptanceNotConvertedClient from "./AcceptanceNotConvertedClient";
 
@@ -38,6 +39,9 @@ export interface AcceptanceNotConvertedApplicant {
 }
 
 export default async function AcceptanceNotConvertedPage() {
+  const cookieStore = await cookies();
+  const userName = cookieStore.get("team_auth")?.value ?? "";
+
   const now = new Date();
   const fiveDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const threeDaysAgo = new Date(now.getTime() - 69 * 60 * 60 * 1000);
@@ -141,7 +145,7 @@ export default async function AcceptanceNotConvertedPage() {
       <p className="text-xs text-rise-brown/70 mb-4">
         Students sent an acceptance email 7+ days ago who haven&apos;t paid, haven&apos;t been called in 3+ days (or were marked Did Not Pick Up 24+ hours ago), and applied in 2026.
       </p>
-      <AcceptanceNotConvertedClient applicants={applicants} />
+      <AcceptanceNotConvertedClient applicants={applicants} userName={userName} />
     </div>
   );
 }

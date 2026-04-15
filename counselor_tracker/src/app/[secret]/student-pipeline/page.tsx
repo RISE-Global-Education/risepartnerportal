@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { fetchAllRecords, getField } from "@/lib/airtable";
 import StudentPipelineClient from "./StudentPipelineClient";
 
@@ -31,6 +32,9 @@ export interface ScholarApplicant {
 }
 
 export default async function StudentPipelinePage() {
+  const cookieStore = await cookies();
+  const userName = cookieStore.get("team_auth")?.value ?? "";
+
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {
     filterByFormula: `{Acceptance Status} = ""`,
     fields: [
@@ -91,7 +95,7 @@ export default async function StudentPipelinePage() {
         Research Scholar applicants pending acceptance — {students.length} student
         {students.length !== 1 ? "s" : ""}
       </p>
-      <StudentPipelineClient students={students} />
+      <StudentPipelineClient students={students} userName={userName} />
     </div>
   );
 }
