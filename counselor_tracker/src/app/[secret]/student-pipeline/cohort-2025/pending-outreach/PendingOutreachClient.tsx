@@ -197,6 +197,10 @@ function Modal({
                 <dd className="text-sm text-rise-black">{applicant.outreach2025}</dd>
               </div>
             )}
+            <div>
+              <dt className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-0.5">Applied On</dt>
+              <dd className="text-sm text-rise-black">{formatDate(applicant.createdTime)}</dd>
+            </div>
             {applicant.lastCallDate && (
               <div>
                 <dt className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-0.5">Last Call Date</dt>
