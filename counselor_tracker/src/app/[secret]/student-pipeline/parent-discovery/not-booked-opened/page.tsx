@@ -41,7 +41,7 @@ export default async function NotBookedOpenedPage() {
   const now = new Date();
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
   const cutoff = sevenDaysAgo.toISOString();
 
   const [records, { recipients: allRecipients, cachedAt: mixmaxCachedAt }] = await Promise.all([

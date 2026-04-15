@@ -41,8 +41,8 @@ export interface InterviewNotBookedApplicant {
 export default async function InterviewNotBookedPage() {
   const now = new Date();
   const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
-  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const threeDaysAgo = new Date(now.getTime() - 69 * 60 * 60 * 1000);
+  const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
   const jan2026 = new Date("2026-01-01T00:00:00.000Z");
 
   const EXCLUDED_STATUSES = new Set(["Drop", "Client", "Interview Booked"]);

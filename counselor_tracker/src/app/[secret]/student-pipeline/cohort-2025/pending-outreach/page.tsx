@@ -36,8 +36,8 @@ export interface PendingOutreachApplicant {
 
 export default async function PendingOutreachPage() {
   const now = new Date();
-  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const threeDaysAgo = new Date(now.getTime() - 69 * 60 * 60 * 1000);
+  const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
   const cutoff = "2026-01-01T00:00:00.000Z";
 
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {

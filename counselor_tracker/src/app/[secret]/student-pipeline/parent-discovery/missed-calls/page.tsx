@@ -35,7 +35,7 @@ export default async function MissedCallsPage() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const cutoff = sevenDaysAgo.toISOString();
   const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
 
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
     filterByFormula: `AND(
