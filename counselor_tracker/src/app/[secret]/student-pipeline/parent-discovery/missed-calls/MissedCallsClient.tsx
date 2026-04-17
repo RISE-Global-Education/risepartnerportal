@@ -246,12 +246,9 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
               <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
                 Previous Notes
               </label>
-              <textarea
-                readOnly
-                value={lead.callNotes}
-                rows={3}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black bg-gray-50 resize-none cursor-default focus:outline-none"
-              />
+              <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black bg-gray-50 whitespace-pre-wrap">
+                {lead.callNotes}
+              </div>
             </div>
           )}
           <div>
@@ -261,10 +258,11 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
             <textarea
               value={newNotes}
               onChange={(e) => { setNewNotes(e.target.value); if (saveError === "Call notes are required.") setSaveError(""); }}
+              onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
               rows={3}
               placeholder="Add notes for this call…"
               disabled={status === "dnp"}
-              className={`w-full border rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 resize-none disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50 ${saveError === "Call notes are required." ? "border-red-400 focus:ring-red-300/40" : "border-gray-200 focus:ring-rise-green/40"}`}
+              className={`w-full border rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 resize-none overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50 ${saveError === "Call notes are required." ? "border-red-400 focus:ring-red-300/40" : "border-gray-200 focus:ring-rise-green/40"}`}
             />
           </div>
 

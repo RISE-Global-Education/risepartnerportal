@@ -182,9 +182,10 @@ function Modal({
                 <textarea
                   value={edit.notes}
                   onChange={(e) => setEdit((prev) => ({ ...prev, notes: e.target.value }))}
+                  onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
                   rows={4}
                   placeholder="Add notes from the interview…"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none overflow-hidden"
                 />
               </div>
 

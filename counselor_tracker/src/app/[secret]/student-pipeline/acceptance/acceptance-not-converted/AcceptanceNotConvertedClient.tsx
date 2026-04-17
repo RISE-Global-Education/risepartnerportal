@@ -227,12 +227,9 @@ function Modal({
               <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
                 Previous Notes
               </label>
-              <textarea
-                readOnly
-                value={applicant.paymentCallNotes}
-                rows={3}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black bg-gray-50 resize-none cursor-default focus:outline-none"
-              />
+              <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black bg-gray-50 whitespace-pre-wrap">
+                {applicant.paymentCallNotes}
+              </div>
             </div>
           )}
           <div>
@@ -242,10 +239,11 @@ function Modal({
             <textarea
               value={newNotes}
               onChange={(e) => setNewNotes(e.target.value)}
+              onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
               rows={3}
               disabled={status === "dnp"}
               placeholder="Add notes for this call…"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
           </div>
 
