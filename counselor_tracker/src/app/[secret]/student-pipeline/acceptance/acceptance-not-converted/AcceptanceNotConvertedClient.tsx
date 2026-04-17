@@ -41,7 +41,7 @@ function Modal({
   userName: string;
 }) {
   const router = useRouter();
-  const [callNotes, setCallNotes] = useState(applicant.paymentCallNotes);
+  const [newNotes, setNewNotes] = useState("");
   const [status, setStatus] = useState<"none" | "drop" | "dnp">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -52,8 +52,12 @@ function Modal({
     setSaveError("");
     setSaving(true);
     try {
+      const existing = applicant.paymentCallNotes;
+      const combined = existing.trim() && newNotes.trim()
+        ? existing.trimEnd() + "\n" + newNotes.trim()
+        : existing.trim() ? existing : newNotes.trim();
       const body: Record<string, unknown> = {
-        paymentCallNotes: callNotes,
+        paymentCallNotes: combined,
         lastCallDate: today,
         ...(userName && { callPoc: userName }),
       };
@@ -61,7 +65,7 @@ function Modal({
         body.followUpStatus = "Drop";
       } else if (status === "dnp") {
         body.incrementDnp = true;
-        body.paymentCallNotes = callNotes.trim() ? callNotes.trimEnd() + "\ndnp" : "dnp";
+        body.paymentCallNotes = existing.trim() ? existing.trimEnd() + "\ndnp" : "dnp";
       }
 
       const res = await fetch(`/api/student-pipeline/${applicant.recordId}`, {
@@ -212,19 +216,31 @@ function Modal({
             </p>
           </div>
 
+          {applicant.paymentCallNotes && (
+            <div>
+              <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
+                Previous Notes
+              </label>
+              <textarea
+                readOnly
+                value={applicant.paymentCallNotes}
+                rows={3}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black bg-gray-50 resize-none cursor-default focus:outline-none"
+              />
+            </div>
+          )}
           <div>
             <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
-              Payment Call Notes
+              Add Call Notes
             </label>
             <textarea
-              value={callNotes}
-              onChange={(e) => setCallNotes(e.target.value)}
-              rows={4}
+              value={newNotes}
+              onChange={(e) => setNewNotes(e.target.value)}
+              rows={3}
               disabled={status === "dnp"}
-              placeholder="Please add your call notes here with what was discussed in the call. If the person did not pick up, please mark them 'Did Not Pick Up' at the bottom."
+              placeholder="Add notes for this call…"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
-            <p className="mt-1 text-xs text-rise-brown/60 italic">Please don&apos;t remove any notes. If you want to add any notes, please add them on the next line.</p>
           </div>
 
           {/* Actions */}

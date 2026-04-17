@@ -39,7 +39,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onClose: () => void; onSaved: () => void; userName: string }) {
   const router = useRouter();
-  const [callNotes, setCallNotes] = useState(lead.callNotes);
+  const [newNotes, setNewNotes] = useState("");
   const [status, setStatus] = useState<"none" | "drop" | "dnp">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -48,14 +48,18 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
 
   async function handleSave() {
     setSaveError("");
-    if (!callNotes.trim()) {
+    if (status !== "dnp" && !newNotes.trim()) {
       setSaveError("Call notes are required.");
       return;
     }
     setSaving(true);
     try {
+      const existing = lead.callNotes;
+      const combined = existing.trim() && newNotes.trim()
+        ? existing.trimEnd() + "\n" + newNotes.trim()
+        : existing.trim() ? existing : newNotes.trim();
       const body: Record<string, unknown> = {
-        callNotes,
+        callNotes: combined,
         lastContacted: today,
         ...(userName && { callPoc: userName }),
       };
@@ -63,7 +67,7 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
         body.studentApplicationForm = "Drop";
       } else if (status === "dnp") {
         body.incrementDnp = true;
-        body.callNotes = callNotes.trim() ? callNotes.trimEnd() + "\ndnp" : "dnp";
+        body.callNotes = existing.trim() ? existing.trimEnd() + "\ndnp" : "dnp";
       }
 
       const res = await fetch(`/api/parent-discovery/${lead.recordId}`, {
@@ -231,20 +235,31 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
             </p>
           </div>
 
-          {/* Call Notes */}
+          {lead.callNotes && (
+            <div>
+              <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
+                Previous Notes
+              </label>
+              <textarea
+                readOnly
+                value={lead.callNotes}
+                rows={3}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black bg-gray-50 resize-none cursor-default focus:outline-none"
+              />
+            </div>
+          )}
           <div>
             <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
-              Call Notes <span className="text-red-500">*</span>
+              Add Call Notes {status !== "dnp" && <span className="text-red-500">*</span>}
             </label>
             <textarea
-              value={callNotes}
-              onChange={(e) => { setCallNotes(e.target.value); if (saveError === "Call notes are required.") setSaveError(""); }}
-              rows={4}
-              placeholder="Please add your call notes here with what was discussed in the call. If the person did not pick up, please mark them 'Did Not Pick Up' at the bottom."
+              value={newNotes}
+              onChange={(e) => { setNewNotes(e.target.value); if (saveError === "Call notes are required.") setSaveError(""); }}
+              rows={3}
+              placeholder="Add notes for this call…"
               disabled={status === "dnp"}
               className={`w-full border rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 resize-none disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50 ${saveError === "Call notes are required." ? "border-red-400 focus:ring-red-300/40" : "border-gray-200 focus:ring-rise-green/40"}`}
             />
-            <p className="mt-1 text-xs text-rise-brown/60 italic">Please don&apos;t remove any notes. If you want to add any notes, please add them on the next line.</p>
           </div>
 
           {/* Actions */}
