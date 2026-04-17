@@ -356,6 +356,7 @@ export default function PendingOutreachClient({
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState("");
   const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
+  const [countrySort, setCountrySort] = useState<"asc" | "desc" | null>(null);
   const [toast, setToast] = useState<"saved" | "pd" | null>(null);
 
   function handleSaved(addedToPd: boolean) {
@@ -375,6 +376,8 @@ export default function PendingOutreachClient({
       return matchesQuery && matchesRegion;
     })
     .sort((a, b) => {
+      if (countrySort === "asc") return a.country.trim().localeCompare(b.country.trim());
+      if (countrySort === "desc") return b.country.trim().localeCompare(a.country.trim());
       if (idSort === "asc") return a.applicantId.localeCompare(b.applicantId);
       if (idSort === "desc") return b.applicantId.localeCompare(a.applicantId);
       return 0;
@@ -450,7 +453,9 @@ export default function PendingOutreachClient({
                 Student Email
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
-                Country
+                <button onClick={() => setCountrySort((s) => (s === null ? "asc" : s === "asc" ? "desc" : null))} className="inline-flex items-center gap-1 hover:text-rise-black transition-colors">
+                  Country <span className="text-base leading-none">{countrySort === "asc" ? "↑" : countrySort === "desc" ? "↓" : "↕"}</span>
+                </button>
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Details
