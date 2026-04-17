@@ -91,14 +91,14 @@ export default async function PastPage() {
     if (parentEmail && !recordByEmail.has(parentEmail)) recordByEmail.set(parentEmail, r);
   }
 
-  const matched: MatchedRow[] = [];
+  const matchedRaw: MatchedRow[] = [];
   const unmatched: UnmatchedRow[] = [];
 
   for (const b of bookings) {
     const record = recordByEmail.get(b.attendeeEmail);
     if (record) {
       const acceptanceTime = getField<string>(record, "Acceptances Email Sent Time");
-      matched.push({
+      matchedRaw.push({
         uid: b.uid,
         applicantId: getField<string>(record, "Applicant ID") ?? "—",
         studentName: getField<string>(record, "Name") ?? "—",
@@ -116,6 +116,13 @@ export default async function PastPage() {
       });
     }
   }
+
+  // Sort: No (acceptance not sent) first, then descending by start time within each group
+  const matched = matchedRaw.sort((a, b) => {
+    if (!a.acceptanceSent && b.acceptanceSent) return -1;
+    if (a.acceptanceSent && !b.acceptanceSent) return 1;
+    return b.start.localeCompare(a.start);
+  });
 
   return (
     <div>
