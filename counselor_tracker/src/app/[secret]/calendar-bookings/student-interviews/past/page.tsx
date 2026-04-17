@@ -77,7 +77,7 @@ async function fetchAllPastBookings() {
 export default async function PastPage() {
   const [records, bookings] = await Promise.all([
     fetchAllRecords(STUDENT_PIPELINE_BASE, RESEARCH_SCHOLAR_TABLE, {
-      fields: ["Applicant ID", "Name", "Student Email ID", "Parent Email ID", "Acceptances Email Sent Time"],
+      fields: ["Applicant ID", "Name", "Student Email ID", "Parent Email ID", "Acceptances Email Sent Time", "Follow Up Status"],
     }),
     fetchAllPastBookings(),
   ]);
@@ -99,6 +99,8 @@ export default async function PastPage() {
   for (const b of bookings) {
     const record = recordByEmail.get(normalize(b.attendeeEmail));
     if (record) {
+      const followUpStatus = getField<string>(record, "Follow Up Status") ?? "";
+      if (followUpStatus === "Drop" || followUpStatus === "Client") continue;
       const acceptanceTime = getField<string>(record, "Acceptances Email Sent Time");
       matchedRaw.push({
         uid: b.uid,
