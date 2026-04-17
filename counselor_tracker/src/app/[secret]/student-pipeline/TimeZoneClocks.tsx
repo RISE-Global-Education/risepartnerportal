@@ -8,7 +8,6 @@ const ZONES = [
   { label: "IST", iana: "Asia/Kolkata" },
   { label: "SGT", iana: "Asia/Singapore" },
   { label: "GMT", iana: "Etc/GMT" },
-  { label: "UTC", iana: "UTC" },
 ];
 
 function formatTime(iana: string, hour12: boolean): string {
