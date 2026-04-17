@@ -42,7 +42,7 @@ function Modal({
 }) {
   const router = useRouter();
   const [newNotes, setNewNotes] = useState("");
-  const [status, setStatus] = useState<"none" | "drop" | "dnp">("none");
+  const [status, setStatus] = useState<"none" | "drop" | "dnp" | "invalid">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -65,8 +65,10 @@ function Modal({
       if (status === "drop") {
         body.followUpStatus = "Drop";
       } else if (status === "dnp") {
-        body.incrementDnp = true;
+        body.incrementDnp = 1;
         body.paymentCallNotes = existing.trim() ? existing.trimEnd() + "\ndnp" : "dnp";
+      } else if (status === "invalid") {
+        body.incrementDnp = 4;
       }
 
       const res = await fetch(`/api/student-pipeline/${applicant.recordId}`, {
@@ -189,7 +191,7 @@ function Modal({
           <div>
             <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
             <div className="flex items-center gap-5">
-              {(["none", "drop", "dnp"] as const).map((val) => (
+              {(["none", "drop", "dnp", "invalid"] as const).map((val) => (
                 <label key={val} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -200,7 +202,7 @@ function Modal({
                     className="accent-rise-green cursor-pointer"
                   />
                   <span className="text-sm text-rise-black">
-                    {val === "none" ? "None" : val === "drop" ? "Drop" : "Did Not Pick Up"}
+                    {val === "none" ? "None" : val === "drop" ? "Drop" : val === "dnp" ? "Did Not Pick Up" : "Invalid Number"}
                   </span>
                 </label>
               ))}
@@ -211,6 +213,9 @@ function Modal({
           <div className="text-xs text-rise-brown/70 space-y-1.5 border-t border-gray-100 pt-3">
             <p>
               <span className="font-semibold text-rise-brown">Did Not Pick Up:</span> Mark this if the person didn&apos;t answer your call. They will be ready to call again tomorrow.
+            </p>
+            <p>
+              <span className="font-semibold text-rise-brown">Invalid Number:</span> Marks this number as invalid. Adds 4 to the DNP counter.
             </p>
             <p>
               <span className="font-semibold text-rise-brown">Drop:</span> This person will be removed from the pipeline. Please confirm with the team before marking anyone as Drop.

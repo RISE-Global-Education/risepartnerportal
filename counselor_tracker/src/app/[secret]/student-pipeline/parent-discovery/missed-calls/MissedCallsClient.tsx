@@ -40,7 +40,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onClose: () => void; onSaved: () => void; userName: string }) {
   const router = useRouter();
   const [newNotes, setNewNotes] = useState("");
-  const [status, setStatus] = useState<"none" | "drop" | "dnp">("none");
+  const [status, setStatus] = useState<"none" | "drop" | "dnp" | "invalid">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -48,7 +48,7 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
 
   async function handleSave() {
     setSaveError("");
-    if (status !== "dnp" && !newNotes.trim()) {
+    if (status !== "dnp" && status !== "invalid" && !newNotes.trim()) {
       setSaveError("Call notes are required.");
       return;
     }
@@ -67,8 +67,10 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
       if (status === "drop") {
         body.studentApplicationForm = "Drop";
       } else if (status === "dnp") {
-        body.incrementDnp = true;
+        body.incrementDnp = 1;
         body.callNotes = existing.trim() ? existing.trimEnd() + "\ndnp" : "dnp";
+      } else if (status === "invalid") {
+        body.incrementDnp = 4;
       }
 
       const res = await fetch(`/api/parent-discovery/${lead.recordId}`, {
@@ -208,7 +210,7 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
           <div>
             <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
             <div className="flex items-center gap-5">
-              {(["none", "drop", "dnp"] as const).map((val) => (
+              {(["none", "drop", "dnp", "invalid"] as const).map((val) => (
                 <label key={val} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -219,7 +221,7 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
                     className="accent-rise-green cursor-pointer"
                   />
                   <span className="text-sm text-rise-black">
-                    {val === "none" ? "None" : val === "drop" ? "Drop" : "Did Not Pick Up"}
+                    {val === "none" ? "None" : val === "drop" ? "Drop" : val === "dnp" ? "Did Not Pick Up" : "Invalid Number"}
                   </span>
                 </label>
               ))}
@@ -230,6 +232,9 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
           <div className="text-xs text-rise-brown/70 space-y-1.5 border-t border-gray-100 pt-3">
             <p>
               <span className="font-semibold text-rise-brown">Did Not Pick Up:</span> Mark this if the person didn&apos;t answer your call. They will be ready to call again tomorrow.
+            </p>
+            <p>
+              <span className="font-semibold text-rise-brown">Invalid Number:</span> Marks this number as invalid. Adds 4 to the DNP counter.
             </p>
             <p>
               <span className="font-semibold text-rise-brown">Drop:</span> This person will be removed from the pipeline. Please confirm with the team before marking anyone as Drop.
@@ -251,7 +256,7 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
           )}
           <div>
             <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
-              Add Call Notes {status !== "dnp" && <span className="text-red-500">*</span>}
+              Add Call Notes {status !== "dnp" && status !== "invalid" && <span className="text-red-500">*</span>}
             </label>
             <textarea
               value={newNotes}

@@ -84,7 +84,7 @@ function Modal({
 }) {
   const router = useRouter();
   const [newNotes, setNewNotes] = useState("");
-  const [status, setStatus] = useState<"none" | "drop" | "dnp" | "add_to_pd">("none");
+  const [status, setStatus] = useState<"none" | "drop" | "dnp" | "invalid" | "add_to_pd">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -109,8 +109,10 @@ function Modal({
       if (status === "drop") {
         body.outreach2025 = "Dropped";
       } else if (status === "dnp") {
-        body.incrementDnp = true;
+        body.incrementDnp = 1;
         body.outreachNotes2025 = existing.trim() ? existing.trimEnd() + "\ndnp" : "dnp";
+      } else if (status === "invalid") {
+        body.incrementDnp = 4;
       } else if (status === "add_to_pd") {
         body.outreach2025 = "Interested";
       }
@@ -256,7 +258,7 @@ function Modal({
           <div>
             <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
             <div className="flex items-center flex-wrap gap-5">
-              {(["none", "drop", "dnp", "add_to_pd"] as const).map((val) => (
+              {(["none", "drop", "dnp", "invalid", "add_to_pd"] as const).map((val) => (
                 <label key={val} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -267,7 +269,7 @@ function Modal({
                     className="accent-rise-green cursor-pointer"
                   />
                   <span className="text-sm text-rise-black">
-                    {val === "none" ? "None" : val === "drop" ? "Drop" : val === "dnp" ? "Did Not Pick Up" : "Add to Parent Discovery"}
+                    {val === "none" ? "None" : val === "drop" ? "Drop" : val === "dnp" ? "Did Not Pick Up" : val === "invalid" ? "Invalid Number" : "Add to Parent Discovery"}
                   </span>
                 </label>
               ))}
@@ -281,6 +283,9 @@ function Modal({
             </p>
             <p>
               <span className="font-semibold text-rise-brown">Drop:</span> This person will be removed from the pipeline. Please confirm with the team before marking anyone as Drop.
+            </p>
+            <p>
+              <span className="font-semibold text-rise-brown">Invalid Number:</span> Marks this number as invalid. Adds 4 to the DNP counter.
             </p>
             <p>
               <span className="font-semibold text-rise-brown">Add to Parent Discovery:</span> Marks this lead as Interested and creates a new record in the Parent Discovery table.

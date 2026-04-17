@@ -56,11 +56,12 @@ export async function PATCH(
     fields["Interview POC"] = body.interviewPoc;
   }
 
-  // DNP counter increment: fetch current value then add 1
-  if (body.incrementDnp === true) {
+  // DNP counter increment: fetch current value then add the specified amount (1 for DNP, 4 for invalid number)
+  if (body.incrementDnp) {
+    const increment = typeof body.incrementDnp === "number" ? body.incrementDnp : 1;
     const current = await getRecord(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, recordId, process.env.AIRTABLE_COUNSELOR_TOKEN);
     const currentCount = (current.fields["DNP Counter"] as number) ?? 0;
-    fields["DNP Counter"] = currentCount + 1;
+    fields["DNP Counter"] = currentCount + increment;
   }
 
   if (Object.keys(fields).length === 0) {
