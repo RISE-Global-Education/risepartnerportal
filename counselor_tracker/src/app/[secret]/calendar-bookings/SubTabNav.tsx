@@ -2,12 +2,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function SubTabNav({ secret }: { secret: string }) {
+export default function SubTabNav({ secret, isAdmin }: { secret: string; isAdmin: boolean }) {
   const pathname = usePathname();
   const base = `/${secret}/calendar-bookings`;
 
   const tabs = [
-    { label: "Discovery Call", href: `${base}/discovery-call` },
+    ...(isAdmin ? [{ label: "Discovery Call", href: `${base}/discovery-call` }] : []),
     { label: "Student Interviews", href: `${base}/student-interviews` },
     { label: "Mentor Interviews", href: `${base}/mentor-interviews` },
   ];

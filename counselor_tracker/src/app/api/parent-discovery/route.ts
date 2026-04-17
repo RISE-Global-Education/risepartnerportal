@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     "Parent Email ID": body.parentEmail,
     "Parent Phone number": body.parentPhone,
     "Current Grade": body.currentGrade === "9" ? "Grade 9" : body.currentGrade,
-    "Country of Residence": typeof body.country === "string" ? body.country.trim() : body.country,
+    "Country of Residence": body.country,
     "School/ College Name": body.schoolCollege,
     "Counselor Source": [COUNSELOR_SOURCE_RISE_2025],
   };

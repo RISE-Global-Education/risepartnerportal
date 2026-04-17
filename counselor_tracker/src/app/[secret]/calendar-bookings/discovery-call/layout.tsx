@@ -1,4 +1,5 @@
 import DiscoverySubTabNav from "./SubTabNav";
+import { notFound } from "next/navigation";
 
 export default async function DiscoveryCallLayout({
   children,
@@ -8,6 +9,7 @@ export default async function DiscoveryCallLayout({
   params: Promise<{ secret: string }>;
 }) {
   const { secret } = await params;
+  if (secret !== process.env.DASHBOARD_SECRET) notFound();
 
   return (
     <div>
