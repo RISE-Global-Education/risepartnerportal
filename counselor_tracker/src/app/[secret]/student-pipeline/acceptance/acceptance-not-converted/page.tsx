@@ -36,6 +36,7 @@ export interface AcceptanceNotConvertedApplicant {
   paymentCallNotes: string;
   createdTime: string;
   lastCallDate: string;
+  dnpCounter: number;
 }
 
 export default async function AcceptanceNotConvertedPage() {
@@ -81,6 +82,7 @@ export default async function AcceptanceNotConvertedPage() {
       "Payment Call Notes",
       "Created Time",
       "Last Call Date",
+      "DNP Counter",
     ],
   });
 
@@ -116,9 +118,11 @@ export default async function AcceptanceNotConvertedPage() {
       paymentCallNotes: getField<string>(r, "Payment Call Notes") ?? "",
       createdTime: getField<string>(r, "Created Time") ?? r.createdTime,
       lastCallDate: getField<string>(r, "Last Call Date") ?? "",
+      dnpCounter: getField<number>(r, "DNP Counter") ?? 0,
     }))
     .filter((a) => {
       // Hard gates — always required
+      if (a.dnpCounter >= 4) return false;
       if (new Date(a.createdTime) < jan2026) return false;
       if (!a.acceptanceSentTime) return false;
       const acceptanceSent = new Date(a.acceptanceSentTime);

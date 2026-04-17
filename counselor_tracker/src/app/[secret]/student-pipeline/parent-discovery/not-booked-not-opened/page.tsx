@@ -33,6 +33,7 @@ export interface NotBookedNotOpenedLead {
   lastContacted: string;
   createdTime: string;
   poc: string;
+  dnpCounter: number;
   // Mixmax
   sequenceName: string;
   sentCount: number;
@@ -53,7 +54,8 @@ export default async function NotBookedNotOpenedPage() {
       filterByFormula: `AND(
         IS_BEFORE({Created}, "${cutoff}"),
         {Qualified} != "No",
-        {Student Application Form} != "Drop"
+        {Student Application Form} != "Drop",
+        OR({DNP Counter} = BLANK(), {DNP Counter} < 4)
       )`,
       fields: [
         "Applicant ID",
@@ -75,6 +77,7 @@ export default async function NotBookedNotOpenedPage() {
         "Call Status",
         "Last Call Date",
         "POC",
+        "DNP Counter",
       ],
     }),
     getMixmaxData(),
@@ -123,6 +126,7 @@ export default async function NotBookedNotOpenedPage() {
         lastContacted: getField<string>(r, "Last Call Date") ?? "",
         createdTime: r.createdTime,
         poc: getField<string>(r, "POC") ?? "",
+        dnpCounter: getField<number>(r, "DNP Counter") ?? 0,
         sequenceName: mixmax?.sequenceName ?? "",
         sentCount: mixmax?.sentCount ?? 0,
         // openCount stored temporarily for filtering

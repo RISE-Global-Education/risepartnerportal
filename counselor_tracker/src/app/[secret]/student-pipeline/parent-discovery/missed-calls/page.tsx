@@ -5,7 +5,7 @@ import MissedCallsClient from "./MissedCallsClient";
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
 
-const EXCLUDED_CALL_STATUSES = new Set(["Call Booked", "Call Completed"]);
+const EXCLUDED_CALL_STATUSES = new Set(["Call Completed"]);
 
 export interface DiscoveryLead {
   recordId: string;
@@ -29,6 +29,7 @@ export interface DiscoveryLead {
   lastContacted: string;
   createdTime: string;
   poc: string;
+  dnpCounter: number;
 }
 
 export default async function MissedCallsPage() {
@@ -45,7 +46,8 @@ export default async function MissedCallsPage() {
     filterByFormula: `AND(
       IS_BEFORE({Created}, "${cutoff}"),
       {Qualified} != "No",
-      {Student Application Form} != "Drop"
+      {Student Application Form} != "Drop",
+      OR({DNP Counter} = BLANK(), {DNP Counter} < 4)
     )`,
     fields: [
       "Applicant ID",
@@ -67,6 +69,7 @@ export default async function MissedCallsPage() {
       "Call Status",
       "Last Call Date",
       "POC",
+      "DNP Counter",
     ],
   });
 
@@ -95,6 +98,7 @@ export default async function MissedCallsPage() {
         lastContacted: getField<string>(r, "Last Call Date") ?? "",
         createdTime: r.createdTime,
         poc: getField<string>(r, "POC") ?? "",
+        dnpCounter: getField<number>(r, "DNP Counter") ?? 0,
       };
     })
     .filter((lead) => {

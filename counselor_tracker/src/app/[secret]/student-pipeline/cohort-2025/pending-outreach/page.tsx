@@ -33,6 +33,7 @@ export interface PendingOutreachApplicant {
   outreachNotes2025: string;
   lastCallDate: string;
   createdTime: string;
+  dnpCounter: number;
 }
 
 export default async function PendingOutreachPage() {
@@ -48,7 +49,8 @@ export default async function PendingOutreachPage() {
     filterByFormula: `AND(
       IS_BEFORE({Created Time}, "${cutoff}"),
       {Follow Up Status} != "Client",
-      {2025 Outreach} = "Pending"
+      {2025 Outreach} = "Pending",
+      OR({DNP Counter} = BLANK(), {DNP Counter} < 4)
     )`,
     fields: [
       "Applicant ID",
@@ -77,6 +79,7 @@ export default async function PendingOutreachPage() {
       "2025 Outreach Notes",
       "Last Call Date",
       "Created Time",
+      "DNP Counter",
     ],
   });
 
@@ -109,6 +112,7 @@ export default async function PendingOutreachPage() {
       outreachNotes2025: getField<string>(r, "2025 Outreach Notes") ?? "",
       lastCallDate: getField<string>(r, "Last Call Date") ?? "",
       createdTime: getField<string>(r, "Created Time") ?? r.createdTime,
+      dnpCounter: getField<number>(r, "DNP Counter") ?? 0,
     }))
     .filter((a) => {
       const lastCallDate = a.lastCallDate ? new Date(a.lastCallDate) : null;
