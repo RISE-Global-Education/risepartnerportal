@@ -6,5 +6,6 @@ export default async function CalendarBookingsIndex({
   params: Promise<{ secret: string }>;
 }) {
   const { secret } = await params;
-  redirect(`/${secret}/calendar-bookings/discovery-call`);
+  const isAdmin = secret === process.env.DASHBOARD_SECRET;
+  redirect(`/${secret}/calendar-bookings/${isAdmin ? "discovery-call" : "student-interviews"}`);
 }

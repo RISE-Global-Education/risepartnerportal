@@ -18,7 +18,7 @@ export default function NavBar({ secret, role, teamName }: { secret: string; rol
     { label: "Search", href: `${basePath}/search`, active: isSearch, adminOnly: true },
     { label: "Student Pipeline", href: `${basePath}/student-pipeline`, active: isPipeline, adminOnly: false },
     { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights, adminOnly: true },
-    { label: "Calendar Bookings", href: `${basePath}/calendar-bookings`, active: isCalendar, adminOnly: true },
+    { label: "Calendar Bookings", href: `${basePath}/calendar-bookings`, active: isCalendar, adminOnly: false },
   ];
 
   const tabs = role === "admin" ? allTabs : allTabs.filter((t) => !t.adminOnly);
