@@ -60,8 +60,8 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Restrict to student-pipeline only
-    if (!rest.startsWith("/student-pipeline")) {
+    // Restrict to student-pipeline and calendar-bookings only
+    if (!rest.startsWith("/student-pipeline") && !rest.startsWith("/calendar-bookings")) {
       const url = req.nextUrl.clone();
       url.pathname = `/${secret}/student-pipeline`;
       return NextResponse.redirect(url);
