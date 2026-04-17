@@ -118,7 +118,7 @@ export default function MeetingsChart({
             <Tooltip
               cursor={{ fill: "rgba(0,0,0,0.04)" }}
               contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb", padding: "4px 10px" }}
-              formatter={(v: number) => [v, "meetings"]}
+              formatter={(v: unknown) => [v, "meetings"]}
               labelStyle={{ color: "#1a1a1a", fontWeight: 600 }}
             />
             <Bar dataKey="count" radius={[3, 3, 0, 0]}>
