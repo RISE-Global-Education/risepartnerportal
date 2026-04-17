@@ -83,10 +83,12 @@ export default async function PastPage() {
   ]);
 
   // Build email → Airtable record map (student email and parent email both)
+  const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim();
+
   const recordByEmail = new Map<string, typeof records[number]>();
   for (const r of records) {
-    const studentEmail = (getField<string>(r, "Student Email ID") ?? "").toLowerCase().trim();
-    const parentEmail = (getField<string>(r, "Parent Email ID") ?? "").toLowerCase().trim();
+    const studentEmail = normalize(getField<string>(r, "Student Email ID") ?? "");
+    const parentEmail = normalize(getField<string>(r, "Parent Email ID") ?? "");
     if (studentEmail) recordByEmail.set(studentEmail, r);
     if (parentEmail && !recordByEmail.has(parentEmail)) recordByEmail.set(parentEmail, r);
   }
@@ -95,7 +97,7 @@ export default async function PastPage() {
   const unmatched: UnmatchedRow[] = [];
 
   for (const b of bookings) {
-    const record = recordByEmail.get(b.attendeeEmail);
+    const record = recordByEmail.get(normalize(b.attendeeEmail));
     if (record) {
       const acceptanceTime = getField<string>(record, "Acceptances Email Sent Time");
       matchedRaw.push({

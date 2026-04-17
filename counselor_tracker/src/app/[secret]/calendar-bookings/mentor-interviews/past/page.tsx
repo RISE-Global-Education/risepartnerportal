@@ -94,9 +94,11 @@ export default async function PastPage() {
     fetchAllPastBookings(),
   ]);
 
+  const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim();
+
   const recordByEmail = new Map<string, typeof records[number]>();
   for (const r of records) {
-    const email = (getField<string>(r, "Email ID") ?? "").toLowerCase().trim();
+    const email = normalize(getField<string>(r, "Email ID") ?? "");
     if (email) recordByEmail.set(email, r);
   }
 
@@ -104,7 +106,7 @@ export default async function PastPage() {
   const unmatched: UnmatchedMentor[] = [];
 
   for (const b of bookings) {
-    const record = recordByEmail.get(b.attendeeEmail);
+    const record = recordByEmail.get(normalize(b.attendeeEmail));
     if (record) {
       const rawStatus = getField<string[]>(record, "Contract Status");
       matched.push({
