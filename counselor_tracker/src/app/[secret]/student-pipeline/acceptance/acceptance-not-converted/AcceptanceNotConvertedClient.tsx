@@ -180,21 +180,6 @@ function Modal({
 
         {/* Footer — editable */}
         <div className="px-6 py-4 border-t border-gray-100 space-y-4">
-          {/* Shortlisting Call Notes */}
-          <div>
-            <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
-              Payment Call Notes
-            </label>
-            <textarea
-              value={callNotes}
-              onChange={(e) => setCallNotes(e.target.value)}
-              rows={4}
-              placeholder="Please add your call notes here with what was discussed in the call. If the person did not pick up, please mark them 'Did Not Pick Up' at the bottom."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none"
-            />
-            <p className="mt-1 text-xs text-rise-brown/60 italic">Please don&apos;t remove any notes. If you want to add any notes, please add them on the next line.</p>
-          </div>
-
           {/* Status radio */}
           <div>
             <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
@@ -225,6 +210,20 @@ function Modal({
             <p>
               <span className="font-semibold text-rise-brown">Drop:</span> This person will be removed from the pipeline. Please confirm with the team before marking anyone as Drop.
             </p>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
+              Payment Call Notes
+            </label>
+            <textarea
+              value={callNotes}
+              onChange={(e) => setCallNotes(e.target.value)}
+              rows={4}
+              placeholder="Please add your call notes here with what was discussed in the call. If the person did not pick up, please mark them 'Did Not Pick Up' at the bottom."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none"
+            />
+            <p className="mt-1 text-xs text-rise-brown/60 italic">Please don&apos;t remove any notes. If you want to add any notes, please add them on the next line.</p>
           </div>
 
           {/* Actions */}
