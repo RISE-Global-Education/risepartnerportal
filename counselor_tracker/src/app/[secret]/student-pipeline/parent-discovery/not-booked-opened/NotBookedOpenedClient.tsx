@@ -61,9 +61,10 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: NotBookedOpenedLead
     setSaving(true);
     try {
       const existing = lead.callNotes;
+      const datePrefix = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
       const combined = existing.trim() && newNotes.trim()
-        ? existing.trimEnd() + "\n" + newNotes.trim()
-        : existing.trim() ? existing : newNotes.trim();
+        ? existing.trimEnd() + "\n" + datePrefix + ": " + newNotes.trim()
+        : existing.trim() ? existing : datePrefix + ": " + newNotes.trim();
       const body: Record<string, unknown> = { callNotes: combined, lastContacted: today, ...(userName && { callPoc: userName }) };
       if (status === "drop") body.studentApplicationForm = "Drop";
       else if (status === "dnp") {

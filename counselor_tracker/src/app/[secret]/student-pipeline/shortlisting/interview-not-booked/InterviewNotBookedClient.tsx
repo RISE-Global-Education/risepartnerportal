@@ -53,9 +53,10 @@ function Modal({
     setSaving(true);
     try {
       const existing = applicant.shortlistingCallNotes;
+      const datePrefix = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
       const combined = existing.trim() && newNotes.trim()
-        ? existing.trimEnd() + "\n" + newNotes.trim()
-        : existing.trim() ? existing : newNotes.trim();
+        ? existing.trimEnd() + "\n" + datePrefix + ": " + newNotes.trim()
+        : existing.trim() ? existing : datePrefix + ": " + newNotes.trim();
       const body: Record<string, unknown> = {
         shortlistingCallNotes: combined,
         lastCallDate: today,

@@ -95,11 +95,12 @@ function Modal({
     setSaving(true);
     try {
       const existing = applicant.outreachNotes2025;
+      const datePrefix = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
       const combined = existing.trim() && newNotes.trim()
-        ? existing.trimEnd() + "\n" + newNotes.trim()
+        ? existing.trimEnd() + "\n" + datePrefix + ": " + newNotes.trim()
         : existing.trim()
           ? existing
-          : newNotes.trim();
+          : datePrefix + ": " + newNotes.trim();
       const body: Record<string, unknown> = {
         outreachNotes2025: combined,
         lastCallDate: today,
