@@ -236,7 +236,8 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: NotBookedOpenedLead
               onChange={(e) => { setCallNotes(e.target.value); if (saveError === "Call notes are required.") setSaveError(""); }}
               rows={4}
               placeholder="Please add your call notes here with what was discussed in the call. If the person did not pick up, please mark them 'Did Not Pick Up' at the bottom."
-              className={`w-full border rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 resize-none ${saveError === "Call notes are required." ? "border-red-400 focus:ring-red-300/40" : "border-gray-200 focus:ring-rise-green/40"}`}
+              disabled={status === "dnp"}
+              className={`w-full border rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 resize-none disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50 ${saveError === "Call notes are required." ? "border-red-400 focus:ring-red-300/40" : "border-gray-200 focus:ring-rise-green/40"}`}
             />
             <p className="mt-1 text-xs text-rise-brown/60 italic">Please don&apos;t remove any notes. If you want to add any notes, please add them on the next line.</p>
           </div>
