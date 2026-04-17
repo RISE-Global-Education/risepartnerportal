@@ -1,4 +1,52 @@
 import StudentInterviewsSubTabNav from "./SubTabNav";
+import MeetingsChart from "../MeetingsChart";
+
+const STUDENT_INTERVIEW_EVENT_TYPE_ID = 5205635;
+
+async function fetchPastStarts(): Promise<string[]> {
+  const take = 100;
+  const starts: string[] = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const params = new URLSearchParams({
+      eventTypeId: String(STUDENT_INTERVIEW_EVENT_TYPE_ID),
+      status: "past",
+      take: String(take),
+      skip: String((page - 1) * take),
+      sortStart: "desc",
+    });
+
+    const res = await fetch(`https://api.cal.com/v2/bookings?${params}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.CALCOM_API_KEY}`,
+        "cal-api-version": "2026-02-25",
+      },
+      next: { revalidate: 300 },
+    });
+
+    if (!res.ok) break;
+
+    const json = await res.json();
+    for (const b of json.data ?? []) {
+      if (b.start) starts.push(b.start);
+    }
+
+    // Only need last 90 days max — stop early if oldest booking is beyond that
+    const oldest = json.data?.[json.data.length - 1]?.start;
+    if (oldest) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 90);
+      if (new Date(oldest) < cutoff) break;
+    }
+
+    hasMore = json.pagination?.hasNextPage ?? false;
+    page++;
+  }
+
+  return starts;
+}
 
 export default async function StudentInterviewsLayout({
   children,
@@ -8,10 +56,11 @@ export default async function StudentInterviewsLayout({
   params: Promise<{ secret: string }>;
 }) {
   const { secret } = await params;
+  const pastStarts = await fetchPastStarts();
 
   return (
     <div>
-      <h2 className="text-base font-semibold text-rise-black font-heading">Student Interviews</h2>
+      <MeetingsChart pastStarts={pastStarts} />
       <StudentInterviewsSubTabNav secret={secret} />
       <div className="mt-6">{children}</div>
     </div>
