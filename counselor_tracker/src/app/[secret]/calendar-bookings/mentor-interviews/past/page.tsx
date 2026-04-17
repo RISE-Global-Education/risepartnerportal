@@ -128,6 +128,15 @@ export default async function PastPage() {
     }
   }
 
+  const STATUS_ORDER: Record<ContractStatusLabel, number> = {
+    "Contract Not Sent": 0,
+    "Send Contract": 1,
+    "Contract Sent": 2,
+    "Not Needed": 3,
+  };
+
+  matched.sort((a, b) => STATUS_ORDER[a.contractStatus] - STATUS_ORDER[b.contractStatus]);
+
   return (
     <div>
       <p className="text-sm text-rise-brown mb-4">

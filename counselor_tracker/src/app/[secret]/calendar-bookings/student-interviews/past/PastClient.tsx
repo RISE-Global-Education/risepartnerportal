@@ -65,9 +65,9 @@ export default function PastClient({
               </tr>
             ) : (
               filteredMatched.map((r) => (
-                <tr key={r.uid} className="hover:bg-gray-50 transition-colors">
+                <tr key={r.uid} className={`transition-colors ${r.acceptanceSent ? "hover:bg-gray-50" : "bg-red-50 hover:bg-red-100"}`}>
                   <td className="px-4 py-3 text-rise-brown font-mono text-xs">{r.applicantId}</td>
-                  <td className="px-4 py-3 font-medium text-rise-black">{r.studentName}</td>
+                  <td className={`px-4 py-3 font-medium ${r.acceptanceSent ? "text-rise-black" : "text-red-800"}`}>{r.studentName}</td>
                   <td className="px-4 py-3 text-rise-brown">{r.hostName}</td>
                   <td className="px-4 py-3 text-rise-brown whitespace-nowrap">{formatDateTime(r.start)}</td>
                   <td className="px-4 py-3">
@@ -76,7 +76,7 @@ export default function PastClient({
                         Yes
                       </span>
                     ) : (
-                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">
                         No
                       </span>
                     )}
