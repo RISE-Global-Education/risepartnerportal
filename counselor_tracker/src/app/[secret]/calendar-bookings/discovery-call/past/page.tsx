@@ -72,12 +72,16 @@ export default async function PastPage() {
   const [bookings, records] = await Promise.all([
     fetchAllBookings(),
     fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
-      fields: ["Applicant ID", "Student Name", "Student Email ID", "Parent/Guardian Name", "Parent Email ID", "Notes"],
+      fields: ["Applicant ID", "Student Name", "Student Email ID", "Parent/Guardian Name", "Parent Email ID", "Notes", "Qualified", "Student Application Form"],
     }),
   ]);
 
   const recordByEmail = new Map<string, { applicantId: string; studentName: string; studentEmail: string; parentName: string; parentEmail: string; hasNotes: boolean }>();
   for (const r of records) {
+    const qualified = (getField<string>(r, "Qualified") ?? "").trim();
+    const appForm = (getField<string>(r, "Student Application Form") ?? "").trim();
+    if (qualified === "No" || appForm === "Dont Send") continue;
+
     const studentEmail = (getField<string>(r, "Student Email ID") ?? "").toLowerCase().trim();
     const parentEmail = (getField<string>(r, "Parent Email ID") ?? "").toLowerCase().trim();
     const hasNotes = !!(getField<string>(r, "Notes") ?? "").trim();
