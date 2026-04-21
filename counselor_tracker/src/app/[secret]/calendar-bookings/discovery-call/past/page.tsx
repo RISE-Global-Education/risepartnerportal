@@ -80,16 +80,24 @@ export default async function PastPage() {
   for (const r of records) {
     const studentEmail = (getField<string>(r, "Student Email ID") ?? "").toLowerCase().trim();
     const parentEmail = (getField<string>(r, "Parent Email ID") ?? "").toLowerCase().trim();
+    const hasNotes = !!(getField<string>(r, "Notes") ?? "").trim();
     const entry = {
       applicantId: getField<string>(r, "Applicant ID") ?? "—",
       studentName: getField<string>(r, "Student Name") ?? "—",
       studentEmail: getField<string>(r, "Student Email ID") ?? "",
       parentName: getField<string>(r, "Parent/Guardian Name") ?? "—",
       parentEmail: getField<string>(r, "Parent Email ID") ?? "",
-      hasNotes: !!(getField<string>(r, "Notes") ?? "").trim(),
+      hasNotes,
     };
-    if (studentEmail) recordByEmail.set(studentEmail, entry);
-    if (parentEmail && !recordByEmail.has(parentEmail)) recordByEmail.set(parentEmail, entry);
+    for (const email of [studentEmail, parentEmail].filter(Boolean)) {
+      const existing = recordByEmail.get(email);
+      if (!existing) {
+        recordByEmail.set(email, entry);
+      } else if (hasNotes && !existing.hasNotes) {
+        // a duplicate entry has notes — update hasNotes on the existing record
+        recordByEmail.set(email, { ...existing, hasNotes: true });
+      }
+    }
   }
 
   const matched: MatchedBooking[] = [];
