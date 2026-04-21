@@ -76,7 +76,7 @@ export default async function PastPage() {
     }),
   ]);
 
-  const recordByEmail = new Map<string, { applicantId: string; studentName: string; studentEmail: string; parentName: string; parentEmail: string }>();
+  const recordByEmail = new Map<string, { applicantId: string; studentName: string; studentEmail: string; parentName: string; parentEmail: string; hasNotes: boolean }>();
   for (const r of records) {
     const studentEmail = (getField<string>(r, "Student Email ID") ?? "").toLowerCase().trim();
     const parentEmail = (getField<string>(r, "Parent Email ID") ?? "").toLowerCase().trim();
