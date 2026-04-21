@@ -18,7 +18,9 @@ export interface MatchedBooking {
   uid: string;
   applicantId: string;
   studentName: string;
+  studentEmail: string;
   parentName: string;
+  parentEmail: string;
   hostName: string;
   start: string;
   meetingUrl: string;
@@ -77,14 +79,16 @@ export default async function UpcomingPage() {
   ]);
 
   // Build email → airtable record map
-  const recordByEmail = new Map<string, { studentName: string; parentName: string }>();
+  const recordByEmail = new Map<string, { applicantId: string; studentName: string; studentEmail: string; parentName: string; parentEmail: string }>();
   for (const r of records) {
     const studentEmail = (getField<string>(r, "Student Email ID") ?? "").toLowerCase().trim();
     const parentEmail = (getField<string>(r, "Parent Email ID") ?? "").toLowerCase().trim();
     const entry = {
       applicantId: getField<string>(r, "Applicant ID") ?? "—",
       studentName: getField<string>(r, "Student Name") ?? "—",
+      studentEmail: getField<string>(r, "Student Email ID") ?? "",
       parentName: getField<string>(r, "Parent/Guardian Name") ?? "—",
+      parentEmail: getField<string>(r, "Parent Email ID") ?? "",
     };
     if (studentEmail) recordByEmail.set(studentEmail, entry);
     if (parentEmail && !recordByEmail.has(parentEmail)) recordByEmail.set(parentEmail, entry);
@@ -100,7 +104,9 @@ export default async function UpcomingPage() {
         uid: b.uid,
         applicantId: airtable.applicantId,
         studentName: airtable.studentName,
+        studentEmail: airtable.studentEmail,
         parentName: airtable.parentName,
+        parentEmail: airtable.parentEmail,
         hostName: b.hostName,
         start: b.start,
         meetingUrl: b.meetingUrl,
