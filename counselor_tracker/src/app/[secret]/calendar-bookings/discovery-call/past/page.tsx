@@ -80,7 +80,7 @@ export default async function PastPage() {
   for (const r of records) {
     const qualified = (getField<string>(r, "Qualified") ?? "").trim();
     const appForm = (getField<string>(r, "Student Application Form") ?? "").trim();
-    if (qualified === "No" || appForm === "Dont Send") continue;
+    if (qualified === "No" || appForm === "Don't Send") continue;
 
     const studentEmail = (getField<string>(r, "Student Email ID") ?? "").toLowerCase().trim();
     const parentEmail = (getField<string>(r, "Parent Email ID") ?? "").toLowerCase().trim();
