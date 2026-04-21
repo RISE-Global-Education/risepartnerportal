@@ -76,8 +76,13 @@ export default async function DuplicateLeadsPage() {
     });
   }
 
-  // Sort by number of duplicates descending
-  groups.sort((a, b) => b.records.length - a.records.length);
+  // Sort records within each group by applicant ID ascending
+  for (const g of groups) {
+    g.records.sort((a, b) => a.applicantId.localeCompare(b.applicantId));
+  }
+
+  // Sort groups by primary (lowest) applicant ID ascending
+  groups.sort((a, b) => a.records[0].applicantId.localeCompare(b.records[0].applicantId));
 
   return (
     <div>
