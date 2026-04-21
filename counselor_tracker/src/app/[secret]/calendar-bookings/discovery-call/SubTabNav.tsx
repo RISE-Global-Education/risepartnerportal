@@ -10,6 +10,7 @@ export default function DiscoverySubTabNav({ secret }: { secret: string }) {
     { label: "Upcoming", href: `${base}/upcoming` },
     { label: "Past", href: `${base}/past` },
     { label: "Unqualified", href: `${base}/unqualified` },
+    { label: "Duplicate Leads", href: `${base}/duplicate-leads` },
   ];
 
   return (
