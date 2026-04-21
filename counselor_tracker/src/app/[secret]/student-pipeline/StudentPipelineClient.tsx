@@ -3,6 +3,133 @@
 import { useState } from "react";
 import type { ScholarApplicant } from "./page";
 
+const DEFAULT_SUBJECT = "Interview Reminder | RISE Research";
+const DEFAULT_BODY = `Hey,
+
+Hope you're doing well. Just checking in — will you be joining the interview? I'm already on the call and wanted to confirm if you're able to make it.
+
+Let us know. Thanks.
+
+Best,
+Team RISE Research`;
+
+interface ReminderState {
+  student: ScholarApplicant;
+  to: string;
+  cc: string;
+  bcc: string;
+  subject: string;
+  body: string;
+}
+
+function ReminderModal({
+  state,
+  onChange,
+  onClose,
+  onSend,
+  sending,
+}: {
+  state: ReminderState;
+  onChange: (updated: ReminderState) => void;
+  onClose: () => void;
+  onSend: () => void;
+  sending: boolean;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+      onClick={(e) => { if (e.target === e.currentTarget && !sending) onClose(); }}
+    >
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="font-heading font-bold text-rise-black text-base">Send Reminder</h2>
+          <button
+            onClick={onClose}
+            disabled={sending}
+            className="text-rise-brown hover:text-rise-black transition-colors p-1"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">To</label>
+            <input
+              type="email"
+              value={state.to}
+              onChange={(e) => onChange({ ...state, to: e.target.value })}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">CC</label>
+            <input
+              type="email"
+              value={state.cc}
+              onChange={(e) => onChange({ ...state, cc: e.target.value })}
+              placeholder="Parent email"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">BCC</label>
+            <input
+              type="email"
+              value={state.bcc}
+              onChange={(e) => onChange({ ...state, bcc: e.target.value })}
+              placeholder="Optional"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">Subject</label>
+            <input
+              type="text"
+              value={state.subject}
+              onChange={(e) => onChange({ ...state, subject: e.target.value })}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1">Body</label>
+            <textarea
+              value={state.body}
+              onChange={(e) => onChange({ ...state, body: e.target.value })}
+              rows={10}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none font-mono"
+            />
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={sending}
+            className="px-4 py-2 text-sm font-medium text-rise-brown hover:text-rise-black transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSend}
+            disabled={sending || !state.to || !state.subject || !state.body}
+            className="px-5 py-2 text-sm font-semibold bg-rise-green text-white rounded-lg hover:bg-rise-green/90 transition-colors disabled:opacity-60"
+          >
+            {sending ? "Sending…" : "Send"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface EditState {
   notes: string;
   interviewDate: string;
@@ -244,9 +371,53 @@ export default function StudentPipelineClient({
   const [selected, setSelected] = useState<ScholarApplicant | null>(null);
   const [query, setQuery] = useState("");
   const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
+  const [reminder, setReminder] = useState<ReminderState | null>(null);
+  const [sending, setSending] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  function openReminder(student: ScholarApplicant) {
+    setReminder({
+      student,
+      to: student.email,
+      cc: student.parentEmail,
+      bcc: "",
+      subject: DEFAULT_SUBJECT,
+      body: DEFAULT_BODY,
+    });
+  }
+
+  async function handleSendReminder() {
+    if (!reminder) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: reminder.to,
+          cc: reminder.cc || undefined,
+          bcc: reminder.bcc || undefined,
+          subject: reminder.subject,
+          body: reminder.body,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to send");
+      }
+
+      setReminder(null);
+      setToast({ type: "success", message: `Reminder sent to ${reminder.to}` });
+    } catch (err) {
+      setToast({ type: "error", message: err instanceof Error ? err.message : "Failed to send email" });
+    } finally {
+      setSending(false);
+      setTimeout(() => setToast(null), 4000);
+    }
+  }
 
   function handleSuccess(recordId: string) {
-    // Remove the student from the list (they now have an Acceptance Status set)
     setStudents((prev) => prev.filter((s) => s.recordId !== recordId));
     setSelected(null);
   }
@@ -273,6 +444,18 @@ export default function StudentPipelineClient({
 
   return (
     <>
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg text-sm font-medium shadow-lg ${
+            toast.type === "success"
+              ? "bg-green-100 text-green-800 border border-green-200"
+              : "bg-red-100 text-red-800 border border-red-200"
+          }`}
+        >
+          {toast.message}
+        </div>
+      )}
+
       <div className="mb-4">
         <input
           type="search"
@@ -297,6 +480,9 @@ export default function StudentPipelineClient({
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Country
               </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                Reminder
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Details
               </th>
@@ -305,7 +491,7 @@ export default function StudentPipelineClient({
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-rise-brown text-sm">
+                <td colSpan={5} className="px-4 py-8 text-center text-rise-brown text-sm">
                   No results for &ldquo;{query}&rdquo;
                 </td>
               </tr>
@@ -316,6 +502,14 @@ export default function StudentPipelineClient({
                 </td>
                 <td className="px-4 py-3 font-medium text-rise-black">{student.name}</td>
                 <td className="px-4 py-3 text-rise-brown">{student.country || "—"}</td>
+                <td className="px-4 py-3">
+                  <button
+                    onClick={() => openReminder(student)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-md bg-rise-green text-white hover:opacity-90 transition-opacity whitespace-nowrap"
+                  >
+                    Send Reminder
+                  </button>
+                </td>
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => setSelected(student)}
@@ -350,6 +544,16 @@ export default function StudentPipelineClient({
           onClose={() => setSelected(null)}
           onSuccess={handleSuccess}
           userName={userName}
+        />
+      )}
+
+      {reminder && (
+        <ReminderModal
+          state={reminder}
+          onChange={setReminder}
+          onClose={() => { if (!sending) setReminder(null); }}
+          onSend={handleSendReminder}
+          sending={sending}
         />
       )}
     </>

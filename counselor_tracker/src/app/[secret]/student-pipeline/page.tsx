@@ -9,8 +9,10 @@ export interface ScholarApplicant {
   recordId: string;
   applicantId: string;
   name: string;
+  email: string;
   phone: string;
   parentName: string;
+  parentEmail: string;
   parentPhone: string;
   currentGrade: string;
   schoolCollege: string;
@@ -40,8 +42,10 @@ export default async function StudentPipelinePage() {
     fields: [
       "Applicant ID",
       "Name",
+      "Student Email ID",
       "Phone number",
       "Parent Name",
+      "Parent Email ID",
       "Parent Phone Number",
       "Current Grade",
       "School/ College",
@@ -67,8 +71,10 @@ export default async function StudentPipelinePage() {
     recordId: r.id,
     applicantId: getField<string>(r, "Applicant ID") ?? "—",
     name: getField<string>(r, "Name") ?? "Unknown",
+    email: getField<string>(r, "Student Email ID") ?? "",
     phone: getField<string>(r, "Phone number") ?? "",
     parentName: getField<string>(r, "Parent Name") ?? "",
+    parentEmail: getField<string>(r, "Parent Email ID") ?? "",
     parentPhone: getField<string>(r, "Parent Phone Number") ?? "",
     currentGrade: getField<string>(r, "Current Grade") ?? "",
     schoolCollege: getField<string>(r, "School/ College") ?? "",
