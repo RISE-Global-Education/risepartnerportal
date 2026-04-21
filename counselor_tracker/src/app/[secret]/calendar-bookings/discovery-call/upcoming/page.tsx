@@ -1,4 +1,9 @@
 import UpcomingClient from "./UpcomingClient";
+import { fetchAllRecords, getField } from "@/lib/airtable";
+
+const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
+const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
+const DISCOVERY_EVENT_TYPE_ID = 4654239;
 
 export interface DiscoveryBooking {
   uid: string;
@@ -9,11 +14,19 @@ export interface DiscoveryBooking {
   meetingUrl: string;
 }
 
+export interface MatchedBooking {
+  uid: string;
+  applicantId: string;
+  studentName: string;
+  parentName: string;
+  hostName: string;
+  start: string;
+  meetingUrl: string;
+}
+
 async function fetchAllBookings(): Promise<DiscoveryBooking[]> {
-  const CALCOM_API = "https://api.cal.com/v2";
-  const DISCOVERY_EVENT_TYPE_ID = 4654239;
   const take = 100;
-  const allBookings: DiscoveryBooking[] = [];
+  const all: DiscoveryBooking[] = [];
   let page = 1;
   let hasMore = true;
 
@@ -26,7 +39,7 @@ async function fetchAllBookings(): Promise<DiscoveryBooking[]> {
       sortStart: "asc",
     });
 
-    const res = await fetch(`${CALCOM_API}/bookings?${params}`, {
+    const res = await fetch(`https://api.cal.com/v2/bookings?${params}`, {
       headers: {
         Authorization: `Bearer ${process.env.CALCOM_API_KEY}`,
         "cal-api-version": "2026-02-25",
@@ -37,13 +50,11 @@ async function fetchAllBookings(): Promise<DiscoveryBooking[]> {
     if (!res.ok) break;
 
     const json = await res.json();
-    const bookings = json.data ?? [];
-
-    for (const b of bookings) {
-      allBookings.push({
+    for (const b of json.data ?? []) {
+      all.push({
         uid: b.uid,
         attendeeName: b.attendees?.[0]?.name ?? "—",
-        attendeeEmail: b.attendees?.[0]?.email ?? "—",
+        attendeeEmail: (b.attendees?.[0]?.email ?? "").toLowerCase().trim(),
         hostName: b.hosts?.[0]?.name ?? "—",
         start: b.start,
         meetingUrl: b.meetingUrl ?? "",
@@ -54,18 +65,59 @@ async function fetchAllBookings(): Promise<DiscoveryBooking[]> {
     page++;
   }
 
-  return allBookings;
+  return all;
 }
 
 export default async function UpcomingPage() {
-  const bookings = await fetchAllBookings();
+  const [bookings, records] = await Promise.all([
+    fetchAllBookings(),
+    fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
+      fields: ["Applicant ID", "Student Name", "Student Email ID", "Parent/Guardian Name", "Parent Email ID"],
+    }),
+  ]);
+
+  // Build email → airtable record map
+  const recordByEmail = new Map<string, { studentName: string; parentName: string }>();
+  for (const r of records) {
+    const studentEmail = (getField<string>(r, "Student Email ID") ?? "").toLowerCase().trim();
+    const parentEmail = (getField<string>(r, "Parent Email ID") ?? "").toLowerCase().trim();
+    const entry = {
+      applicantId: getField<string>(r, "Applicant ID") ?? "—",
+      studentName: getField<string>(r, "Student Name") ?? "—",
+      parentName: getField<string>(r, "Parent/Guardian Name") ?? "—",
+    };
+    if (studentEmail) recordByEmail.set(studentEmail, entry);
+    if (parentEmail && !recordByEmail.has(parentEmail)) recordByEmail.set(parentEmail, entry);
+  }
+
+  const matched: MatchedBooking[] = [];
+  const unmatched: DiscoveryBooking[] = [];
+
+  for (const b of bookings) {
+    const airtable = recordByEmail.get(b.attendeeEmail);
+    if (airtable) {
+      matched.push({
+        uid: b.uid,
+        applicantId: airtable.applicantId,
+        studentName: airtable.studentName,
+        parentName: airtable.parentName,
+        hostName: b.hostName,
+        start: b.start,
+        meetingUrl: b.meetingUrl,
+      });
+    } else {
+      unmatched.push(b);
+    }
+  }
 
   return (
     <div>
       <p className="text-sm text-rise-brown mb-4">
-        {bookings.length} upcoming discovery call{bookings.length !== 1 ? "s" : ""}
+        {bookings.length} upcoming discovery call{bookings.length !== 1 ? "s" : ""} —{" "}
+        <span className="text-rise-black font-medium">{matched.length}</span> matched,{" "}
+        <span className="text-rise-black font-medium">{unmatched.length}</span> unmatched
       </p>
-      <UpcomingClient bookings={bookings} />
+      <UpcomingClient matched={matched} unmatched={unmatched} />
     </div>
   );
 }

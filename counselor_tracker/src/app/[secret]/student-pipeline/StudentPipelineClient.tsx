@@ -6,7 +6,7 @@ import type { ScholarApplicant } from "./page";
 const DEFAULT_SUBJECT = "Interview Reminder | RISE Research";
 const DEFAULT_BODY = `Hey,
 
-Hope you're doing well. Just checking in — will you be joining the interview? I'm already on the call and wanted to confirm if you're able to make it.
+I'm on the call and wanted to confirm if you're able to make it.
 
 Let us know. Thanks.
 
