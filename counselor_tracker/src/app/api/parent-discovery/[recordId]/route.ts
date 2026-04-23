@@ -34,6 +34,12 @@ export async function PATCH(
   if (body.callPoc !== undefined) {
     fields["Call POC"] = body.callPoc;
   }
+  if (body.appFormCallNotes !== undefined) {
+    fields["Application Form Call Notes"] = body.appFormCallNotes;
+  }
+  if (body.appFormCallDate !== undefined) {
+    fields["Application Form Call Date"] = body.appFormCallDate || null;
+  }
 
   // DNP counter increment: fetch current value then add the specified amount (1 for DNP, 4 for invalid number)
   if (body.incrementDnp) {
