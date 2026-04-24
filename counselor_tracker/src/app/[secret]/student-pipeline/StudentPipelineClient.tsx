@@ -249,6 +249,7 @@ function Modal({
                 <DetailRow label="Country" value={student.country} />
                 <DetailRow label="Cohort" value={student.cohort} />
                 <DetailRow label="Research Package" value={student.researchPackage} />
+                <DetailRow label="Scholarship %" value={student.scholarshipPercent ? `${student.scholarshipPercent}%` : ""} />
                 <DetailRow label="Previously Applied to RISE?" value={student.previouslyApplied} />
                 <DetailRow label="Academic Score" value={student.academicScore} />
                 <DetailRow label="Standardized Test Scores" value={student.testScores} />
