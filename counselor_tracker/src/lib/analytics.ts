@@ -5,6 +5,7 @@ const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
 const APPLICATION_TABLE = "tblpsa6QdGW9qmyll";
 const COUNSELOR_RECORDS_TABLE = "tblzcy02PoVxhAXId";
+const BROCHURE_DOWNLOADS_TABLE = "tblRIS5zx51SYpkhB";
 
 // --- Raw record types ---
 
@@ -35,6 +36,11 @@ export interface ApplicationRecord {
   clientDate: string | null; // ISO, parsed from "Client Date" field (DD/MM/YYYY)
 }
 
+export interface BrochureDownloadRecord {
+  id: string;
+  date: string; // ISO
+}
+
 export interface CounselorRecord {
   counselorId: string;
   discoveryCallIds: string[];
@@ -60,7 +66,8 @@ export async function getAllDiscoveryCalls(): Promise<DiscoveryCallRecord[]> {
 
 export async function getAllLeads(): Promise<LeadRecord[]> {
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
-    fields: ["Student Name", "Student Email ID", "Created"],
+    fields: ["Student Name", "Student Email ID", "Created", "Qualified"],
+    filterByFormula: `{Qualified} != "No"`,
   });
 
   return records.map((r) => ({
@@ -68,6 +75,34 @@ export async function getAllLeads(): Promise<LeadRecord[]> {
     name: getField<string>(r, "Student Name") || "Unknown",
     email: (getField<string>(r, "Student Email ID") || "").toLowerCase(),
     createdDate: getField<string>(r, "Created") || r.createdTime,
+  }));
+}
+
+function parseBrochureDate(raw: string): string {
+  // Format: "17/1/2026 8:37pm" → ISO
+  const match = raw.match(/^(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)(am|pm)$/i);
+  if (!match) return new Date(raw).toISOString();
+  const [, day, month, year, hourStr, min, ampm] = match;
+  let hour = parseInt(hourStr, 10);
+  if (ampm.toLowerCase() === "pm" && hour !== 12) hour += 12;
+  if (ampm.toLowerCase() === "am" && hour === 12) hour = 0;
+  return new Date(
+    parseInt(year, 10),
+    parseInt(month, 10) - 1,
+    parseInt(day, 10),
+    hour,
+    parseInt(min, 10)
+  ).toISOString();
+}
+
+export async function getAllBrochureDownloads(): Promise<BrochureDownloadRecord[]> {
+  const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, BROCHURE_DOWNLOADS_TABLE, {
+    fields: ["Created Time"],
+  });
+
+  return records.map((r) => ({
+    id: r.id,
+    date: parseBrochureDate(getField<string>(r, "Created Time") || r.createdTime),
   }));
 }
 
@@ -167,7 +202,7 @@ export interface AnalyticsData {
   subStageCounts: Record<string, number>;
 
   // Section 2: Flow over time
-  leadsOverTime: { date: string; leads: number; applications: number }[];
+  leadsOverTime: { date: string; leads: number; applications: number; brochureDownloads: number; clients: number }[];
   stageEntriesOverTime: { date: string; Lead: number; Application: number; Interview: number }[];
   interviewsOverTime: { date: string; count: number }[];
 
@@ -194,7 +229,8 @@ export function computeAnalytics(
   counselorRecords: CounselorRecord[],
   counselorNameMap: Map<string, string>,
   period: string,
-  discoveryCalls: DiscoveryCallRecord[] = []
+  discoveryCalls: DiscoveryCallRecord[] = [],
+  brochureDownloads: BrochureDownloadRecord[] = []
 ): AnalyticsData {
   const days = periodToDays(period);
   const periodStart = days ? daysAgo(days) : null;
@@ -258,12 +294,12 @@ export function computeAnalytics(
   const useWeekly = days === null || days > 30;
   const keyFn = useWeekly ? toWeekKey : toDateKey;
 
-  const leadsTimeMap = new Map<string, { leads: number; applications: number }>();
+  const leadsTimeMap = new Map<string, { leads: number; applications: number; brochureDownloads: number; clients: number }>();
 
   for (const lead of leads) {
     if (!isInPeriod(lead.createdDate, periodStart)) continue;
     const key = keyFn(lead.createdDate);
-    const entry = leadsTimeMap.get(key) || { leads: 0, applications: 0 };
+    const entry = leadsTimeMap.get(key) || { leads: 0, applications: 0, brochureDownloads: 0, clients: 0 };
     entry.leads++;
     leadsTimeMap.set(key, entry);
   }
@@ -271,8 +307,25 @@ export function computeAnalytics(
   for (const app of applications) {
     if (!isInPeriod(app.createdDate, periodStart)) continue;
     const key = keyFn(app.createdDate);
-    const entry = leadsTimeMap.get(key) || { leads: 0, applications: 0 };
+    const entry = leadsTimeMap.get(key) || { leads: 0, applications: 0, brochureDownloads: 0, clients: 0 };
     entry.applications++;
+    leadsTimeMap.set(key, entry);
+  }
+
+  for (const dl of brochureDownloads) {
+    if (!isInPeriod(dl.date, periodStart)) continue;
+    const key = keyFn(dl.date);
+    const entry = leadsTimeMap.get(key) || { leads: 0, applications: 0, brochureDownloads: 0, clients: 0 };
+    entry.brochureDownloads++;
+    leadsTimeMap.set(key, entry);
+  }
+
+  for (const app of applications) {
+    if (app.followUpStatus !== "Client" || !app.clientDate) continue;
+    if (!isInPeriod(app.clientDate, periodStart)) continue;
+    const key = keyFn(app.clientDate);
+    const entry = leadsTimeMap.get(key) || { leads: 0, applications: 0, brochureDownloads: 0, clients: 0 };
+    entry.clients++;
     leadsTimeMap.set(key, entry);
   }
 
