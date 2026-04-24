@@ -31,6 +31,7 @@ export interface ScholarApplicant {
   interviewDate: string;
   notes: string;
   mentorField: string;
+  scholarshipPercent: string;
 }
 
 export default async function StudentPipelinePage() {
@@ -64,6 +65,7 @@ export default async function StudentPipelinePage() {
       "Interview Date",
       "Notes",
       "Mentor Field",
+      "Scholarship %",
     ],
   });
 
@@ -93,6 +95,7 @@ export default async function StudentPipelinePage() {
     interviewDate: getField<string>(r, "Interview Date") ?? "",
     notes: getField<string>(r, "Notes") ?? "",
     mentorField: getField<string>(r, "Mentor Field") ?? "",
+    scholarshipPercent: getField<number>(r, "Scholarship %")?.toString() ?? "",
   }));
 
   return (

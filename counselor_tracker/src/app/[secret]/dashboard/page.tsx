@@ -1,11 +1,10 @@
 import { Suspense } from "react";
-import { getAllLeads, getAllApplications, getAllCounselorRecords, getAllDiscoveryCalls, computeAnalytics } from "@/lib/analytics";
+import { getAllLeads, getAllApplications, getAllCounselorRecords, getAllDiscoveryCalls, getAllBrochureDownloads, computeAnalytics } from "@/lib/analytics";
 import { getAllCounselors } from "@/lib/counselors";
 import TimePeriodSelector from "@/components/dashboard/TimePeriodSelector";
 import FunnelOverviewCards from "@/components/dashboard/FunnelOverviewCards";
 import PendingActionsChart from "@/components/dashboard/PendingActionsChart";
 import LeadsVsApplicationsChart from "@/components/dashboard/LeadsVsApplicationsChart";
-import StageEntriesChart from "@/components/dashboard/StageEntriesChart";
 import InterviewsChart from "@/components/dashboard/InterviewsChart";
 import ConversionFunnel from "@/components/dashboard/ConversionFunnel";
 import DropOffChart from "@/components/dashboard/DropOffChart";
@@ -23,12 +22,13 @@ export default async function DashboardPage({
 }) {
   const { period = "7d" } = await searchParams;
 
-  const [leads, applications, counselorRecords, counselors, discoveryCalls] = await Promise.all([
+  const [leads, applications, counselorRecords, counselors, discoveryCalls, brochureDownloads] = await Promise.all([
     getAllLeads(),
     getAllApplications(),
     getAllCounselorRecords(),
     getAllCounselors(),
     getAllDiscoveryCalls(),
+    getAllBrochureDownloads(),
   ]);
 
   // Build counselorId → company name map
@@ -37,7 +37,7 @@ export default async function DashboardPage({
     counselorNameMap.set(c.counselorId, c.companyName);
   }
 
-  const analytics = computeAnalytics(leads, applications, counselorRecords, counselorNameMap, period, discoveryCalls);
+  const analytics = computeAnalytics(leads, applications, counselorRecords, counselorNameMap, period, discoveryCalls, brochureDownloads);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
@@ -66,10 +66,7 @@ export default async function DashboardPage({
       {/* Section 2: Flow Over Time */}
       <section className="mt-8">
         <h2 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">Flow Over Time</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <LeadsVsApplicationsChart data={analytics.leadsOverTime} />
-          <StageEntriesChart data={analytics.stageEntriesOverTime} />
-        </div>
+        <LeadsVsApplicationsChart data={analytics.leadsOverTime} />
         <div className="mt-4">
           <InterviewsChart data={analytics.interviewsOverTime} />
         </div>
