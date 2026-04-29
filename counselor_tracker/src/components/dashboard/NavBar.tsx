@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function NavBar({ secret, role, teamName }: { secret: string; role: "admin" | "user"; teamName?: string | null }) {
   const pathname = usePathname();
+  const router = useRouter();
   const basePath = `/${secret}`;
   const isSearch = pathname.endsWith("/search");
   const isInsights = pathname.includes("/insights");
@@ -55,7 +56,7 @@ export default function NavBar({ secret, role, teamName }: { secret: string; rol
         </div>
 
         {teamName && (
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto relative group flex items-center gap-2 cursor-pointer">
             <div className="w-7 h-7 rounded-full bg-rise-green/10 flex items-center justify-center">
               <span className="text-xs font-semibold text-rise-green">
                 {teamName.charAt(0).toUpperCase()}
@@ -64,6 +65,17 @@ export default function NavBar({ secret, role, teamName }: { secret: string; rol
             <span className="text-sm font-medium text-rise-black hidden sm:inline">
               {teamName}
             </span>
+            <div className="absolute right-0 top-full mt-1 hidden group-hover:flex flex-col bg-white border border-gray-200 rounded-md shadow-md min-w-[120px] z-50">
+              <button
+                onClick={async () => {
+                  await fetch("/api/auth/team-logout", { method: "POST" });
+                  router.push(`/${secret}/login`);
+                }}
+                className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left rounded-md transition-colors"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         )}
       </div>
