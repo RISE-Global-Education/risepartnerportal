@@ -4,6 +4,52 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { InterviewNotBookedApplicant } from "./page";
 
+const REGION_MAP: Record<string, string[]> = {
+  "Asia": [
+    "Afghanistan","Armenia","Azerbaijan","Bangladesh","Bhutan","Brunei","Cambodia","China",
+    "East Timor (Timor-Leste)","Georgia","Hong Kong","India","Indonesia","Iran","Iraq","Israel",
+    "Japan","Jordan","Kazakhstan","Kyrgyzstan","Laos","Lebanon","Macau","Malaysia",
+    "Maldives","Mongolia","Myanmar (Burma)","Nepal","North Korea","Pakistan",
+    "Philippines","Russia","Singapore","South Korea","Sri Lanka","Syria",
+    "Taiwan","Tajikistan","Thailand","Turkey","Turkmenistan","Uzbekistan",
+    "Vietnam","West Bank","Yemen","Gaza Strip",
+  ],
+  "GCC": [
+    "Bahrain","Kuwait","Oman","Qatar","Saudi Arabia","United Arab Emirates",
+  ],
+  "US/Canada": [
+    "United States","Canada",
+  ],
+  "Europe": [
+    "Albania","Andorra","Austria","Belarus","Belgium","Bosnia and Herzegovina","Bulgaria","Croatia",
+    "Cyprus","Czech Republic","Denmark","Estonia","Finland","France","Germany","Gibraltar","Greece",
+    "Greenland","Hungary","Iceland","Ireland","Italy","Kosovo","Latvia","Liechtenstein","Lithuania",
+    "Luxembourg","Malta","Moldova","Monaco","Montenegro","Netherlands","North Macedonia","Norway",
+    "Poland","Portugal","Romania","San Marino","Serbia","Slovakia","Slovenia","Spain",
+    "Sweden","Switzerland","Ukraine","United Kingdom","Vatican City",
+  ],
+  "Africa": [
+    "Algeria","Angola","Benin","Botswana","Burkina Faso","Burundi","Cabo Verde (Cape Verde)",
+    "Cameroon","Central African Republic","Chad","Comoros","Democratic Republic of the Congo",
+    "Djibouti","Egypt","Equatorial Guinea","Eritrea","Eswatini (Swaziland)","Ethiopia","Gabon",
+    "Ghana","Guinea","Guinea-Bissau","Kenya","Lesotho","Liberia","Libya","Madagascar","Malawi",
+    "Mali","Mauritania","Mauritius","Morocco","Mozambique","Namibia","Niger","Nigeria",
+    "Republic of the Congo","Rwanda","Senegal","Seychelles","Sierra Leone","Somalia","South Africa",
+    "South Sudan","Sudan","Tanzania","The Gambia","Togo","Tunisia","Uganda","Zambia","Zimbabwe",
+  ],
+};
+
+const REGIONS = ["Asia", "GCC", "US/Canada", "Europe", "Africa", "Other"] as const;
+type Region = typeof REGIONS[number];
+
+function getRegion(country: string): Region {
+  for (const r of REGIONS) {
+    if (r === "Other") continue;
+    if (REGION_MAP[r]?.includes(country)) return r;
+  }
+  return "Other";
+}
+
 const COUNTRIES = [
   "Afghanistan","Albania","Algeria","American Samoa","Andorra","Angola","Anguilla","Antigua and Barbuda","Argentina","Armenia","Aruba","Australia","Austria","Azerbaijan","Bahrain","Bangladesh","Barbados","Belarus","Belgium","Belize","Benin","Bermuda","Bhutan","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","British Virgin Islands","Brunei","Bulgaria","Burkina Faso","Burundi","Cabo Verde (Cape Verde)","Cambodia","Cameroon","Canada","Cayman Islands","Central African Republic","Chad","Chile","China","Colombia","Comoros","Cook Islands","Costa Rica","Croatia","Cuba","Cyprus","Czech Republic","Democratic Republic of the Congo","Denmark","Djibouti","Dominica","Dominican Republic","East Timor (Timor-Leste)","Ecuador","Egypt","El Salvador","Equatorial Guinea","Eritrea","Estonia","Eswatini (Swaziland)","Ethiopia","Fiji","Finland","France","Gabon","Gaza Strip","Georgia","Germany","Ghana","Gibraltar","Greece","Greenland","Grenada","Guatemala","Guinea","Guinea-Bissau","Guyana","Haiti","Honduras","Hong Kong","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kiribati","Kosovo","Kuwait","Kyrgyzstan","Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Liechtenstein","Lithuania","Luxembourg","Macau","Madagascar","Malawi","Malaysia","Maldives","Mali","Malta","Marshall Islands","Mauritania","Mauritius","Mexico","Micronesia","Moldova","Monaco","Mongolia","Montenegro","Morocco","Mozambique","Myanmar (Burma)","Namibia","Nauru","Nepal","Netherlands","New Zealand","Nicaragua","Niger","Nigeria","North Korea","North Macedonia","Norway","Oman","Other","Pakistan","Palau","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar","Republic of the Congo","Romania","Russia","Rwanda","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines","Samoa","San Marino","Saudi Arabia","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Slovakia","Slovenia","Solomon Islands","Somalia","South Africa","South Korea","South Sudan","Spain","Sri Lanka","Sudan","Suriname","Sweden","Switzerland","Syria","Taiwan","Tajikistan","Tanzania","Thailand","The Bahamas","The Gambia","Togo","Tonga","Trinidad and Tobago","Tunisia","Turkey","Turkmenistan","Tuvalu","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States","Uruguay","Uzbekistan","Vanuatu","Vatican City","Venezuela","Vietnam","West Bank","Yemen","Zambia","Zimbabwe",
 ];
@@ -273,6 +319,7 @@ export default function InterviewNotBookedClient({
   const [selected, setSelected] = useState<InterviewNotBookedApplicant | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [region, setRegion] = useState("");
   const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
   const [toast, setToast] = useState(false);
 
@@ -290,7 +337,8 @@ export default function InterviewNotBookedClient({
         a.studentEmail.toLowerCase().includes(q) ||
         a.applicantId.toLowerCase().includes(q);
       const matchesCountry = !country || a.country.trim() === country;
-      return matchesQuery && matchesCountry;
+      const matchesRegion = !region || getRegion(a.country.trim()) === region;
+      return matchesQuery && matchesCountry && matchesRegion;
     })
     .sort((a, b) => {
       if (idSort === "asc") return a.applicantId.localeCompare(b.applicantId);
@@ -332,12 +380,22 @@ export default function InterviewNotBookedClient({
         />
         <select
           value={country}
-          onChange={(e) => setCountry(e.target.value)}
+          onChange={(e) => { setCountry(e.target.value); if (e.target.value) setRegion(""); }}
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40"
         >
           <option value="">All countries</option>
           {COUNTRIES.map((c) => (
             <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <select
+          value={region}
+          onChange={(e) => { setRegion(e.target.value); if (e.target.value) setCountry(""); }}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+        >
+          <option value="">All regions</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
           ))}
         </select>
         <a
@@ -377,7 +435,7 @@ export default function InterviewNotBookedClient({
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-rise-brown text-sm">
-                  No results{query || country ? " for current filters" : ""}
+                  No results{query || country || region ? " for current filters" : ""}
                 </td>
               </tr>
             ) : (

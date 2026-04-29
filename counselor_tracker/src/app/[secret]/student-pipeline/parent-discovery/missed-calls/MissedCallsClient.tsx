@@ -4,6 +4,52 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { DiscoveryLead } from "./page";
 
+const REGION_MAP: Record<string, string[]> = {
+  "Asia": [
+    "Afghanistan","Armenia","Azerbaijan","Bangladesh","Bhutan","Brunei","Cambodia","China",
+    "East Timor (Timor-Leste)","Georgia","Hong Kong","India","Indonesia","Iran","Iraq","Israel",
+    "Japan","Jordan","Kazakhstan","Kyrgyzstan","Laos","Lebanon","Macau","Malaysia",
+    "Maldives","Mongolia","Myanmar (Burma)","Nepal","North Korea","Pakistan",
+    "Philippines","Russia","Singapore","South Korea","Sri Lanka","Syria",
+    "Taiwan","Tajikistan","Thailand","Turkey","Turkmenistan","Uzbekistan",
+    "Vietnam","West Bank","Yemen","Gaza Strip",
+  ],
+  "GCC": [
+    "Bahrain","Kuwait","Oman","Qatar","Saudi Arabia","United Arab Emirates",
+  ],
+  "US/Canada": [
+    "United States","Canada",
+  ],
+  "Europe": [
+    "Albania","Andorra","Austria","Belarus","Belgium","Bosnia and Herzegovina","Bulgaria","Croatia",
+    "Cyprus","Czech Republic","Denmark","Estonia","Finland","France","Germany","Gibraltar","Greece",
+    "Greenland","Hungary","Iceland","Ireland","Italy","Kosovo","Latvia","Liechtenstein","Lithuania",
+    "Luxembourg","Malta","Moldova","Monaco","Montenegro","Netherlands","North Macedonia","Norway",
+    "Poland","Portugal","Romania","San Marino","Serbia","Slovakia","Slovenia","Spain",
+    "Sweden","Switzerland","Ukraine","United Kingdom","Vatican City",
+  ],
+  "Africa": [
+    "Algeria","Angola","Benin","Botswana","Burkina Faso","Burundi","Cabo Verde (Cape Verde)",
+    "Cameroon","Central African Republic","Chad","Comoros","Democratic Republic of the Congo",
+    "Djibouti","Egypt","Equatorial Guinea","Eritrea","Eswatini (Swaziland)","Ethiopia","Gabon",
+    "Ghana","Guinea","Guinea-Bissau","Kenya","Lesotho","Liberia","Libya","Madagascar","Malawi",
+    "Mali","Mauritania","Mauritius","Morocco","Mozambique","Namibia","Niger","Nigeria",
+    "Republic of the Congo","Rwanda","Senegal","Seychelles","Sierra Leone","Somalia","South Africa",
+    "South Sudan","Sudan","Tanzania","The Gambia","Togo","Tunisia","Uganda","Zambia","Zimbabwe",
+  ],
+};
+
+const REGIONS = ["Asia", "GCC", "US/Canada", "Europe", "Africa", "Other"] as const;
+type Region = typeof REGIONS[number];
+
+function getRegion(country: string): Region {
+  for (const r of REGIONS) {
+    if (r === "Other") continue;
+    if (REGION_MAP[r]?.includes(country)) return r;
+  }
+  return "Other";
+}
+
 function formatDate(iso: string): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -302,6 +348,7 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
   const [selected, setSelected] = useState<DiscoveryLead | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
+  const [region, setRegion] = useState("");
   const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
   const [toast, setToast] = useState(false);
 
@@ -321,7 +368,8 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
         l.parentName.toLowerCase().includes(q) ||
         l.parentEmail.toLowerCase().includes(q);
       const matchesCountry = !country || l.country.trim() === country;
-      return matchesQuery && matchesCountry;
+      const matchesRegion = !region || getRegion(l.country.trim()) === region;
+      return matchesQuery && matchesCountry && matchesRegion;
     })
     .sort((a, b) => {
       if (idSort === "asc") return a.applicantId.localeCompare(b.applicantId);
@@ -356,12 +404,22 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
         />
         <select
           value={country}
-          onChange={(e) => setCountry(e.target.value)}
+          onChange={(e) => { setCountry(e.target.value); if (e.target.value) setRegion(""); }}
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40"
         >
           <option value="">All countries</option>
           {COUNTRIES.map((c) => (
             <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <select
+          value={region}
+          onChange={(e) => { setRegion(e.target.value); if (e.target.value) setCountry(""); }}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+        >
+          <option value="">All regions</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
           ))}
         </select>
         <a
@@ -401,7 +459,7 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-rise-brown text-sm">
-                  No results{query || country ? " for current filters" : ""}
+                  No results{query || country || region ? " for current filters" : ""}
                 </td>
               </tr>
             ) : (

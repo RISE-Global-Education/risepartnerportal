@@ -3,6 +3,52 @@
 import { useState } from "react";
 import type { ScholarApplicant } from "./page";
 
+const REGION_MAP: Record<string, string[]> = {
+  "Asia": [
+    "Afghanistan","Armenia","Azerbaijan","Bangladesh","Bhutan","Brunei","Cambodia","China",
+    "East Timor (Timor-Leste)","Georgia","Hong Kong","India","Indonesia","Iran","Iraq","Israel",
+    "Japan","Jordan","Kazakhstan","Kyrgyzstan","Laos","Lebanon","Macau","Malaysia",
+    "Maldives","Mongolia","Myanmar (Burma)","Nepal","North Korea","Pakistan",
+    "Philippines","Russia","Singapore","South Korea","Sri Lanka","Syria",
+    "Taiwan","Tajikistan","Thailand","Turkey","Turkmenistan","Uzbekistan",
+    "Vietnam","West Bank","Yemen","Gaza Strip",
+  ],
+  "GCC": [
+    "Bahrain","Kuwait","Oman","Qatar","Saudi Arabia","United Arab Emirates",
+  ],
+  "US/Canada": [
+    "United States","Canada",
+  ],
+  "Europe": [
+    "Albania","Andorra","Austria","Belarus","Belgium","Bosnia and Herzegovina","Bulgaria","Croatia",
+    "Cyprus","Czech Republic","Denmark","Estonia","Finland","France","Germany","Gibraltar","Greece",
+    "Greenland","Hungary","Iceland","Ireland","Italy","Kosovo","Latvia","Liechtenstein","Lithuania",
+    "Luxembourg","Malta","Moldova","Monaco","Montenegro","Netherlands","North Macedonia","Norway",
+    "Poland","Portugal","Romania","San Marino","Serbia","Slovakia","Slovenia","Spain",
+    "Sweden","Switzerland","Ukraine","United Kingdom","Vatican City",
+  ],
+  "Africa": [
+    "Algeria","Angola","Benin","Botswana","Burkina Faso","Burundi","Cabo Verde (Cape Verde)",
+    "Cameroon","Central African Republic","Chad","Comoros","Democratic Republic of the Congo",
+    "Djibouti","Egypt","Equatorial Guinea","Eritrea","Eswatini (Swaziland)","Ethiopia","Gabon",
+    "Ghana","Guinea","Guinea-Bissau","Kenya","Lesotho","Liberia","Libya","Madagascar","Malawi",
+    "Mali","Mauritania","Mauritius","Morocco","Mozambique","Namibia","Niger","Nigeria",
+    "Republic of the Congo","Rwanda","Senegal","Seychelles","Sierra Leone","Somalia","South Africa",
+    "South Sudan","Sudan","Tanzania","The Gambia","Togo","Tunisia","Uganda","Zambia","Zimbabwe",
+  ],
+};
+
+const REGIONS = ["Asia", "GCC", "US/Canada", "Europe", "Africa", "Other"] as const;
+type Region = typeof REGIONS[number];
+
+function getRegion(country: string): Region {
+  for (const r of REGIONS) {
+    if (r === "Other") continue;
+    if (REGION_MAP[r]?.includes(country)) return r;
+  }
+  return "Other";
+}
+
 const DEFAULT_SUBJECT = "Interview Reminder | RISE Research";
 const DEFAULT_BODY = `Hey,
 
@@ -371,6 +417,7 @@ export default function StudentPipelineClient({
   const [students, setStudents] = useState(initialStudents);
   const [selected, setSelected] = useState<ScholarApplicant | null>(null);
   const [query, setQuery] = useState("");
+  const [region, setRegion] = useState("");
   const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
   const [reminder, setReminder] = useState<ReminderState | null>(null);
   const [sending, setSending] = useState(false);
@@ -425,9 +472,10 @@ export default function StudentPipelineClient({
 
   const filtered = students
     .filter((s) => {
-      if (!query.trim()) return true;
       const q = query.trim().toLowerCase();
-      return s.name.toLowerCase().includes(q) || s.applicantId.toLowerCase().includes(q);
+      const matchesQuery = !q || s.name.toLowerCase().includes(q) || s.applicantId.toLowerCase().includes(q);
+      const matchesRegion = !region || getRegion(s.country.trim()) === region;
+      return matchesQuery && matchesRegion;
     })
     .sort((a, b) => {
       if (idSort === "asc") return a.applicantId.localeCompare(b.applicantId);
@@ -457,7 +505,7 @@ export default function StudentPipelineClient({
         </div>
       )}
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap gap-3 items-center">
         <input
           type="search"
           value={query}
@@ -465,6 +513,16 @@ export default function StudentPipelineClient({
           placeholder="Search by name or applicant ID…"
           className="w-full sm:w-80 border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40"
         />
+        <select
+          value={region}
+          onChange={(e) => setRegion(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+        >
+          <option value="">All regions</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
       </div>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
@@ -493,7 +551,7 @@ export default function StudentPipelineClient({
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-rise-brown text-sm">
-                  No results for &ldquo;{query}&rdquo;
+                  No results{query || region ? " for current filters" : ""}
                 </td>
               </tr>
             ) : (filtered.map((student) => (
