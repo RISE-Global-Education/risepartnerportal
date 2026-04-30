@@ -60,8 +60,25 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Restrict to student-pipeline and calendar-bookings only
-    if (!rest.startsWith("/student-pipeline") && !rest.startsWith("/calendar-bookings")) {
+    const employeeTypes = (req.cookies.get("team_employee_types")?.value ?? "")
+      .split(",")
+      .map((t) => t.trim());
+    const isMentorSuccess = employeeTypes.includes("Mentor Success");
+
+    // Restrict mentor-pipeline to Mentor Success employees only
+    if (rest.startsWith("/mentor-pipeline") && !isMentorSuccess) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/${secret}/student-pipeline`;
+      return NextResponse.redirect(url);
+    }
+
+    // Restrict to allowed routes only
+    const allowed =
+      rest.startsWith("/student-pipeline") ||
+      rest.startsWith("/calendar-bookings") ||
+      rest.startsWith("/mentor-pipeline");
+
+    if (!allowed) {
       const url = req.nextUrl.clone();
       url.pathname = `/${secret}/student-pipeline`;
       return NextResponse.redirect(url);

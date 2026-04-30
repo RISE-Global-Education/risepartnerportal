@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Fetch team records from Airtable
-  const url = `https://api.airtable.com/v0/${CONTACTS_BASE}/${TEAM_TABLE}?fields%5B%5D=Email&fields%5B%5D=Password&fields%5B%5D=Name&fields%5B%5D=Working+Status`;
+  const url = `https://api.airtable.com/v0/${CONTACTS_BASE}/${TEAM_TABLE}?fields%5B%5D=Email&fields%5B%5D=Password&fields%5B%5D=Name&fields%5B%5D=Working+Status&fields%5B%5D=Employee+Type`;
   const atRes = await fetch(url, {
     headers: { Authorization: `Bearer ${process.env.AIRTABLE_TOKEN}` },
     cache: "no-store",
@@ -39,14 +39,18 @@ export async function POST(req: NextRequest) {
   }
 
   const name = match.fields["Name"] ?? "Team Member";
+  const employeeTypes: string[] = match.fields["Employee Type"] ?? [];
 
-  const res = NextResponse.json({ ok: true, name });
-  res.cookies.set("team_auth", name, {
+  const cookieOpts = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "lax" as const,
     path: "/",
-    maxAge: 60 * 60 * 12, // 12-hour session
-  });
+    maxAge: 60 * 60 * 12,
+  };
+
+  const res = NextResponse.json({ ok: true, name });
+  res.cookies.set("team_auth", name, cookieOpts);
+  res.cookies.set("team_employee_types", employeeTypes.join(","), cookieOpts);
   return res;
 }

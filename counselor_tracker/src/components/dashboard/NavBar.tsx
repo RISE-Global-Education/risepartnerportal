@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-export default function NavBar({ secret, role, teamName }: { secret: string; role: "admin" | "user"; teamName?: string | null }) {
+export default function NavBar({ secret, role, teamName, employeeTypes = [] }: { secret: string; role: "admin" | "user"; teamName?: string | null; employeeTypes?: string[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const basePath = `/${secret}`;
@@ -12,17 +12,21 @@ export default function NavBar({ secret, role, teamName }: { secret: string; rol
   const isInsights = pathname.includes("/insights");
   const isPipeline = pathname.includes("/student-pipeline");
   const isCalendar = pathname.includes("/calendar-bookings");
+  const isMentorPipeline = pathname.includes("/mentor-pipeline");
   const isDashboard = pathname.includes("/dashboard") && !isSearch && !isInsights && !isPipeline && !isCalendar;
 
+  const isMentorSuccess = role === "admin" || employeeTypes.includes("Mentor Success");
+
   const allTabs = [
-    { label: "Dashboard", href: `${basePath}/dashboard`, active: isDashboard, adminOnly: true },
-    { label: "Search", href: `${basePath}/search`, active: isSearch, adminOnly: true },
-    { label: "Student Pipeline", href: `${basePath}/student-pipeline`, active: isPipeline, adminOnly: false },
-    { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights, adminOnly: true },
-    { label: "Calendar Bookings", href: `${basePath}/calendar-bookings`, active: isCalendar, adminOnly: false },
+    { label: "Dashboard", href: `${basePath}/dashboard`, active: isDashboard, adminOnly: true, show: true },
+    { label: "Search", href: `${basePath}/search`, active: isSearch, adminOnly: true, show: true },
+    { label: "Student Pipeline", href: `${basePath}/student-pipeline`, active: isPipeline, adminOnly: false, show: true },
+    { label: "Mentor Pipeline", href: `${basePath}/mentor-pipeline`, active: isMentorPipeline, adminOnly: false, show: isMentorSuccess },
+    { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights, adminOnly: true, show: true },
+    { label: "Calendar Bookings", href: `${basePath}/calendar-bookings`, active: isCalendar, adminOnly: false, show: true },
   ];
 
-  const tabs = role === "admin" ? allTabs : allTabs.filter((t) => !t.adminOnly);
+  const tabs = (role === "admin" ? allTabs : allTabs.filter((t) => !t.adminOnly)).filter((t) => t.show);
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -56,26 +60,26 @@ export default function NavBar({ secret, role, teamName }: { secret: string; rol
         </div>
 
         {teamName && (
-          <div className="ml-auto relative group flex items-center gap-2 cursor-pointer">
-            <div className="w-7 h-7 rounded-full bg-rise-green/10 flex items-center justify-center">
-              <span className="text-xs font-semibold text-rise-green">
-                {teamName.charAt(0).toUpperCase()}
+          <div className="ml-auto flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-rise-green/10 flex items-center justify-center">
+                <span className="text-xs font-semibold text-rise-green">
+                  {teamName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <span className="text-sm font-medium text-rise-black hidden sm:inline">
+                {teamName}
               </span>
             </div>
-            <span className="text-sm font-medium text-rise-black hidden sm:inline">
-              {teamName}
-            </span>
-            <div className="absolute right-0 top-full mt-1 hidden group-hover:flex flex-col bg-white border border-gray-200 rounded-md shadow-md min-w-[120px] z-50">
-              <button
-                onClick={async () => {
-                  await fetch("/api/auth/team-logout", { method: "POST" });
-                  router.push(`/${secret}/login`);
-                }}
-                className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left rounded-md transition-colors"
-              >
-                Logout
-              </button>
-            </div>
+            <button
+              onClick={async () => {
+                await fetch("/api/auth/team-logout", { method: "POST" });
+                router.push(`/${secret}/login`);
+              }}
+              className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors"
+            >
+              Logout
+            </button>
           </div>
         )}
       </div>
