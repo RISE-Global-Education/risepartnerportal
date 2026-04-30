@@ -1,15 +1,37 @@
 import { fetchAllRecords, getField } from "@/lib/airtable";
-import PastClient from "@/app/[secret]/calendar-bookings/mentor-interviews/past/PastClient";
-import type { MatchedMentor, UnmatchedMentor, ContractStatusLabel } from "@/app/[secret]/calendar-bookings/mentor-interviews/past/page";
+import PastClient from "./PastClient";
 
 const MENTOR_PIPELINE_BASE = "appFavjto15k519od";
 const MENTOR_INFO_TABLE = "tblt4vfMm1tiywIeQ";
 const MENTOR_INTERVIEW_EVENT_TYPE_ID = 5275411;
+const UNDERTAKING_FIELD = "Please upload a signed copy of the mentor undertaking shared with you. (File type - PDF, max size - 2MB)";
 
-const NOT_NEEDED = new Set(["Rejected", "Completed", "Sent (Issue)", "Not Interested", "Removed"]);
+export type ContractStatusLabel = "Send Contract" | "Contract Sent" | "Contract Not Sent" | "Not Needed" | "Completed";
+
+export interface MatchedMentor {
+  uid: string;
+  mentorName: string;
+  mentorEmail: string;
+  hostName: string;
+  interviewDate: string | null;
+  bookingStart: string;
+  contractStatus: ContractStatusLabel;
+  undertakingUploaded: boolean;
+}
+
+export interface UnmatchedMentor {
+  uid: string;
+  attendeeName: string;
+  attendeeEmail: string;
+  hostName: string;
+  bookingStart: string;
+}
+
+const NOT_NEEDED = new Set(["Rejected", "Sent (Issue)", "Not Interested", "Removed"]);
 
 function resolveContractStatus(raw: string[] | null): ContractStatusLabel {
   if (!raw || raw.length === 0) return "Contract Not Sent";
+  if (raw.includes("Completed")) return "Completed";
   if (raw.includes("Send Contract")) return "Send Contract";
   if (raw.includes("Sent")) return "Contract Sent";
   if (raw.some((s) => NOT_NEEDED.has(s))) return "Not Needed";
@@ -65,7 +87,7 @@ async function fetchAllPastBookings() {
 export default async function PastPage() {
   const [records, bookings] = await Promise.all([
     fetchAllRecords(MENTOR_PIPELINE_BASE, MENTOR_INFO_TABLE, {
-      fields: ["Full Name", "Email ID", "Contract Status", "Interview Date"],
+      fields: ["Full Name", "Email ID", "Contract Status", "Interview Date", UNDERTAKING_FIELD],
     }),
     fetchAllPastBookings(),
   ]);
@@ -85,13 +107,16 @@ export default async function PastPage() {
     const record = recordByEmail.get(normalize(b.attendeeEmail));
     if (record) {
       const rawStatus = getField<string[]>(record, "Contract Status");
+      const undertaking = getField<{ url: string }[]>(record, UNDERTAKING_FIELD);
       matched.push({
         uid: b.uid,
         mentorName: getField<string>(record, "Full Name") ?? "—",
+        mentorEmail: b.attendeeEmail,
         hostName: b.hostName,
         interviewDate: getField<string>(record, "Interview Date"),
         bookingStart: b.start,
         contractStatus: resolveContractStatus(rawStatus),
+        undertakingUploaded: Array.isArray(undertaking) && undertaking.length > 0,
       });
     } else {
       unmatched.push({
@@ -109,6 +134,7 @@ export default async function PastPage() {
     "Send Contract": 1,
     "Contract Sent": 2,
     "Not Needed": 3,
+    "Completed": 4,
   };
 
   matched.sort((a, b) => STATUS_ORDER[a.contractStatus] - STATUS_ORDER[b.contractStatus]);

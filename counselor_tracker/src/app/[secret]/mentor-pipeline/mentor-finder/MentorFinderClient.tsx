@@ -53,6 +53,18 @@ function DetailPopup({ mentor, onClose }: { mentor: CompletedMentor; onClose: ()
             <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">University</dt>
             <dd className="text-rise-black">{mentor.university ?? <span className="text-gray-300">—</span>}</dd>
           </div>
+          <div>
+            <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Rate</dt>
+            <dd className="text-rise-black">{mentor.rate ?? <span className="text-gray-300">—</span>}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Interview Date</dt>
+            <dd className="text-rise-black">{mentor.interviewDate ?? <span className="text-gray-300">—</span>}</dd>
+          </div>
+          <div className="col-span-2">
+            <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Notes</dt>
+            <dd className="text-rise-black whitespace-pre-wrap">{mentor.notes ?? <span className="text-gray-300">—</span>}</dd>
+          </div>
           <div className="col-span-2">
             <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Education</dt>
             <dd className="text-rise-black whitespace-pre-wrap">{mentor.education ?? <span className="text-gray-300">—</span>}</dd>
@@ -69,28 +81,60 @@ function DetailPopup({ mentor, onClose }: { mentor: CompletedMentor; onClose: ()
 
 export default function MentorFinderClient({ mentors }: { mentors: CompletedMentor[] }) {
   const [query, setQuery] = useState("");
+  const [uniFilter, setUniFilter] = useState("");
+  const [researchFilter, setResearchFilter] = useState("");
   const [selected, setSelected] = useState<CompletedMentor | null>(null);
 
-  const filtered = query.trim()
-    ? mentors.filter(
-        (m) =>
-          m.name.toLowerCase().includes(query.toLowerCase()) ||
-          (m.university ?? "").toLowerCase().includes(query.toLowerCase()) ||
-          (m.researchAreas ?? "").toLowerCase().includes(query.toLowerCase())
-      )
-    : mentors;
+  const universities = Array.from(new Set(mentors.map((m) => m.university).filter(Boolean) as string[])).sort();
+
+  const filtered = mentors.filter((m) => {
+    const matchesSearch = !query.trim() ||
+      m.name.toLowerCase().includes(query.toLowerCase()) ||
+      (m.university ?? "").toLowerCase().includes(query.toLowerCase()) ||
+      (m.researchAreas ?? "").toLowerCase().includes(query.toLowerCase());
+
+    const matchesUni = !uniFilter || (m.university ?? "") === uniFilter;
+
+    const matchesResearch = !researchFilter.trim() ||
+      (m.researchAreas ?? "").toLowerCase().includes(researchFilter.toLowerCase());
+
+    return matchesSearch && matchesUni && matchesResearch;
+  });
 
   return (
     <div>
       {selected && <DetailPopup mentor={selected} onClose={() => setSelected(null)} />}
 
-      <input
-        type="text"
-        placeholder="Search by name, university or research area..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="w-full max-w-sm mb-4 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-rise-green"
-      />
+      <div className="flex flex-wrap gap-3 mb-4">
+        <input
+          type="text"
+          placeholder="Search by name..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="flex-1 min-w-[180px] max-w-xs px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-rise-green"
+        />
+        <select
+          value={uniFilter}
+          onChange={(e) => setUniFilter(e.target.value)}
+          className="flex-1 min-w-[180px] max-w-xs px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-rise-green bg-white"
+        >
+          <option value="">All Universities</option>
+          {universities.map((u) => (
+            <option key={u} value={u}>{u}</option>
+          ))}
+        </select>
+        <input
+          type="text"
+          placeholder="Search research area..."
+          value={researchFilter}
+          onChange={(e) => setResearchFilter(e.target.value)}
+          className="flex-1 min-w-[180px] max-w-xs px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-rise-green"
+        />
+      </div>
+
+      <p className="text-sm text-rise-brown mb-3">
+        <span className="font-semibold text-rise-black">{filtered.length}</span> mentor{filtered.length !== 1 ? "s" : ""}
+      </p>
 
       <div className="overflow-x-auto rounded-lg border border-gray-200">
         <table className="min-w-full text-sm">
