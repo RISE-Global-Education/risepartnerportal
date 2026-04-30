@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   }
 
   const name = match.fields["Name"] ?? "Team Member";
-  const employeeTypes: string[] = match.fields["Employee Type"] ?? [];
+  const employeeTypes: string[] = Array.isArray(match.fields["Employee Type"]) ? match.fields["Employee Type"] : [];
 
   const cookieOpts = {
     httpOnly: true,
