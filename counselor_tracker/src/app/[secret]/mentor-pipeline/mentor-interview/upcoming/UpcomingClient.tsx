@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import type { MentorInterviewBooking } from "./page";
-
-const RATE_REGEX = /^\d{2,3}\s+(USD|GBP|INR)$/;
+import ContractPopup from "@/components/mentor/ContractPopup";
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
@@ -11,231 +10,70 @@ function formatDateTime(iso: string) {
 }
 
 function DetailPopup({ booking, onClose }: { booking: MentorInterviewBooking; onClose: () => void }) {
-  const [name, setName] = useState(booking.attendeeName);
-  const [email, setEmail] = useState(booking.attendeeEmail);
-  const [rate, setRate] = useState("");
-  const [rateError, setRateError] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [sendError, setSendError] = useState("");
-
-  const rateValid = RATE_REGEX.test(rate.trim());
-
-  async function handleSendContract() {
-    setSending(true);
-    setSendError("");
-    try {
-      const res = await fetch("https://hook.us2.make.com/cnwy15kbljmrwgs666x7tujoyngurcx5", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, rate: rate.trim() }),
-      });
-      if (!res.ok) throw new Error();
-      setSent(true);
-    } catch {
-      setSendError("Failed to send. Please try again.");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  function handleRateChange(val: string) {
-    setRate(val);
-    if (val.trim() && !RATE_REGEX.test(val.trim())) {
-      setRateError("Format: e.g. 50 USD, 100 GBP, 500 INR");
-    } else {
-      setRateError("");
-    }
-  }
+  const [showContract, setShowContract] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-rise-black">Interview Details</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
-        </div>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+        <div
+          className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold text-rise-black">Interview Details</h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+          </div>
 
-        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <div>
-            <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Name</dt>
-            <dd className="text-rise-black font-medium">{booking.attendeeName}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Email</dt>
-            <dd className="text-rise-black break-all">{booking.attendeeEmail}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Phone</dt>
-            <dd className="text-rise-black">{booking.attendeePhone ?? <span className="text-gray-300">—</span>}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">University</dt>
-            <dd className="text-rise-black">{booking.university ?? <span className="text-gray-300">—</span>}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Host</dt>
-            <dd className="text-rise-black">{booking.hostName}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Meeting Time (UTC)</dt>
-            <dd className="text-rise-black">{formatDateTime(booking.start)}</dd>
-          </div>
-        </dl>
-
-        <div className="mt-5 pt-5 border-t border-gray-100">
-          <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">Send Contract</p>
-          <div className="space-y-3">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <div>
-              <label className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-1 block">Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-rise-green"
-              />
+              <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Name</dt>
+              <dd className="text-rise-black font-medium">{booking.attendeeName}</dd>
             </div>
             <div>
-              <label className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-1 block">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-rise-green"
-              />
+              <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Email</dt>
+              <dd className="text-rise-black break-all">{booking.attendeeEmail}</dd>
             </div>
             <div>
-              <label className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-1 block">Rate</label>
-              <input
-                type="text"
-                value={rate}
-                onChange={(e) => handleRateChange(e.target.value)}
-                placeholder="e.g. 50 USD"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-1 ${
-                  rateError ? "border-red-300 focus:ring-red-300" : "border-gray-300 focus:ring-rise-green"
-                }`}
-              />
-              {rateError && <p className="text-xs text-red-500 mt-1">{rateError}</p>}
+              <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Phone</dt>
+              <dd className="text-rise-black">{booking.attendeePhone ?? <span className="text-gray-300">—</span>}</dd>
             </div>
-            {sendError && <p className="text-xs text-red-500">{sendError}</p>}
-            {sent ? (
-              <p className="text-sm text-center text-rise-green font-medium py-2">Contract sent!</p>
-            ) : (
-              <button
-                onClick={handleSendContract}
-                disabled={!name.trim() || !email.trim() || !rateValid || sending}
-                className="w-full bg-gray-800 text-white text-sm font-medium py-2 rounded-lg hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {sending ? "Sending…" : "Send Contract"}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+            <div>
+              <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">University</dt>
+              <dd className="text-rise-black">{booking.university ?? <span className="text-gray-300">—</span>}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Host</dt>
+              <dd className="text-rise-black">{booking.hostName}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Meeting Time (UTC)</dt>
+              <dd className="text-rise-black">{formatDateTime(booking.start)}</dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Academic Background</dt>
+              <dd className="text-rise-black">{booking.academicBackground ?? <span className="text-gray-300">—</span>}</dd>
+            </div>
+          </dl>
 
-function ManualContractPopup({ onClose }: { onClose: () => void }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [rate, setRate] = useState("");
-  const [rateError, setRateError] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [sendError, setSendError] = useState("");
-
-  const rateValid = RATE_REGEX.test(rate.trim());
-
-  function handleRateChange(val: string) {
-    setRate(val);
-    if (val.trim() && !RATE_REGEX.test(val.trim())) {
-      setRateError("Format: e.g. 50 USD, 100 GBP, 500 INR");
-    } else {
-      setRateError("");
-    }
-  }
-
-  async function handleSend() {
-    setSending(true);
-    setSendError("");
-    try {
-      const res = await fetch("https://hook.us2.make.com/cnwy15kbljmrwgs666x7tujoyngurcx5", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, rate: rate.trim() }),
-      });
-      if (!res.ok) throw new Error();
-      setSent(true);
-    } catch {
-      setSendError("Failed to send. Please try again.");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-rise-black">Send Contract</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-1 block">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Full name"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-rise-green"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-1 block">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-rise-green"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-1 block">Rate</label>
-            <input
-              type="text"
-              value={rate}
-              onChange={(e) => handleRateChange(e.target.value)}
-              placeholder="e.g. 50 USD"
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-1 ${
-                rateError ? "border-red-300 focus:ring-red-300" : "border-gray-300 focus:ring-rise-green"
-              }`}
-            />
-            {rateError && <p className="text-xs text-red-500 mt-1">{rateError}</p>}
-          </div>
-          {sendError && <p className="text-xs text-red-500">{sendError}</p>}
-          {sent ? (
-            <p className="text-sm text-center text-rise-green font-medium py-2">Contract sent!</p>
-          ) : (
+          <div className="mt-5 pt-5 border-t border-gray-100">
             <button
-              onClick={handleSend}
-              disabled={!name.trim() || !email.trim() || !rateValid || sending}
-              className="w-full bg-gray-800 text-white text-sm font-medium py-2 rounded-lg hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              onClick={() => setShowContract(true)}
+              className="w-full bg-gray-800 text-white text-sm font-medium py-2 rounded-lg hover:bg-gray-700 transition-colors"
             >
-              {sending ? "Sending…" : "Send Contract"}
+              Send Contract
             </button>
-          )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {showContract && (
+        <ContractPopup
+          initialName={booking.attendeeName}
+          initialEmail={booking.attendeeEmail}
+          onClose={() => setShowContract(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -256,7 +94,7 @@ export default function UpcomingClient({ bookings }: { bookings: MentorInterview
   return (
     <div>
       {selected && <DetailPopup booking={selected} onClose={() => setSelected(null)} />}
-      {showManual && <ManualContractPopup onClose={() => setShowManual(false)} />}
+      {showManual && <ContractPopup onClose={() => setShowManual(false)} />}
 
       <div className="flex items-center justify-between mb-4">
         <input

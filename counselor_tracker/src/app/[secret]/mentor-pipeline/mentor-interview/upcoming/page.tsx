@@ -8,6 +8,7 @@ export interface MentorInterviewBooking {
   attendeeEmail: string;
   attendeePhone: string | null;
   university: string | null;
+  academicBackground: string | null;
   hostName: string;
   start: string;
 }
@@ -46,6 +47,7 @@ async function fetchAllUpcoming(): Promise<MentorInterviewBooking[]> {
         attendeeEmail: b.attendees?.[0]?.email ?? "—",
         attendeePhone: fields.attendeePhoneNumber ?? null,
         university: fields.University ?? null,
+        academicBackground: fields["Academic-Background"] ?? null,
         hostName: b.hosts?.[0]?.name ?? "—",
         start: b.start,
       });
