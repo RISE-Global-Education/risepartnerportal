@@ -7,7 +7,7 @@ export default function SubTabNav({ secret }: { secret: string }) {
   const base = `/${secret}/student-pipeline`;
 
   const tabs = [
-    { label: "Interview Stage", href: base },
+    { label: "Interview Stage", href: `${base}/interview-stage` },
     { label: "Shortlisting Stage", href: `${base}/shortlisting` },
     { label: "Acceptance Stage", href: `${base}/acceptance` },
     { label: "Parent Discovery Stage", href: `${base}/parent-discovery` },
@@ -17,9 +17,7 @@ export default function SubTabNav({ secret }: { secret: string }) {
   return (
     <div className="flex gap-1 mt-3 border-b border-gray-200">
       {tabs.map((tab) => {
-        const active = tab.href === base
-          ? pathname === base
-          : pathname.startsWith(tab.href);
+        const active = pathname.startsWith(tab.href);
         return (
           <Link
             key={tab.href}
