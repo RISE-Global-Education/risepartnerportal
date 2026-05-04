@@ -211,7 +211,28 @@ function Modal({
     mentorField: student.mentorField,
   });
   const [saving, setSaving] = useState(false);
+  const [missedSaving, setMissedSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function handleMissedInterview() {
+    setError(null);
+    setMissedSaving(true);
+    try {
+      const res = await fetch(`/api/student-pipeline/${student.recordId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ followUpStatus: "Call Shortlisting" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Request failed (${res.status})`);
+      }
+      onSuccess(student.recordId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setMissedSaving(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -394,9 +415,17 @@ function Modal({
             Cancel
           </button>
           <button
+            type="button"
+            onClick={handleMissedInterview}
+            disabled={missedSaving || saving}
+            className="px-5 py-2 text-sm font-semibold bg-yellow-400 text-yellow-900 rounded-lg hover:bg-yellow-300 transition-colors disabled:opacity-60"
+          >
+            {missedSaving ? "Saving…" : "Missed Interview"}
+          </button>
+          <button
             type="submit"
             form="modal-form"
-            disabled={saving}
+            disabled={saving || missedSaving}
             className="px-5 py-2 text-sm font-semibold bg-rise-green text-white rounded-lg hover:bg-rise-green/90 transition-colors disabled:opacity-60"
           >
             {saving ? "Sending…" : "Send Acceptance"}
