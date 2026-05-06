@@ -42,6 +42,7 @@ export async function getAllCounselors(): Promise<Counselor[]> {
       "MOU",
       "Partner Type",
       "Workshop Type",
+      "Last Conversation Date",
     ],
   });
 
@@ -73,6 +74,7 @@ export async function getAllCounselors(): Promise<Counselor[]> {
         })(),
         partnerType: getField<string>(record, "Partner Type") || "",
         workshopType: getField<string>(record, "Workshop Type") || "",
+        lastConversationDate: getField<string>(record, "Last Conversation Date") || null,
         slug: generateSlug(companyName),
       };
     })

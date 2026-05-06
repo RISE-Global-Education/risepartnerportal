@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getCounselorBySlug, getContactsForCounselor } from "@/lib/counselors";
 import { getStudentsForCounselor, computeFunnelCounts } from "@/lib/students";
 import { getConversationsForCounselor } from "@/lib/conversations";
+import BackButton from "./BackButton";
 import PartnerHeader from "@/components/PartnerHeader";
 import FunnelStats from "@/components/FunnelStats";
 import StudentTable from "@/components/StudentTable";
@@ -38,9 +39,11 @@ export default async function PartnerPage({
       <div className="bg-rise-green h-1.5" />
       <div className="max-w-4xl mx-auto px-4 py-8">
         {isCeoView && (
-          <div className="mb-4 px-4 py-2 bg-rise-green/10 rounded-lg text-sm text-rise-green font-medium">
-            CEO View — This page includes internal data not visible to the
-            partner.
+          <div className="mb-4 flex items-center gap-3">
+            <BackButton />
+            <div className="flex-1 px-4 py-2 bg-rise-green/10 rounded-lg text-sm text-rise-green font-medium">
+              CEO View — This page includes internal data not visible to the partner.
+            </div>
           </div>
         )}
         <PartnerHeader counselor={counselor} isCeoView={isCeoView} />

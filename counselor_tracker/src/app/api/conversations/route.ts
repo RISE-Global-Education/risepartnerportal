@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRecord } from "@/lib/airtable";
+import { createRecord, updateRecord } from "@/lib/airtable";
 
 const COUNSELOR_DB_BASE = "appU2cJpIWIHQI4up";
 const CONVERSATIONS_TABLE = "tblIg6bBDbLvsvPiJ";
+const COUNSELOR_DB_TABLE = "tblxCiUOdN435Zfju";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -38,6 +39,14 @@ export async function POST(request: NextRequest) {
     COUNSELOR_DB_BASE,
     CONVERSATIONS_TABLE,
     fields,
+    token
+  );
+
+  await updateRecord(
+    COUNSELOR_DB_BASE,
+    COUNSELOR_DB_TABLE,
+    counselorId,
+    { "Last Conversation Date": date || new Date().toISOString() },
     token
   );
 

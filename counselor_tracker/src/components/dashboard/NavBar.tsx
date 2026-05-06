@@ -8,18 +8,18 @@ export default function NavBar({ secret, role, teamName, employeeTypes = [] }: {
   const pathname = usePathname();
   const router = useRouter();
   const basePath = `/${secret}`;
-  const isSearch = pathname.endsWith("/search");
+  const isPartners = pathname.includes("/partners");
   const isInsights = pathname.includes("/insights");
   const isPipeline = pathname.includes("/student-pipeline");
   const isCalendar = pathname.includes("/calendar-bookings");
   const isMentorPipeline = pathname.includes("/mentor-pipeline");
-  const isDashboard = pathname.includes("/dashboard") && !isSearch && !isInsights && !isPipeline && !isCalendar;
+  const isDashboard = pathname.includes("/dashboard") && !isPartners && !isInsights && !isPipeline && !isCalendar;
 
   const isMentorSuccess = role === "admin" || employeeTypes.includes("Mentor Success");
 
   const allTabs = [
     { label: "Dashboard", href: `${basePath}/dashboard`, active: isDashboard, adminOnly: true, show: true },
-    { label: "Search", href: `${basePath}/search`, active: isSearch, adminOnly: true, show: true },
+    { label: "Partners", href: `${basePath}/partners`, active: isPartners, adminOnly: true, show: true },
     { label: "Student Pipeline", href: `${basePath}/student-pipeline`, active: isPipeline, adminOnly: false, show: true },
     { label: "Mentor Pipeline", href: `${basePath}/mentor-pipeline`, active: isMentorPipeline, adminOnly: false, show: isMentorSuccess },
     { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights, adminOnly: true, show: true },

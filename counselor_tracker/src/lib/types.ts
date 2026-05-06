@@ -22,6 +22,7 @@ export interface Counselor {
   mouUrl: string | null;
   partnerType: string;
   workshopType: string;
+  lastConversationDate: string | null;
   slug: string; // auto-generated from company name
 }
 
