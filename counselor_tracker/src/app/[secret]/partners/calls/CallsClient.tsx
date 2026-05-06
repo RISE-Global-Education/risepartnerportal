@@ -16,13 +16,29 @@ interface StalePartner {
 
 export default function CallsClient({ partners, allRisePocs }: { partners: StalePartner[]; allRisePocs: string[] }) {
   const [selectedPoc, setSelectedPoc] = useState<string>("all");
+  const [query, setQuery] = useState("");
 
-  const filtered = selectedPoc === "all"
-    ? partners
-    : partners.filter((p) => p.risePoc.includes(selectedPoc));
+  const filtered = partners
+    .filter((p) => selectedPoc === "all" || p.risePoc.includes(selectedPoc))
+    .filter((p) => {
+      if (!query.trim()) return true;
+      const q = query.toLowerCase();
+      return (
+        p.companyName.toLowerCase().includes(q) ||
+        p.pocNames.some((n) => n.toLowerCase().includes(q)) ||
+        p.risePoc.some((r) => r.toLowerCase().includes(q))
+      );
+    });
 
   return (
     <div>
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search by partner, contact, or RISE POC..."
+        className="w-full px-4 py-2.5 mb-4 text-sm rounded-lg border border-gray-200 focus:border-rise-green focus:outline-none bg-white text-rise-black placeholder:text-rise-brown/50"
+      />
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-rise-brown">
           {filtered.length} partner{filtered.length !== 1 ? "s" : ""} with no conversation in the last 28 days
