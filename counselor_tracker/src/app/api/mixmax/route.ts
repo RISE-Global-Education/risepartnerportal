@@ -108,7 +108,8 @@ export function isCacheFresh(fetchedAt: string): boolean {
 
 const BASE = "https://api.mixmax.com/v1";
 
-async function mixmaxGet(path: string, apiKey: string, attempt = 0): Promise<unknown> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function mixmaxGet(path: string, apiKey: string, attempt = 0): Promise<any> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "X-API-Token": apiKey },
     cache: "no-store",
