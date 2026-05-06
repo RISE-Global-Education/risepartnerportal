@@ -83,7 +83,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onClose: () => void; onSaved: () => void; userName: string }) {
+function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onClose: () => void; onSaved: (recordId: string) => void; userName: string }) {
   const router = useRouter();
   const [newNotes, setNewNotes] = useState("");
   const [status, setStatus] = useState<"none" | "drop" | "dnp" | "invalid">("none");
@@ -128,9 +128,9 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: DiscoveryLead; onCl
         const data = await res.json().catch(() => ({}));
         setSaveError(data.error ?? `Error ${res.status}`);
       } else {
-        router.refresh();
-        onSaved();
+        onSaved(lead.recordId);
         onClose();
+        router.refresh();
       }
     } catch {
       setSaveError("Network error");
@@ -351,6 +351,7 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
   const [region, setRegion] = useState("");
   const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
   const [toast, setToast] = useState(false);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!toast) return;
@@ -359,6 +360,7 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
   }, [toast]);
 
   const filtered = leads
+    .filter((l) => !dismissed.has(l.recordId))
     .filter((l) => {
       const q = query.trim().toLowerCase();
       const matchesQuery =
@@ -377,7 +379,9 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
       return 0;
     });
 
-  if (leads.length === 0) {
+  const activeLeads = leads.filter((l) => !dismissed.has(l.recordId));
+
+  if (activeLeads.length === 0) {
     return (
       <div className="text-center py-16 text-rise-brown text-sm">
         No missed leads.
@@ -392,7 +396,7 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
           Changes saved — Last Contacted set to today
         </div>
       )}
-      {selected && <Modal lead={selected} onClose={() => setSelected(null)} onSaved={() => setToast(true)} userName={userName} />}
+      {selected && <Modal lead={selected} onClose={() => setSelected(null)} onSaved={(id) => { setDismissed((prev) => new Set(prev).add(id)); setToast(true); }} userName={userName} />}
 
       <div className="mb-4 flex flex-wrap gap-3 items-center">
         <input

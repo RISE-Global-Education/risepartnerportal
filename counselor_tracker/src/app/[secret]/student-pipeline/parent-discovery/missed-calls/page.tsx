@@ -47,7 +47,8 @@ export default async function MissedCallsPage() {
       IS_BEFORE({Created}, "${cutoff}"),
       {Qualified} != "No",
       {Student Application Form} != "Drop",
-      OR({DNP Counter} = BLANK(), {DNP Counter} < 4)
+      OR({DNP Counter} = BLANK(), {DNP Counter} < 4),
+      SEARCH("missed", LOWER(IF({Notes}, {Notes}, "")))
     )`,
     fields: [
       "Applicant ID",
@@ -102,8 +103,6 @@ export default async function MissedCallsPage() {
       };
     })
     .filter((lead) => {
-      // Hard gates
-      if (!lead.notes.toLowerCase().includes("missed")) return false;
       if (EXCLUDED_CALL_STATUSES.has(lead.callStatus)) return false;
 
       const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;

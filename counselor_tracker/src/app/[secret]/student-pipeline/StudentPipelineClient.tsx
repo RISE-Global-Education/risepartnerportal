@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ScholarApplicant } from "./page";
+import type { ScholarApplicant } from "./interview-stage/page";
 
 const REGION_MAP: Record<string, string[]> = {
   "Asia": [

@@ -108,11 +108,18 @@ export function isCacheFresh(fetchedAt: string): boolean {
 
 const BASE = "https://api.mixmax.com/v1";
 
-async function mixmaxGet(path: string, apiKey: string) {
+async function mixmaxGet(path: string, apiKey: string, attempt = 0): Promise<unknown> {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "X-API-Token": apiKey },
     cache: "no-store",
   });
+  if (res.status === 429 && attempt < 4) {
+    const retryAfter = parseInt(res.headers.get("Retry-After") ?? "0", 10);
+    const delay = retryAfter > 0 ? retryAfter * 1000 : Math.min(2000 * 2 ** attempt, 30000);
+    console.warn(`[Mixmax] 429 on ${path}, retrying in ${delay}ms (attempt ${attempt + 1})`);
+    await new Promise((r) => setTimeout(r, delay));
+    return mixmaxGet(path, apiKey, attempt + 1);
+  }
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Mixmax ${path} → ${res.status}: ${text.slice(0, 200)}`);
@@ -139,7 +146,20 @@ interface MixmaxSequence {
   name: string;
 }
 
+// In-process lock: prevents multiple concurrent fetches from hammering the Mixmax API simultaneously.
+// When a fetch is already in flight, subsequent callers await the same promise.
+let _fetchInFlight: Promise<MixmaxInsightsResponse> | null = null;
+
 export async function fetchFromMixmax(apiKey: string): Promise<MixmaxInsightsResponse> {
+  if (_fetchInFlight) {
+    console.log("[Mixmax] Fetch already in flight, awaiting existing request…");
+    return _fetchInFlight;
+  }
+  _fetchInFlight = _doFetchFromMixmax(apiKey).finally(() => { _fetchInFlight = null; });
+  return _fetchInFlight;
+}
+
+async function _doFetchFromMixmax(apiKey: string): Promise<MixmaxInsightsResponse> {
   // 1. Fetch all sequences (paginate if needed)
   const sequences: MixmaxSequence[] = [];
   let cursor: string | null = null;
@@ -202,9 +222,9 @@ export async function fetchFromMixmax(apiKey: string): Promise<MixmaxInsightsRes
 
       if (recipients.length < limit) break;
       offset += limit;
-      await new Promise((res) => setTimeout(res, 300));
+      await new Promise((res) => setTimeout(res, 600));
     }
-    await new Promise((res) => setTimeout(res, 300));
+    await new Promise((res) => setTimeout(res, 600));
   }
 
   const recipients = Array.from(recipientMap.values()).sort(
