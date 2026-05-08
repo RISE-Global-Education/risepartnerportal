@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@upstash/qstash": "^2.10.1",
     "@upstash/redis": "^1.36.3",
     "docx-templates": "^4.15.0",
     "googleapis": "^171.4.0",

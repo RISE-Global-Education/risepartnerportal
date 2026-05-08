@@ -160,8 +160,10 @@ export async function fetchFromMixmax(apiKey: string): Promise<MixmaxInsightsRes
   return _fetchInFlight;
 }
 
+const MIXMAX_USER_ID = "68416315ed588cc0a766f5eb";
+
 async function _doFetchFromMixmax(apiKey: string): Promise<MixmaxInsightsResponse> {
-  // 1. Fetch all sequences (paginate if needed)
+  // 1. Fetch all sequences, filtering to MIXMAX_USER_ID only
   const sequences: MixmaxSequence[] = [];
   let cursor: string | null = null;
 
@@ -170,7 +172,8 @@ async function _doFetchFromMixmax(apiKey: string): Promise<MixmaxInsightsRespons
       ? `/sequences?next=${encodeURIComponent(cursor)}&limit=50`
       : "/sequences?limit=50";
     const page = await mixmaxGet(url, apiKey);
-    sequences.push(...(page.results ?? []));
+    const mine = (page.results ?? []).filter((s: MixmaxSequence & { userId: string }) => s.userId === MIXMAX_USER_ID);
+    sequences.push(...mine);
     cursor = page.hasNext ? page.next : null;
   } while (cursor);
 
@@ -223,9 +226,9 @@ async function _doFetchFromMixmax(apiKey: string): Promise<MixmaxInsightsRespons
 
       if (recipients.length < limit) break;
       offset += limit;
-      await new Promise((res) => setTimeout(res, 600));
+      await new Promise((res) => setTimeout(res, 1200));
     }
-    await new Promise((res) => setTimeout(res, 600));
+    await new Promise((res) => setTimeout(res, 1200));
   }
 
   const recipients = Array.from(recipientMap.values()).sort(

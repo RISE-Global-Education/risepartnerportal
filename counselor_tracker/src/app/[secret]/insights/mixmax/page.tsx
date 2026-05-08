@@ -1,5 +1,5 @@
 import type { MixmaxInsightsResponse } from "@/app/api/mixmax/route";
-import { readCache, isCacheFresh, fetchFromMixmax, writeCache } from "@/app/api/mixmax/route";
+import { readCache } from "@/app/api/mixmax/route";
 import InsightsTable from "./InsightsTable";
 import RefreshButton from "./RefreshButton";
 import MasterTestButton from "./MasterTestButton";
@@ -14,16 +14,10 @@ async function getMixmaxInsights(): Promise<MixmaxResult> {
 
   try {
     const cached = await readCache();
-    if (cached && isCacheFresh(cached.fetchedAt)) {
-      return { ok: true, data: { ...cached.data, cachedAt: cached.fetchedAt } };
-    }
-    const data = await fetchFromMixmax(apiKey);
-    await writeCache(data);
-    return { ok: true, data: { ...data, cachedAt: new Date().toISOString() } };
+    if (cached) return { ok: true, data: { ...cached.data, cachedAt: cached.fetchedAt } };
+    return { ok: false, reason: "fetch_error", error: "No cached data yet. Click Refresh to load." };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
-    const cached = await readCache();
-    if (cached) return { ok: true, data: { ...cached.data, cachedAt: cached.fetchedAt } };
     return { ok: false, reason: "fetch_error", error };
   }
 }

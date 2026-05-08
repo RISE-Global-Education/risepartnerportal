@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    // 10-minute session
-    maxAge: 60 * 10,
+    // 7-day session
+    maxAge: 60 * 60 * 24 * 7,
   });
   return res;
 }
