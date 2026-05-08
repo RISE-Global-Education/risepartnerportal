@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 export default function MentorPipelineTabNav({ secret }: { secret: string }) {
   const pathname = usePathname();
-  const base = `/${secret}/mentor-pipeline`;
+  const base = `/${secret}/mentor-pipeline/mentors`;
 
   const tabs = [
     { label: "Mentor Interview", href: `${base}/mentor-interview` },
