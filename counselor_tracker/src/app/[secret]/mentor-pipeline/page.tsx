@@ -6,5 +6,5 @@ export default async function MentorPipelinePage({
   params: Promise<{ secret: string }>;
 }) {
   const { secret } = await params;
-  redirect(`/${secret}/mentor-pipeline/mentor-interview`);
+  redirect(`/${secret}/mentor-pipeline/mentors/mentor-interview`);
 }
