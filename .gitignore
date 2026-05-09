@@ -17,3 +17,4 @@ package.json
 # Misc
 .bin
 *.log
+counselor_tracker/env.local
