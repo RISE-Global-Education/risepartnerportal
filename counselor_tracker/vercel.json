@@ -7,10 +7,6 @@
     {
       "path": "/api/cron/airtable",
       "schedule": "35 5 * * *"
-    },
-    {
-      "path": "/api/cron/daily-check",
-      "schedule": "0 6 * * *"
     }
   ]
 }

@@ -132,54 +132,6 @@ export async function loadMixmaxRows(allowLiveFetch = false): Promise<MixmaxRow[
   return [];
 }
 
-export async function buildSections(allowLiveFetch = false): Promise<SectionResult[]> {
-  const allMixmax = await loadMixmaxRows(allowLiveFetch);
-  const cutoff = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const sections: SectionResult[] = [];
-
-  // Acceptance Email Audit
-  {
-    const statusFormula = `OR(${ACCEPTANCE_STATUSES.map((s) => `{Follow Up Status}="${s}"`).join(",")})`;
-    const formula = `AND(${statusFormula}, IS_AFTER({Acceptances Email Sent Time}, "${cutoff}"))`;
-    const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {
-      fields: ["Applicant ID", "Name", "Student Email ID", "Follow Up Status"],
-      filterByFormula: formula,
-    });
-    sections.push({ title: "Acceptance Email Audit", ...classifyRecords(records, "Student Email ID", "Name", buildMixmaxMap(allMixmax, ACCEPTANCE_SEQUENCES), "Follow Up Status") });
-  }
-
-  // Shortlisting
-  {
-    const statusFormula = `OR(${SHORTLISTING_STATUSES.map((s) => `{Follow Up Status}="${s}"`).join(",")})`;
-    const formula = `AND(${statusFormula}, IS_AFTER({Shortlist Email Sent Time}, "${cutoff}"))`;
-    const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {
-      fields: ["Applicant ID", "Name", "Student Email ID", "Follow Up Status"],
-      filterByFormula: formula,
-    });
-    sections.push({ title: "Shortlisting", ...classifyRecords(records, "Student Email ID", "Name", buildMixmaxMap(allMixmax, SHORTLISTING_SEQUENCES), "Follow Up Status") });
-  }
-
-  // Parents Discovery — Booking Link
-  {
-    const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
-      fields: ["Student Name", "Parent Email ID", "Qualified"],
-      filterByFormula: `{Qualified} = "Email Sent"`,
-    });
-    sections.push({ title: "Parents Discovery — Booking Link", ...classifyRecords(records, "Parent Email ID", "Student Name", buildMixmaxMap(allMixmax, BOOKING_SEQUENCES)) });
-  }
-
-  // Parents Discovery — Application Form
-  {
-    const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
-      fields: ["Student Name", "Parent Email ID", "Student Application Form"],
-      filterByFormula: `{Student Application Form} = "Form Sent"`,
-    });
-    sections.push({ title: "Parents Discovery — Application Form", ...classifyRecords(records, "Parent Email ID", "Student Name", buildMixmaxMap(allMixmax, FORM_SEQUENCES)) });
-  }
-
-  return sections;
-}
-
 // ── Email HTML builder ─────────────────────────────────────────────────────
 
 const BUCKETS: { key: keyof SectionResult; label: string; color: string; bg: string }[] = [
@@ -283,3 +235,52 @@ export function buildEmailHtml(sections: SectionResult[], generatedAt: string, i
 </body>
 </html>`;
 }
+
+export async function buildSections(allowLiveFetch = false): Promise<SectionResult[]> {
+  const allMixmax = await loadMixmaxRows(allowLiveFetch);
+  const cutoff = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const sections: SectionResult[] = [];
+
+  // Acceptance Email Audit
+  {
+    const statusFormula = `OR(${ACCEPTANCE_STATUSES.map((s) => `{Follow Up Status}="${s}"`).join(",")})`;
+    const formula = `AND(${statusFormula}, IS_AFTER({Acceptances Email Sent Time}, "${cutoff}"))`;
+    const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {
+      fields: ["Applicant ID", "Name", "Student Email ID", "Follow Up Status"],
+      filterByFormula: formula,
+    });
+    sections.push({ title: "Acceptance Email Audit", ...classifyRecords(records, "Student Email ID", "Name", buildMixmaxMap(allMixmax, ACCEPTANCE_SEQUENCES), "Follow Up Status") });
+  }
+
+  // Shortlisting
+  {
+    const statusFormula = `OR(${SHORTLISTING_STATUSES.map((s) => `{Follow Up Status}="${s}"`).join(",")})`;
+    const formula = `AND(${statusFormula}, IS_AFTER({Shortlist Email Sent Time}, "${cutoff}"))`;
+    const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {
+      fields: ["Applicant ID", "Name", "Student Email ID", "Follow Up Status"],
+      filterByFormula: formula,
+    });
+    sections.push({ title: "Shortlisting", ...classifyRecords(records, "Student Email ID", "Name", buildMixmaxMap(allMixmax, SHORTLISTING_SEQUENCES), "Follow Up Status") });
+  }
+
+  // Parents Discovery — Booking Link
+  {
+    const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
+      fields: ["Student Name", "Parent Email ID", "Qualified"],
+      filterByFormula: `{Qualified} = "Email Sent"`,
+    });
+    sections.push({ title: "Parents Discovery — Booking Link", ...classifyRecords(records, "Parent Email ID", "Student Name", buildMixmaxMap(allMixmax, BOOKING_SEQUENCES)) });
+  }
+
+  // Parents Discovery — Application Form
+  {
+    const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
+      fields: ["Student Name", "Parent Email ID", "Student Application Form"],
+      filterByFormula: `{Student Application Form} = "Form Sent"`,
+    });
+    sections.push({ title: "Parents Discovery — Application Form", ...classifyRecords(records, "Parent Email ID", "Student Name", buildMixmaxMap(allMixmax, FORM_SEQUENCES)) });
+  }
+
+  return sections;
+}
+
