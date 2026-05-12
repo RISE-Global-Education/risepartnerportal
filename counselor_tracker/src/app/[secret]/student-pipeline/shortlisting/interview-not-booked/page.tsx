@@ -37,6 +37,7 @@ export interface InterviewNotBookedApplicant {
   shortlistingCallNotes: string;
   createdTime: string;
   lastCallDate: string;
+  dnpCounter: number;
 }
 
 export default async function InterviewNotBookedPage() {
@@ -82,6 +83,7 @@ export default async function InterviewNotBookedPage() {
       "Shortlisting Call Notes",
       "Created Time",
       "Last Call Date",
+      "DNP Counter",
     ],
   });
 
@@ -118,9 +120,11 @@ export default async function InterviewNotBookedPage() {
       shortlistingCallNotes: getField<string>(r, "Shortlisting Call Notes") ?? "",
       createdTime: getField<string>(r, "Created Time") ?? r.createdTime,
       lastCallDate: getField<string>(r, "Last Call Date") ?? "",
+      dnpCounter: getField<number>(r, "DNP Counter") ?? 0,
     }))
     .filter((a) => {
       // Hard gates — always required
+      if (a.dnpCounter >= 4) return false;
       if (new Date(a.createdTime) < jan2026) return false;
       if (!a.shortlistSentTime) return false;
       const shortlistSent = new Date(a.shortlistSentTime);
@@ -146,7 +150,7 @@ export default async function InterviewNotBookedPage() {
         {applicants.length} student{applicants.length !== 1 ? "s" : ""} — interview not yet booked
       </p>
       <p className="text-xs text-rise-brown/70 mb-4">
-        Students shortlisted 5+ days ago who haven&apos;t booked an interview, haven&apos;t been called in 3+ days (or were marked Did Not Pick Up 24+ hours ago), and applied in 2026.
+        Students shortlisted 5+ days ago who haven&apos;t booked an interview, haven&apos;t been called in 3+ days (or were marked Did Not Pick Up 24+ hours ago), have a DNP counter below 4, and applied in 2026.
       </p>
       <InterviewNotBookedClient applicants={applicants} userName={userName} />
     </div>

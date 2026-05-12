@@ -155,7 +155,7 @@ export default async function NotBookedOpenedPage() {
         {leads.length} lead{leads.length !== 1 ? "s" : ""} — opened booking email, not yet booked
       </p>
       <p className="text-xs text-rise-brown/70 mb-4">
-        Leads who opened the booking email but haven&apos;t booked a call, haven&apos;t been followed up in 7+ days (or were marked Did Not Pick Up 24+ hours ago), and haven&apos;t booked or completed a call.
+        Leads who opened the booking email but haven&apos;t booked a call, haven&apos;t been followed up in 7+ days (or were marked Did Not Pick Up 24+ hours ago), have a DNP counter below 4, and haven&apos;t booked or completed a call.
       </p>
       <NotBookedOpenedClient leads={leads} mixmaxCachedAt={mixmaxCachedAt} userName={userName} />
     </div>
