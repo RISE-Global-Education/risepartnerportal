@@ -117,6 +117,8 @@ export default async function MissedApplicationFormPage() {
       };
     })
     .filter((lead) => {
+      if (lead.dnpCounter >= 4) return false;
+
       // Keep only those who haven't submitted the application form
       const studentMatched = lead.studentEmail && appliedEmails.has(lead.studentEmail);
       const parentMatched = lead.parentEmail && appliedEmails.has(lead.parentEmail);
@@ -137,8 +139,7 @@ export default async function MissedApplicationFormPage() {
         {leads.length} lead{leads.length !== 1 ? "s" : ""}
       </p>
       <p className="text-xs text-rise-brown/70 mb-4">
-        Leads where the application form was sent but neither the student nor parent email appears
-        in the Research Scholar Application table.
+        Leads where the application form was sent but neither the student nor parent email appears in the Research Scholar Application table, and have a DNP counter below 4.
       </p>
       <MissedApplicationFormClient leads={leads} userName={userName} />
     </div>

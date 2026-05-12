@@ -147,7 +147,7 @@ export default async function AcceptanceNotConvertedPage() {
         {applicants.length} student{applicants.length !== 1 ? "s" : ""} — payment not yet made
       </p>
       <p className="text-xs text-rise-brown/70 mb-4">
-        Students sent an acceptance email 7+ days ago who haven&apos;t paid, haven&apos;t been called in 3+ days (or were marked Did Not Pick Up 24+ hours ago), and applied in 2026.
+        Students sent an acceptance email 7+ days ago who haven&apos;t paid, haven&apos;t been called in 3+ days (or were marked Did Not Pick Up 24+ hours ago), have a DNP counter below 4, and applied in 2026.
       </p>
       <AcceptanceNotConvertedClient applicants={applicants} userName={userName} />
     </div>
