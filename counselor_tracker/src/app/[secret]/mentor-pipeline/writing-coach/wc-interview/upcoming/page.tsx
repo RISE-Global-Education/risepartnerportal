@@ -13,6 +13,36 @@ export interface WCInterviewBooking {
   start: string;
 }
 
+async function fetchWCEmails(): Promise<string[]> {
+  const emails: string[] = [];
+  let offset: string | undefined;
+
+  do {
+    const params = new URLSearchParams({ pageSize: "100" });
+    if (offset) params.set("offset", offset);
+
+    const res = await fetch(
+      `https://api.airtable.com/v0/appFavjto15k519od/tblb9IgCjQh288AVG?${params}`,
+      {
+        headers: { Authorization: `Bearer ${process.env.AIRTABLE_TOKEN}` },
+        next: { revalidate: 60 },
+      }
+    );
+
+    if (!res.ok) break;
+
+    const json = await res.json();
+    for (const record of json.records ?? []) {
+      const email = record.fields["Email ID"];
+      if (email) emails.push((email as string).toLowerCase());
+    }
+
+    offset = json.offset;
+  } while (offset);
+
+  return emails;
+}
+
 async function fetchAllUpcoming(): Promise<WCInterviewBooking[]> {
   const take = 100;
   const all: WCInterviewBooking[] = [];
@@ -61,14 +91,14 @@ async function fetchAllUpcoming(): Promise<WCInterviewBooking[]> {
 }
 
 export default async function UpcomingWCPage() {
-  const bookings = await fetchAllUpcoming();
+  const [bookings, wcEmails] = await Promise.all([fetchAllUpcoming(), fetchWCEmails()]);
 
   return (
     <div>
       <p className="text-sm text-rise-brown mb-4">
         {bookings.length} upcoming writing coach interview{bookings.length !== 1 ? "s" : ""}
       </p>
-      <UpcomingWCClient bookings={bookings} />
+      <UpcomingWCClient bookings={bookings} wcEmails={wcEmails} />
     </div>
   );
 }
