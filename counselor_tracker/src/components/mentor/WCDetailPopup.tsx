@@ -19,7 +19,7 @@ function formatDateTime(iso: string) {
   return d.toUTCString().replace("GMT", "UTC");
 }
 
-export default function WCDetailPopup({ booking, onClose }: { booking: WCBooking; onClose: () => void }) {
+export default function WCDetailPopup({ booking, hasApplication = true, onClose }: { booking: WCBooking; hasApplication?: boolean; onClose: () => void }) {
   const [showContract, setShowContract] = useState(false);
   const [confirmFail, setConfirmFail] = useState(false);
   const [failReason, setFailReason] = useState("");
@@ -104,6 +104,11 @@ export default function WCDetailPopup({ booking, onClose }: { booking: WCBooking
           {confirmFail && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
               <p className="mb-3">Are you sure you want to Fail <span className="font-semibold">{booking.attendeeName}</span>? Team will be informed accordingly.</p>
+              {!hasApplication && (
+                <div className="mb-3 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-800">
+                  No application on file — the email will still be sent but WC Interest Form will not be updated.
+                </div>
+              )}
               <div className="mb-3">
                 <label className="text-xs font-medium uppercase tracking-wide text-red-700 mb-1 block">
                   Reason for failing <span className="text-red-500">*</span>
@@ -131,6 +136,12 @@ export default function WCDetailPopup({ booking, onClose }: { booking: WCBooking
                   {failing ? "Sending…" : failed ? "Done!" : "Yes, Fail"}
                 </button>
               </div>
+            </div>
+          )}
+
+          {!hasApplication && (
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-xs text-yellow-800">
+              No application on file — sending a contract will not update the WC Interest Form.
             </div>
           )}
 
