@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const findData = await findRes.json();
   const record = findData.records?.[0];
-  if (!record) return NextResponse.json({ error: "No WC Interest Form record found for this email" }, { status: 404 });
+  if (!record) return NextResponse.json({ ok: true, skippedAirtable: true });
 
   const patchRes = await fetch(`${WC_INTEREST_URL}/${record.id}`, {
     method: "PATCH",
