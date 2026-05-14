@@ -10,7 +10,8 @@ function formatDateTime(iso: string) {
   return d.toUTCString().replace("GMT", "UTC");
 }
 
-export default function UpcomingWCClient({ bookings }: { bookings: WCInterviewBooking[] }) {
+export default function UpcomingWCClient({ bookings, wcEmails }: { bookings: WCInterviewBooking[]; wcEmails: string[] }) {
+  const wcEmailSet = new Set(wcEmails);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<WCInterviewBooking | null>(null);
   const [showManual, setShowManual] = useState(false);
@@ -53,34 +54,49 @@ export default function UpcomingWCClient({ bookings }: { bookings: WCInterviewBo
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">University</th>
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Host</th>
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Time (UTC)</th>
+              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Application</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-rise-brown">
+                <td colSpan={6} className="px-4 py-6 text-center text-rise-brown">
                   No upcoming writing coach interviews found.
                 </td>
               </tr>
             ) : (
-              filtered.map((b) => (
-                <tr key={b.uid} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-rise-black">{b.attendeeName}</td>
-                  <td className="px-4 py-3 text-rise-brown">{b.university ?? <span className="text-gray-300">—</span>}</td>
-                  <td className="px-4 py-3 text-rise-brown">{b.hostName}</td>
-                  <td className="px-4 py-3 text-rise-brown whitespace-nowrap">{formatDateTime(b.start)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => setSelected(b)}
-                      className="text-rise-green hover:text-rise-green/70 transition-colors"
-                      aria-label="View details"
-                    >
-                      →
-                    </button>
-                  </td>
-                </tr>
-              ))
+              filtered.map((b) => {
+                const hasApp = wcEmailSet.has(b.attendeeEmail.toLowerCase());
+                return (
+                  <tr key={b.uid} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-rise-black">{b.attendeeName}</td>
+                    <td className="px-4 py-3 text-rise-brown">{b.university ?? <span className="text-gray-300">—</span>}</td>
+                    <td className="px-4 py-3 text-rise-brown">{b.hostName}</td>
+                    <td className="px-4 py-3 text-rise-brown whitespace-nowrap">{formatDateTime(b.start)}</td>
+                    <td className="px-4 py-3">
+                      {hasApp ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          Application Submitted
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">
+                          Application Missing
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => setSelected(b)}
+                        className="text-rise-green hover:text-rise-green/70 transition-colors"
+                        aria-label="View details"
+                      >
+                        →
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
