@@ -22,6 +22,7 @@ function formatDateTime(iso: string) {
 export default function WCDetailPopup({ booking, onClose }: { booking: WCBooking; onClose: () => void }) {
   const [showContract, setShowContract] = useState(false);
   const [confirmFail, setConfirmFail] = useState(false);
+  const [failReason, setFailReason] = useState("");
   const [failing, setFailing] = useState(false);
   const [failed, setFailed] = useState(false);
   const [failError, setFailError] = useState("");
@@ -30,19 +31,26 @@ export default function WCDetailPopup({ booking, onClose }: { booking: WCBooking
     setFailing(true);
     setFailError("");
     try {
-      const res = await fetch("/api/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: "kalyani@riseglobaleducation.com",
-          subject: `R2 Failed ${booking.attendeeName} | WC Interviews | RISE Research`,
-          body: `Hey,\n\n${booking.attendeeName} did not pass WC Interview Round 2.\nPlease make a note of it.\n\nBest,\nWahiq I\nRISE Research`,
+      const [emailRes, failRes] = await Promise.all([
+        fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: "kalyani@riseglobaleducation.com",
+            subject: `R2 Failed ${booking.attendeeName} | WC Interviews | RISE Research`,
+            body: `Hey,\n\n${booking.attendeeName} did not pass WC Interview Round 2.\nPlease make a note of it.\n\nBest,\nWahiq I\nRISE Research`,
+          }),
         }),
-      });
-      if (!res.ok) throw new Error();
+        fetch("/api/wc-fail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: booking.attendeeEmail, reason: failReason }),
+        }),
+      ]);
+      if (!emailRes.ok || !failRes.ok) throw new Error();
       setFailed(true);
     } catch {
-      setFailError("Failed to send email. Please try again.");
+      setFailError("Failed to process. Please try again.");
     } finally {
       setFailing(false);
     }
@@ -96,19 +104,31 @@ export default function WCDetailPopup({ booking, onClose }: { booking: WCBooking
           {confirmFail && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
               <p className="mb-3">Are you sure you want to Fail <span className="font-semibold">{booking.attendeeName}</span>? Team will be informed accordingly.</p>
+              <div className="mb-3">
+                <label className="text-xs font-medium uppercase tracking-wide text-red-700 mb-1 block">
+                  Reason for failing <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={failReason}
+                  onChange={(e) => setFailReason(e.target.value)}
+                  placeholder="Enter reason for failing this candidate..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm border border-red-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-red-400 resize-none text-gray-800"
+                />
+              </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setConfirmFail(false)}
+                  onClick={() => { setConfirmFail(false); setFailReason(""); }}
                   className="flex-1 border border-red-300 text-red-700 text-sm font-medium py-1.5 rounded-lg hover:bg-red-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleFail}
-                  disabled={failing || failed}
+                  disabled={failing || failed || !failReason.trim()}
                   className="flex-1 bg-red-600 text-white text-sm font-medium py-1.5 rounded-lg hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  {failing ? "Sending…" : failed ? "Email sent!" : "Yes, Fail"}
+                  {failing ? "Sending…" : failed ? "Done!" : "Yes, Fail"}
                 </button>
               </div>
             </div>
