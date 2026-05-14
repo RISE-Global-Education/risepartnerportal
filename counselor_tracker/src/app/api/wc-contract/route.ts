@@ -4,6 +4,9 @@ const BASE = "appFavjto15k519od";
 const TABLE = "tblubNgMLWtH4pzGf";
 const AT_URL = `https://api.airtable.com/v0/${BASE}/${TABLE}`;
 
+const WC_INTEREST_TABLE = "tblb9IgCjQh288AVG";
+const WC_INTEREST_URL = `https://api.airtable.com/v0/${BASE}/${WC_INTEREST_TABLE}`;
+
 const WEBHOOK = "https://hook.us2.make.com/pul9vm6a8d7cdlr1pujktst9e9tpq579";
 
 async function findByEmail(email: string) {
@@ -57,6 +60,33 @@ async function updateRecord(recordId: string, rate: string, interviewDate: strin
   return res.ok;
 }
 
+async function updateWCInterestForm(email: string, interviewNotes: string | null) {
+  const params = new URLSearchParams({
+    filterByFormula: `{Email ID} = "${email.toLowerCase().trim()}"`,
+    maxRecords: "1",
+  });
+  const findRes = await fetch(`${WC_INTEREST_URL}?${params}`, {
+    headers: { Authorization: `Bearer ${process.env.AIRTABLE_TOKEN}` },
+    cache: "no-store",
+  });
+  if (!findRes.ok) return;
+  const findData = await findRes.json();
+  const record = findData.records?.[0];
+  if (!record) return;
+
+  const fields: Record<string, string> = { "R2 Status": "Contract Sent" };
+  if (interviewNotes) fields["R2 Notes"] = interviewNotes;
+
+  await fetch(`${WC_INTEREST_URL}/${record.id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${process.env.AIRTABLE_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ fields }),
+  });
+}
+
 async function triggerWebhook(name: string, email: string, rate: string, interviewDate: string | null, interviewNotes: string | null) {
   const res = await fetch(WEBHOOK, {
     method: "POST",
@@ -97,8 +127,10 @@ export async function POST(req: NextRequest) {
 
   if (!ok) return NextResponse.json({ error: "Airtable update failed" }, { status: 502 });
 
-  const webhookOk = await triggerWebhook(name, email, rate, interviewDate ?? null, interviewNotes ?? null);
-  if (!webhookOk) return NextResponse.json({ error: "Webhook failed" }, { status: 502 });
+  await Promise.all([
+    triggerWebhook(name, email, rate, interviewDate ?? null, interviewNotes ?? null),
+    updateWCInterestForm(email, interviewNotes ?? null),
+  ]);
 
   return NextResponse.json({ ok: true });
 }
