@@ -27,7 +27,7 @@ export default function UpcomingWCClient({ bookings, wcEmails }: { bookings: WCI
 
   return (
     <div>
-      {selected && <WCDetailPopup booking={selected} onClose={() => setSelected(null)} />}
+      {selected && <WCDetailPopup booking={selected} hasApplication={wcEmailSet.has(selected.attendeeEmail.toLowerCase())} onClose={() => setSelected(null)} />}
       {showManual && <WCContractPopup onClose={() => setShowManual(false)} />}
 
       <div className="flex items-center justify-between mb-4">
