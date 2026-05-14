@@ -25,7 +25,7 @@ export default function PastWCClient({ bookings, wcEmails }: { bookings: PastWCB
 
   return (
     <div>
-      {selected && <WCDetailPopup booking={selected} onClose={() => setSelected(null)} />}
+      {selected && <WCDetailPopup booking={selected} hasApplication={wcEmailSet.has(selected.attendeeEmail.toLowerCase())} onClose={() => setSelected(null)} />}
 
       <div className="flex items-center justify-between mb-4">
         <input
