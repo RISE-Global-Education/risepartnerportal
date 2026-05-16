@@ -665,6 +665,7 @@ function MouPreviewModal({
   const [referralAmount, setReferralAmount] = useState(
     counselor.referralAmount != null ? String(Math.round(counselor.referralAmount * 100)) : ""
   );
+  const [signDesignation, setSignDesignation] = useState("");
   const [tiers, setTiers] = useState<TierRow[]>([{ amount: "", studentNumber: "" }]);
   const [generating, setGenerating] = useState(false);
 
@@ -693,7 +694,7 @@ function MouPreviewModal({
           date: date ? date.split("-").reverse().join("/") : "",
           signatory,
           ...(mouType === "scholarship" && { scholarshipAmount }),
-          ...(mouType === "referral-normal" && { referralAmount }),
+          ...(mouType === "referral-normal" && { referralAmount, signDesignation }),
           ...(mouType === "referral-tier" && { tiers }),
         }),
       });
@@ -812,6 +813,9 @@ function MouPreviewModal({
             />
           </div>
           <ModalField label="Signatory Name" value={signatory} onChange={setSignatory} />
+          {mouType === "referral-normal" && (
+            <ModalField label="Signatory Designation" value={signDesignation} onChange={setSignDesignation} />
+          )}
         </div>
 
         <div className="flex gap-3 mt-6">
