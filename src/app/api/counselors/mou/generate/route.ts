@@ -14,6 +14,7 @@ interface GenerateBody {
   partnerName: string;
   date: string;
   signatory: string;
+  signDesignation?: string;
   scholarshipAmount?: string;
   referralAmount?: string;
   tiers?: TierRow[];
@@ -99,6 +100,7 @@ async function handleGenerate(body: GenerateBody) {
     date: body.date,
     signatory: body.signatory,
     first_name: body.signatory,
+    sign_designation: body.signDesignation ?? "",
   };
 
   if (body.type === "scholarship") {
