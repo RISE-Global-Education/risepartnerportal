@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateRecord } from "@/lib/airtable";
 
 const COUNSELOR_DB_BASE = "appU2cJpIWIHQI4up";
-const COUNSELOR_DB_TABLE = "tblxCiUOdN435Zfju";
-
-// Airtable attachment upload: first upload to Airtable's content URL, then link
-const AIRTABLE_UPLOAD_URL = "https://content.airtable.com/v0";
+const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -18,17 +14,23 @@ export async function POST(request: NextRequest) {
   }
 
   if (!recordId || !file) {
+    return NextResponse.json({ error: "recordId and file are required" }, { status: 400 });
+  }
+
+  const fileBuffer = await file.arrayBuffer();
+
+  if (fileBuffer.byteLength > MAX_BYTES) {
     return NextResponse.json(
-      { error: "recordId and file are required" },
-      { status: 400 }
+      { error: "File exceeds 5 MB. Please compress the PDF and try again." },
+      { status: 413 }
     );
   }
 
+  const base64 = Buffer.from(fileBuffer).toString("base64");
   const token = process.env.AIRTABLE_COUNSELOR_TOKEN;
 
-  // Step 1: Get upload URL from Airtable
-  const uploadReqRes = await fetch(
-    `${AIRTABLE_UPLOAD_URL}/${COUNSELOR_DB_BASE}/${COUNSELOR_DB_TABLE}/${recordId}/MOU/uploadAttachment`,
+  const res = await fetch(
+    `https://content.airtable.com/v0/${COUNSELOR_DB_BASE}/${recordId}/MOU/uploadAttachment`,
     {
       method: "POST",
       headers: {
@@ -37,57 +39,21 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         contentType: file.type || "application/pdf",
+        file: base64,
         filename: file.name,
       }),
     }
   );
 
-  if (!uploadReqRes.ok) {
-    // Fallback: use URL-based attachment by converting file to data URL
-    // Airtable also accepts attachments as URL references
-    // For simplicity, we'll update the MOU field with the attachment directly
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-    const dataUrl = `data:${file.type || "application/pdf"};base64,${base64}`;
-
-    // Airtable doesn't accept data URLs directly, so use a simpler approach:
-    // We'll use the standard Airtable attachment update
-    // Airtable attachments can be set via URL - we need a publicly accessible URL
-    // Since we can't host the file, we'll use the multipart upload approach
-
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error(`[MOU upload] Airtable error ${res.status}:`, errText);
     return NextResponse.json(
-      { error: "Upload failed. Please try uploading directly in Airtable." },
+      { error: `Upload failed (${res.status}). Please try again.` },
       { status: 500 }
     );
   }
 
-  const { uploadUrl, id: attachmentId } = await uploadReqRes.json();
-
-  // Step 2: Upload file content to the upload URL
-  const fileBuffer = await file.arrayBuffer();
-  const uploadRes = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: {
-      "Content-Type": file.type || "application/pdf",
-    },
-    body: fileBuffer,
-  });
-
-  if (!uploadRes.ok) {
-    return NextResponse.json(
-      { error: "File upload failed" },
-      { status: 500 }
-    );
-  }
-
-  // Step 3: Commit the attachment to the record
-  const record = await updateRecord(
-    COUNSELOR_DB_BASE,
-    COUNSELOR_DB_TABLE,
-    recordId,
-    { MOU: [{ id: attachmentId }] },
-    token
-  );
-
+  const record = await res.json();
   return NextResponse.json({ success: true, record });
 }
