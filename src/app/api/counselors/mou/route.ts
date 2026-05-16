@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
   // Step 1: Get upload URL from Airtable
   const uploadReqRes = await fetch(
-    `${AIRTABLE_UPLOAD_URL}/${COUNSELOR_DB_BASE}/${recordId}/MOU/uploadAttachment`,
+    `${AIRTABLE_UPLOAD_URL}/${COUNSELOR_DB_BASE}/${COUNSELOR_DB_TABLE}/${recordId}/MOU/uploadAttachment`,
     {
       method: "POST",
       headers: {
