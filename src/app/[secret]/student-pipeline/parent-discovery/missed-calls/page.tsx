@@ -5,7 +5,7 @@ import MissedCallsClient from "./MissedCallsClient";
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
 
-const EXCLUDED_CALL_STATUSES = new Set(["Call Completed"]);
+const EXCLUDED_CALL_STATUSES = new Set(["Call Complete", "Call Completed"]);
 
 export interface DiscoveryLead {
   recordId: string;
