@@ -139,7 +139,7 @@ export default async function NotBookedNotOpenedPage() {
       // Hard gates — must always pass to avoid overlap with other sub-tabs
       if (l.sentCount === 0) return false;
       if (l._openCount > 0) return false;
-      if (["Call Booked", "Call Completed"].includes(l.callStatus)) return false;
+      if (["Call Booked", "Call Complete", "Call Completed"].includes(l.callStatus)) return false;
 
       const lastContactedDate = l.lastContacted ? new Date(l.lastContacted) : null;
 

@@ -132,7 +132,7 @@ export default async function NotBookedOpenedPage() {
     .filter((lead) => {
       // Hard gates — must always pass
       if (lead.openCount === 0) return false;
-      if (["Call Booked", "Call Completed"].includes(lead.callStatus)) return false;
+      if (["Call Booked", "Call Complete", "Call Completed"].includes(lead.callStatus)) return false;
 
       const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;
 
