@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-const ATTENDEES = ["Yash", "Shreyans", "Prachi"];
 
 export default function AddConversationForm({
   counselorId,
@@ -21,6 +19,13 @@ export default function AddConversationForm({
   const [attendee, setAttendee] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [attendees, setAttendees] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch("/api/attendees")
+      .then((r) => r.json())
+      .then((data) => setAttendees(data.attendees ?? []));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -109,7 +114,7 @@ export default function AddConversationForm({
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
             >
               <option value="">Select attendee...</option>
-              {ATTENDEES.map((a) => (
+              {attendees.map((a) => (
                 <option key={a} value={a}>
                   {a}
                 </option>
