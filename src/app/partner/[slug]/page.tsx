@@ -63,7 +63,7 @@ export default async function PartnerPage({
           />
         )}
         {isCeoView && conversations && (
-          <ConversationLog conversations={conversations} />
+          <ConversationLog conversations={conversations} secret={process.env.DASHBOARD_SECRET!} />
         )}
       </div>
     </div>

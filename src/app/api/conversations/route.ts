@@ -52,3 +52,32 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ success: true, record });
 }
+
+export async function PATCH(request: NextRequest) {
+  const body = await request.json();
+  const { secret, recordId, date, notes, attendee } = body;
+
+  if (secret !== process.env.DASHBOARD_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!recordId) {
+    return NextResponse.json({ error: "recordId is required" }, { status: 400 });
+  }
+
+  const fields: Record<string, unknown> = {};
+  if (date !== undefined) fields.Date = date;
+  if (notes !== undefined) fields.Notes = notes;
+  if (attendee !== undefined) fields.Attendee = attendee || null;
+
+  const token = process.env.AIRTABLE_COUNSELOR_TOKEN;
+  const record = await updateRecord(
+    COUNSELOR_DB_BASE,
+    CONVERSATIONS_TABLE,
+    recordId,
+    fields,
+    token
+  );
+
+  return NextResponse.json({ success: true, record });
+}
