@@ -7,23 +7,26 @@ const COUNSELOR_DB_TABLE = "tblxCiUOdN435Zfju";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { secret, counselorId, counselorName, date, notes, attendee } = body;
+  const { secret, counselorId, counselorName, date, notes, attendee, intent } = body;
 
   if (secret !== process.env.DASHBOARD_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!counselorId || !notes) {
+  if (!counselorId || !notes || !intent) {
     return NextResponse.json(
-      { error: "counselorId and notes are required" },
+      { error: "counselorId, notes, and intent are required" },
       { status: 400 }
     );
   }
 
+  const intentLabel = intent.charAt(0).toUpperCase() + intent.slice(1);
+  const formattedNotes = `${intentLabel}\nNotes: ${notes}`;
+
   const fields: Record<string, unknown> = {
     Title: `Meeting - ${counselorName || "Unknown"}`,
     Counselor: [counselorId],
-    Notes: notes,
+    Notes: formattedNotes,
   };
 
   if (date) {

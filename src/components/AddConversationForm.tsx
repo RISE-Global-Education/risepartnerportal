@@ -17,6 +17,7 @@ export default function AddConversationForm({
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
   const [attendee, setAttendee] = useState("");
+  const [intent, setIntent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [attendees, setAttendees] = useState<string[]>([]);
@@ -45,6 +46,7 @@ export default function AddConversationForm({
           date,
           notes: notes.trim(),
           attendee: attendee || undefined,
+          intent,
         }),
       });
 
@@ -56,6 +58,7 @@ export default function AddConversationForm({
       setNotes("");
       setDate(new Date().toISOString().split("T")[0]);
       setAttendee("");
+      setIntent("");
       setIsOpen(false);
       router.refresh();
     } catch (err) {
@@ -92,7 +95,7 @@ export default function AddConversationForm({
         </button>
       </div>
       <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-rise-black mb-1">
               Date
@@ -121,6 +124,21 @@ export default function AddConversationForm({
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-rise-black mb-1">
+              Intent
+            </label>
+            <select
+              value={intent}
+              onChange={(e) => setIntent(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-rise-green focus:outline-none"
+            >
+              <option value="">Select intent...</option>
+              <option value="cold">Cold</option>
+              <option value="warm">Warm</option>
+              <option value="neutral">Neutral</option>
+            </select>
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-rise-black mb-1">
@@ -140,7 +158,7 @@ export default function AddConversationForm({
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={submitting || !notes.trim()}
+            disabled={submitting || !notes.trim() || !intent}
             className="px-4 py-2 bg-rise-green text-white text-sm font-medium rounded-lg hover:bg-rise-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? "Saving..." : "Save Conversation"}
