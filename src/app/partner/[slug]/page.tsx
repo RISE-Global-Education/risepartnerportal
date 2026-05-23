@@ -46,7 +46,7 @@ export default async function PartnerPage({
             </div>
           </div>
         )}
-        <PartnerHeader counselor={counselor} isCeoView={isCeoView} />
+        <PartnerHeader counselor={counselor} isCeoView={isCeoView} secret={process.env.DASHBOARD_SECRET} />
         <CounselorDetails
           counselor={counselor}
           contacts={contacts}
