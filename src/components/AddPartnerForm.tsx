@@ -179,6 +179,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           date: new Date().toISOString().split("T")[0],
           notes: meetingNotes.trim(),
           attendee: risePoc[0],
+          intent: "meeting",
         }),
       });
 
