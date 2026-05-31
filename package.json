@@ -12,6 +12,7 @@
     "@upstash/qstash": "^2.10.1",
     "@upstash/redis": "^1.36.3",
     "docx-templates": "^4.15.0",
+    "fuse.js": "^7.4.0",
     "googleapis": "^171.4.0",
     "next": "^16.1.6",
     "nodemailer": "^8.0.1",
