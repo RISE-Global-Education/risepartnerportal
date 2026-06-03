@@ -21,6 +21,7 @@ export async function fetchAllRecords(
     view?: string;
   }
 ): Promise<AirtableRecord[]> {
+  if (!AIRTABLE_TOKEN) return [];
   const allRecords: AirtableRecord[] = [];
   let offset: string | undefined;
 
@@ -52,6 +53,10 @@ export async function fetchAllRecords(
 
     if (!res.ok) {
       const error = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        console.warn(`[Airtable] Auth error (${res.status}) on ${baseId}/${tableId} — returning empty`);
+        return allRecords;
+      }
       throw new Error(`Airtable API error (${res.status}): ${error}`);
     }
 

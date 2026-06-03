@@ -11,11 +11,15 @@ export default async function CallsPage({
 }: {
   params: Promise<{ secret: string }>;
 }) {
-  const { secret: _secret } = await params;
+  const { secret } = await params;
   const counselors = await getAllCounselors();
+
+  const HIDDEN_STATUSES = ["Rejected", "Unqualified"];
 
   const stale = counselors
     .filter((c) => {
+      // Hide partners marked as Rejected or Unqualified
+      if (HIDDEN_STATUSES.includes(c.followUpStatus)) return false;
       if (!c.lastConversationDate) return true;
       return daysSince(c.lastConversationDate) > 28;
     })
@@ -31,14 +35,15 @@ export default async function CallsPage({
       counselorId: c.counselorId,
       pocNames: c.pocNames,
       risePoc: c.risePoc,
+      followUpStatus: c.followUpStatus,
+      partnerType: c.partnerType,
       lastConversationDate: c.lastConversationDate,
       days: c.lastConversationDate ? daysSince(c.lastConversationDate) : null,
     }));
 
-  // Collect all unique RISE POCs that appear in this stale list
   const allRisePocs = Array.from(
     new Set(stale.flatMap((c) => c.risePoc))
   ).sort();
 
-  return <CallsClient partners={stale} allRisePocs={allRisePocs} />;
+  return <CallsClient partners={stale} allRisePocs={allRisePocs} secret={secret} />;
 }

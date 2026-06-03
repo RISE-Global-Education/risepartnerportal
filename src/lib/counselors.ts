@@ -101,6 +101,18 @@ export async function getCounselorBySlug(
   return null;
 }
 
+export async function getAllContactPhones(): Promise<Map<string, string>> {
+  const records = await fetchAllRecords(COUNSELOR_DB_BASE, CONTACTS_TABLE, {
+    fields: ["Name", "Phone Number"],
+  });
+  const phoneMap = new Map<string, string>();
+  for (const record of records) {
+    const phone = getField<string>(record, "Phone Number");
+    if (phone) phoneMap.set(record.id, phone);
+  }
+  return phoneMap;
+}
+
 export async function getContactsForCounselor(recordIds: string[]): Promise<Contact[]> {
   if (recordIds.length === 0) return [];
 

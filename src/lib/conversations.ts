@@ -11,23 +11,14 @@ export async function getConversationsForCounselor(
     COUNSELOR_DB_BASE,
     CONVERSATIONS_TABLE,
     {
-      fields: [
-        "Title",
-        "Date",
-        "Notes",
-        "Attendee",
-        "Counselor",
-      ],
+      fields: ["Title", "Date", "Notes", "Attendee", "Counselor"],
+      filterByFormula: `FIND("${counselorRecordId}", ARRAYJOIN({Counselor}))`,
     }
   );
 
-  // Filter to conversations linked to this counselor
   const conversations: Conversation[] = [];
 
   for (const record of records) {
-    const linkedCounselors = getField<string[]>(record, "Counselor") || [];
-    if (!linkedCounselors.includes(counselorRecordId)) continue;
-
     conversations.push({
       id: record.id,
       date: getField<string>(record, "Date") || "",
