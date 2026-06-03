@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { UnqualifiedRow } from "./page";
 
 const DEFAULT_REASON =
-  "Our slots for this year are currently filled. Please reapply next year.";
+  "This is a paid program (2500 USD) for students looking to apply abroad for their undergraduate studies and unfortunately we do not offer any financial aid.";
 
 function formatDateTime(iso: string) {
   const d = new Date(iso);
