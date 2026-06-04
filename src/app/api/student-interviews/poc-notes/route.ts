@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
   try {
     const record = await getRecord(STUDENT_PIPELINE_BASE, RESEARCH_SCHOLAR_TABLE, recordId);
     const existing = ((record.fields?.["Interview POC Notes"] as string) ?? "").trim();
-    const newEntry = `${pocName.trim()}: ${note.trim()}`;
+    const date = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    const newEntry = `${pocName.trim()}, ${date}: ${note.trim()}`;
     const updated = existing ? `${existing}\n${newEntry}` : newEntry;
 
     await updateRecord(STUDENT_PIPELINE_BASE, RESEARCH_SCHOLAR_TABLE, recordId, {
