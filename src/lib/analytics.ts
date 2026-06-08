@@ -100,10 +100,11 @@ export async function getAllBrochureDownloads(): Promise<BrochureDownloadRecord[
     fields: ["Created Time"],
   });
 
-  return records.map((r) => ({
-    id: r.id,
-    date: parseBrochureDate(getField<string>(r, "Created Time") || r.createdTime),
-  }));
+  return records.map((r) => {
+    const raw = getField<unknown>(r, "Created Time");
+    const dateStr = typeof raw === "string" ? raw : r.createdTime;
+    return { id: r.id, date: parseBrochureDate(dateStr) };
+  });
 }
 
 function parseClientDate(raw: string | null): string | null {
