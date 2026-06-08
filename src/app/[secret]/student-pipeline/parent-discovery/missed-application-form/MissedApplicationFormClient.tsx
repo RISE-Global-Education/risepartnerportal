@@ -96,7 +96,7 @@ function Modal({
 }) {
   const router = useRouter();
   const [newNotes, setNewNotes] = useState("");
-  const [status, setStatus] = useState<"none" | "dnp" | "invalid">("none");
+  const [status, setStatus] = useState<"none" | "dnp" | "invalid" | "drop">("none");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
@@ -125,6 +125,11 @@ function Modal({
         combinedAppFormNotes = existing.trim()
           ? existing.trimEnd() + "\ninvalid number"
           : "invalid number";
+      } else if (status === "drop") {
+        const dropEntry = "drop, " + datePrefix + ": " + newNotes.trim();
+        combinedAppFormNotes = existing.trim()
+          ? existing.trimEnd() + "\n" + dropEntry
+          : dropEntry;
       } else {
         combinedAppFormNotes = existing.trim()
           ? existing.trimEnd() + "\n" + datePrefix + ": " + newNotes.trim()
@@ -141,6 +146,8 @@ function Modal({
         body.incrementDnp = 1;
       } else if (status === "invalid") {
         body.incrementDnp = 4;
+      } else if (status === "drop") {
+        body.studentApplicationForm = "Drop";
       }
 
       const res = await fetch(`/api/parent-discovery/${lead.recordId}`, {
@@ -277,8 +284,8 @@ function Modal({
           {/* Status */}
           <div>
             <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
-            <div className="flex items-center gap-5">
-              {(["none", "dnp", "invalid"] as const).map((val) => (
+            <div className="flex items-center gap-5 flex-wrap">
+              {(["none", "dnp", "invalid", "drop"] as const).map((val) => (
                 <label key={val} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -288,8 +295,8 @@ function Modal({
                     onChange={() => setStatus(val)}
                     className="accent-rise-green cursor-pointer"
                   />
-                  <span className="text-sm text-rise-black">
-                    {val === "none" ? "None" : val === "dnp" ? "Did Not Pick Up" : "Invalid Number"}
+                  <span className={`text-sm ${val === "drop" ? "text-red-600 font-medium" : "text-rise-black"}`}>
+                    {val === "none" ? "None" : val === "dnp" ? "Did Not Pick Up" : val === "invalid" ? "Invalid Number" : "Drop"}
                   </span>
                 </label>
               ))}
@@ -303,6 +310,9 @@ function Modal({
             </p>
             <p>
               <span className="font-semibold text-rise-brown">Invalid Number:</span> Logs "invalid number" and adds 4 to the DNP counter.
+            </p>
+            <p>
+              <span className="font-semibold text-red-600">Drop:</span> Marks the student as dropped — they will no longer appear in this list. Notes are required and logged with today&apos;s date.
             </p>
           </div>
 
@@ -322,7 +332,7 @@ function Modal({
           <div>
             <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
               Add Call Notes{" "}
-              {status === "none" && <span className="text-red-500">*</span>}
+              {(status === "none" || status === "drop") && <span className="text-red-500">*</span>}
             </label>
             <textarea
               value={newNotes}
@@ -336,7 +346,7 @@ function Modal({
                 t.style.height = t.scrollHeight + "px";
               }}
               rows={3}
-              placeholder="Add notes from this call about the application form…"
+              placeholder={status === "drop" ? "Reason for dropping this lead…" : "Add notes from this call about the application form…"}
               disabled={status === "dnp" || status === "invalid"}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
