@@ -80,7 +80,7 @@ export default async function MissedApplicationFormPage() {
     if (pe) appliedEmails.add(pe);
   }
 
-  const oneDayAgo = new Date(Date.now() - 21 * 60 * 60 * 1000);
+  const today = new Date().toISOString().slice(0, 10);
 
   const leads: MissedAppFormLead[] = discoveryRecords
     .map((r) => {
@@ -117,18 +117,17 @@ export default async function MissedApplicationFormPage() {
       };
     })
     .filter((lead) => {
+      // Permanently hidden
       if (lead.dnpCounter >= 4) return false;
+      if (lead.appFormCallNotes.includes("Call Done")) return false;
 
-      // Keep only those who haven't submitted the application form
+      // Already submitted the application form
       const studentMatched = lead.studentEmail && appliedEmails.has(lead.studentEmail);
       const parentMatched = lead.parentEmail && appliedEmails.has(lead.parentEmail);
       if (studentMatched || parentMatched) return false;
 
-      // Hide if app form call was made less than 21 hours ago
-      if (lead.appFormCallDate) {
-        const callDate = new Date(lead.appFormCallDate);
-        if (callDate > oneDayAgo) return false;
-      }
+      // Called today — hide until tomorrow
+      if (lead.appFormCallDate === today) return false;
 
       return true;
     });

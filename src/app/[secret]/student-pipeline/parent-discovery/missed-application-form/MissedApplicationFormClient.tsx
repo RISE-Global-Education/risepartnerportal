@@ -96,13 +96,13 @@ function Modal({
 }) {
   const router = useRouter();
   const [newNotes, setNewNotes] = useState("");
-  const [status, setStatus] = useState<"none" | "dnp" | "invalid" | "drop">("none");
+  const [status, setStatus] = useState<"call_done" | "dnp" | "invalid" | "drop">("call_done");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
   async function handleSave() {
     setSaveError("");
-    if (status !== "dnp" && status !== "invalid" && !newNotes.trim()) {
+    if ((status === "call_done" || status === "drop") && !newNotes.trim()) {
       setSaveError("Call notes are required.");
       return;
     }
@@ -119,22 +119,17 @@ function Modal({
 
       // Always append to Application Form Call Notes
       let combinedAppFormNotes: string;
+      let entry: string;
       if (status === "dnp") {
-        combinedAppFormNotes = existing.trim() ? existing.trimEnd() + "\ndnp" : "dnp";
+        entry = `DNP, ${datePrefix}`;
       } else if (status === "invalid") {
-        combinedAppFormNotes = existing.trim()
-          ? existing.trimEnd() + "\ninvalid number"
-          : "invalid number";
+        entry = `Invalid Number, ${datePrefix}`;
       } else if (status === "drop") {
-        const dropEntry = "drop, " + datePrefix + ": " + newNotes.trim();
-        combinedAppFormNotes = existing.trim()
-          ? existing.trimEnd() + "\n" + dropEntry
-          : dropEntry;
+        entry = `Drop, ${datePrefix}: ${newNotes.trim()}`;
       } else {
-        combinedAppFormNotes = existing.trim()
-          ? existing.trimEnd() + "\n" + datePrefix + ": " + newNotes.trim()
-          : datePrefix + ": " + newNotes.trim();
+        entry = `Call Done, ${datePrefix}: ${newNotes.trim()}`;
       }
+      combinedAppFormNotes = existing.trim() ? existing.trimEnd() + "\n" + entry : entry;
 
       const body: Record<string, unknown> = {
         appFormCallNotes: combinedAppFormNotes,
@@ -285,7 +280,7 @@ function Modal({
           <div>
             <p className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-2">Status</p>
             <div className="flex items-center gap-5 flex-wrap">
-              {(["none", "dnp", "invalid", "drop"] as const).map((val) => (
+              {(["call_done", "dnp", "invalid", "drop"] as const).map((val) => (
                 <label key={val} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="radio"
@@ -296,7 +291,7 @@ function Modal({
                     className="accent-rise-green cursor-pointer"
                   />
                   <span className={`text-sm ${val === "drop" ? "text-red-600 font-medium" : "text-rise-black"}`}>
-                    {val === "none" ? "None" : val === "dnp" ? "Did Not Pick Up" : val === "invalid" ? "Invalid Number" : "Drop"}
+                    {val === "call_done" ? "Call Done" : val === "dnp" ? "Did Not Pick Up" : val === "invalid" ? "Invalid Number" : "Drop"}
                   </span>
                 </label>
               ))}
@@ -332,7 +327,7 @@ function Modal({
           <div>
             <label className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-1 block">
               Add Call Notes{" "}
-              {(status === "none" || status === "drop") && <span className="text-red-500">*</span>}
+              {(status === "call_done" || status === "drop") && <span className="text-red-500">*</span>}
             </label>
             <textarea
               value={newNotes}
@@ -346,7 +341,7 @@ function Modal({
                 t.style.height = t.scrollHeight + "px";
               }}
               rows={3}
-              placeholder={status === "drop" ? "Reason for dropping this lead…" : "Add notes from this call about the application form…"}
+              placeholder={status === "drop" ? "Reason for dropping this lead…" : "Add notes from this call…"}
               disabled={status === "dnp" || status === "invalid"}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
