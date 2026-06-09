@@ -79,6 +79,7 @@ export async function getAllLeads(): Promise<LeadRecord[]> {
 }
 
 function parseBrochureDate(raw: string): string {
+  if (!raw || typeof raw !== "string") return new Date().toISOString();
   // Format: "17/1/2026 8:37pm" → ISO
   const match = raw.match(/^(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)(am|pm)$/i);
   if (!match) return new Date(raw).toISOString();
