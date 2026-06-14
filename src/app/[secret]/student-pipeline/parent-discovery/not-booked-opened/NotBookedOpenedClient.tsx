@@ -112,7 +112,9 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: NotBookedOpenedLead
         ? `Call Done, ${datePrefix}, ${newNotes.trim()}`
         : status === "dnp"
           ? newNotes.trim() ? `DNP ${datePrefix}, ${newNotes.trim()}` : `DNP ${datePrefix}`
-          : `${datePrefix}: ${newNotes.trim()}`;
+          : status === "drop"
+            ? `Drop ${datePrefix}, ${newNotes.trim()}`
+            : `${datePrefix}: ${newNotes.trim()}`;
       const combined = existing.trim()
         ? existing.trimEnd() + "\n" + newEntry
         : newEntry;
