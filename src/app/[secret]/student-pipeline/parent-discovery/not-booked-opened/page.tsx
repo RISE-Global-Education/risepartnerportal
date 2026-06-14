@@ -42,10 +42,7 @@ export interface NotBookedOpenedLead {
 export default async function NotBookedOpenedPage() {
   const cookieStore = await cookies();
   const userName = cookieStore.get("team_auth")?.value ?? "";
-  const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
-  const lastCallCutoff = new Date(now.getTime() - 69 * 60 * 60 * 1000);
-  const cutoff = oneDayAgo.toISOString();
+  const cutoff = new Date(Date.now() - 21 * 60 * 60 * 1000).toISOString();
 
   const [records, { recipients: allRecipients, cachedAt: mixmaxCachedAt }] = await Promise.all([
     fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
@@ -128,23 +125,10 @@ export default async function NotBookedOpenedPage() {
       };
     })
     .filter((lead) => {
-      // Hard gates — must always pass
       if (lead.openCount === 0) return false;
       if (["Call Booked", "Call Complete", "Call Completed"].includes(lead.callStatus)) return false;
-
-      const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;
-
-      // DNP override: call notes contain "dnp" AND last call date > 24h ago
-      const hasDnp = lead.callNotes.toLowerCase().includes("dnp");
-      if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
-
-      // Exclude if last contacted within the past 7 days
-      if (lastContactedDate && lastContactedDate.getTime() >= lastCallCutoff.getTime()) return false;
-
-      // Not booked conditions: pending consultation and no notes
-      const noConsultation = !lead.consultationDate;
-      const noNotes = !lead.notes.trim();
-      return noConsultation && noNotes;
+      if (lead.callNotes.toLowerCase().includes("call done")) return false;
+      return !lead.consultationDate && !lead.notes.trim();
     });
 
   return (
@@ -153,7 +137,7 @@ export default async function NotBookedOpenedPage() {
         {leads.length} lead{leads.length !== 1 ? "s" : ""} — opened booking email, not yet booked
       </p>
       <p className="text-xs text-rise-brown/70 mb-4">
-        Leads who opened the booking email but haven&apos;t booked a call, haven&apos;t been followed up in 7+ days (or were marked Did Not Pick Up 24+ hours ago), have a DNP counter below 4, and haven&apos;t booked or completed a call.
+        Leads who opened the booking email but haven&apos;t booked a call. Excludes anyone marked as Call Done, Dropped, DNP counter 4+, or with a consultation date or notes set.
       </p>
       <NotBookedOpenedClient leads={leads} mixmaxCachedAt={mixmaxCachedAt} userName={userName} />
     </div>
