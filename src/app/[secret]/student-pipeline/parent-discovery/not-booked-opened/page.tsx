@@ -7,7 +7,7 @@ const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
 
 const BOOKING_SEQUENCES = [
-  "Parents Discovery - Booking Link",
+  "Parents  Discovery - Booking Link",
   "Parents Discovery - Booking Link (Updated)",
 ];
 
@@ -43,11 +43,9 @@ export default async function NotBookedOpenedPage() {
   const cookieStore = await cookies();
   const userName = cookieStore.get("team_auth")?.value ?? "";
   const now = new Date();
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
   const lastCallCutoff = new Date(now.getTime() - 69 * 60 * 60 * 1000);
-  const cutoff = sevenDaysAgo.toISOString();
+  const cutoff = oneDayAgo.toISOString();
 
   const [records, { recipients: allRecipients, cachedAt: mixmaxCachedAt }] = await Promise.all([
     fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
