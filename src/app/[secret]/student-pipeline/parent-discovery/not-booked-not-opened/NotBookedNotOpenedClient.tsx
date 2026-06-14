@@ -108,9 +108,12 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: NotBookedNotOpenedL
     try {
       const existing = lead.callNotes;
       const datePrefix = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-      const combined = existing.trim() && newNotes.trim()
-        ? existing.trimEnd() + "\n" + datePrefix + ": " + newNotes.trim()
-        : existing.trim() ? existing : datePrefix + ": " + newNotes.trim();
+      const newEntry = status === "none"
+        ? `Call Done, ${datePrefix}, ${newNotes.trim()}`
+        : datePrefix + ": " + newNotes.trim();
+      const combined = existing.trim()
+        ? existing.trimEnd() + "\n" + newEntry
+        : newEntry;
       const body: Record<string, unknown> = { callNotes: combined, lastContacted: today, ...(userName && { callPoc: userName }) };
       if (status === "drop") body.studentApplicationForm = "Drop";
       else if (status === "dnp") {
@@ -271,7 +274,7 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: NotBookedNotOpenedL
                     className="accent-rise-green cursor-pointer"
                   />
                   <span className="text-sm text-rise-black">
-                    {val === "none" ? "None" : val === "drop" ? "Drop" : val === "dnp" ? "Did Not Pick Up" : "Invalid Number"}
+                    {val === "none" ? "Call Done" : val === "drop" ? "Drop" : val === "dnp" ? "Did Not Pick Up" : "Invalid Number"}
                   </span>
                 </label>
               ))}
@@ -281,10 +284,13 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: NotBookedNotOpenedL
           {/* Instructions */}
           <div className="text-xs text-rise-brown/70 space-y-1.5 border-t border-gray-100 pt-3">
             <p>
-              <span className="font-semibold text-rise-brown">Did Not Pick Up:</span> Mark this if the person didn&apos;t answer your call. They will be ready to call again tomorrow.
+              <span className="font-semibold text-rise-brown">Call Done:</span> Mark this when you spoke to the person. They will be permanently removed from this tab.
             </p>
             <p>
-              <span className="font-semibold text-rise-brown">Invalid Number:</span> Marks this number as invalid. Adds 4 to the DNP counter.
+              <span className="font-semibold text-rise-brown">Did Not Pick Up:</span> Mark this if the person didn&apos;t answer. Adds 1 to the DNP counter — at 4 they are removed permanently.
+            </p>
+            <p>
+              <span className="font-semibold text-rise-brown">Invalid Number:</span> Marks this number as invalid. Adds 4 to the DNP counter and removes them permanently.
             </p>
             <p>
               <span className="font-semibold text-rise-brown">Drop:</span> This person will be removed from the pipeline. Please confirm with the team before marking anyone as Drop.
