@@ -10,6 +10,7 @@ export default function ParentDiscoverySubNav({ secret }: { secret: string }) {
     { label: "Missed Calls", href: `${base}/missed-calls` },
     { label: "Not Booked Calls (Emails Opened)", href: `${base}/not-booked-opened` },
     { label: "Not Booked Calls (Emails Not Opened)", href: `${base}/not-booked-not-opened` },
+    { label: "Not Booked Calls (No Email Sent)", href: `${base}/not-booked-no-email` },
     { label: "Missed Application Form", href: `${base}/missed-application-form` },
   ];
 
