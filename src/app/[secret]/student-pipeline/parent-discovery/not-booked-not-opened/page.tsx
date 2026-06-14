@@ -42,10 +42,7 @@ export interface NotBookedNotOpenedLead {
 export default async function NotBookedNotOpenedPage() {
   const cookieStore = await cookies();
   const userName = cookieStore.get("team_auth")?.value ?? "";
-  const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
-  const lastCallCutoff = new Date(now.getTime() - 69 * 60 * 60 * 1000);
-  const cutoff = oneDayAgo.toISOString();
+  const cutoff = new Date(Date.now() - 21 * 60 * 60 * 1000).toISOString();
 
   const [records, { recipients: allRecipients, cachedAt: mixmaxCachedAt }] = await Promise.all([
     fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
@@ -134,24 +131,11 @@ export default async function NotBookedNotOpenedPage() {
     .filter((lead) => {
       const l = lead as NotBookedNotOpenedLead & { _openCount: number };
 
-      // Hard gates — must always pass to avoid overlap with other sub-tabs
       if (l.sentCount === 0) return false;
       if (l._openCount > 0) return false;
       if (["Call Booked", "Call Complete", "Call Completed"].includes(l.callStatus)) return false;
-
-      const lastContactedDate = l.lastContacted ? new Date(l.lastContacted) : null;
-
-      // DNP override: call notes contain "dnp" AND last call date > 24h ago
-      const hasDnp = l.callNotes.toLowerCase().includes("dnp");
-      if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
-
-      // Exclude if last contacted within the past 7 days
-      if (lastContactedDate && lastContactedDate.getTime() >= lastCallCutoff.getTime()) return false;
-
-      // Not booked conditions: pending consultation and no notes
-      const noConsultation = !l.consultationDate;
-      const noNotes = !l.notes.trim();
-      return noConsultation && noNotes;
+      if (l.callNotes.toLowerCase().includes("call done")) return false;
+      return !l.consultationDate && !l.notes.trim();
     })
     .map((lead) => {
       // Strip the temporary _openCount field
@@ -166,7 +150,7 @@ export default async function NotBookedNotOpenedPage() {
         {leads.length} lead{leads.length !== 1 ? "s" : ""} — booking email sent, not yet opened
       </p>
       <p className="text-xs text-rise-brown/70 mb-4">
-        Leads who received a booking email but haven&apos;t opened it, haven&apos;t been followed up in 7+ days (or were marked Did Not Pick Up 24+ hours ago), have a DNP counter below 4, and haven&apos;t booked or completed a call.
+        Leads who received a booking email but haven&apos;t opened it or booked a call. Excludes anyone marked as Call Done, Dropped, DNP counter 4+, or with a consultation date or notes set.
       </p>
       <NotBookedNotOpenedClient leads={leads} mixmaxCachedAt={mixmaxCachedAt} userName={userName} />
     </div>
