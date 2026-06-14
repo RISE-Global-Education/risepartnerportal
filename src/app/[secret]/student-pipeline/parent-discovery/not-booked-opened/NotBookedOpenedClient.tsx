@@ -110,18 +110,16 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: NotBookedOpenedLead
       const datePrefix = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
       const newEntry = status === "none"
         ? `Call Done, ${datePrefix}, ${newNotes.trim()}`
-        : datePrefix + ": " + newNotes.trim();
+        : status === "dnp"
+          ? newNotes.trim() ? `DNP ${datePrefix}, ${newNotes.trim()}` : `DNP ${datePrefix}`
+          : `${datePrefix}: ${newNotes.trim()}`;
       const combined = existing.trim()
         ? existing.trimEnd() + "\n" + newEntry
         : newEntry;
       const body: Record<string, unknown> = { callNotes: combined, lastContacted: today, ...(userName && { callPoc: userName }) };
       if (status === "drop") body.studentApplicationForm = "Drop";
-      else if (status === "dnp") {
-        body.incrementDnp = 1;
-        body.callNotes = existing.trim() ? existing.trimEnd() + "\ndnp" : "dnp";
-      } else if (status === "invalid") {
-        body.incrementDnp = 4;
-      }
+      else if (status === "dnp") body.incrementDnp = 1;
+      else if (status === "invalid") body.incrementDnp = 4;
 
       const res = await fetch(`/api/parent-discovery/${lead.recordId}`, {
         method: "PATCH",
@@ -309,7 +307,7 @@ function Modal({ lead, onClose, onSaved, userName }: { lead: NotBookedOpenedLead
               onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
               rows={3}
               placeholder="Add notes for this call…"
-              disabled={status === "dnp"}
+              disabled={false}
               className={`w-full border rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 resize-none overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50 ${saveError === "Call notes are required." ? "border-red-400 focus:ring-red-300/40" : "border-gray-200 focus:ring-rise-green/40"}`}
             />
           </div>
