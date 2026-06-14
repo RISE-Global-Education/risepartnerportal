@@ -43,6 +43,7 @@ export default async function NotBookedNotOpenedPage() {
   const cookieStore = await cookies();
   const userName = cookieStore.get("team_auth")?.value ?? "";
   const cutoff = new Date(Date.now() - 21 * 60 * 60 * 1000).toISOString();
+  const twentyOneHoursAgo = new Date(Date.now() - 21 * 60 * 60 * 1000);
 
   const [records, { recipients: allRecipients, cachedAt: mixmaxCachedAt }] = await Promise.all([
     fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
@@ -135,6 +136,8 @@ export default async function NotBookedNotOpenedPage() {
       if (l._openCount > 0) return false;
       if (["Call Booked", "Call Complete", "Call Completed"].includes(l.callStatus)) return false;
       if (l.callNotes.toLowerCase().includes("call done")) return false;
+      const lastContactedDate = l.lastContacted ? new Date(l.lastContacted) : null;
+      if (lastContactedDate && lastContactedDate > twentyOneHoursAgo) return false;
       return !l.consultationDate && !l.notes.trim();
     })
     .map((lead) => {
