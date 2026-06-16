@@ -39,8 +39,7 @@ export default async function MissedCallsPage() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const cutoff = sevenDaysAgo.toISOString();
   const now = new Date();
-  const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
-  const lastCallCutoff = new Date(now.getTime() - 69 * 60 * 60 * 1000);
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
     filterByFormula: `AND(
@@ -104,15 +103,10 @@ export default async function MissedCallsPage() {
     })
     .filter((lead) => {
       if (EXCLUDED_CALL_STATUSES.has(lead.callStatus)) return false;
+      if (lead.callNotes.toLowerCase().includes("call done")) return false;
 
       const lastContactedDate = lead.lastContacted ? new Date(lead.lastContacted) : null;
-
-      // DNP override: call notes contain "dnp" AND last call date > 24h ago
-      const hasDnp = lead.callNotes.toLowerCase().includes("dnp");
-      if (hasDnp && lastContactedDate && lastContactedDate < oneDayAgo) return true;
-
-      // Last call date blank OR > 7 days ago
-      if (lastContactedDate && lastContactedDate.getTime() >= lastCallCutoff.getTime()) return false;
+      if (lastContactedDate && lastContactedDate >= oneDayAgo) return false;
       return true;
     });
 
@@ -122,7 +116,7 @@ export default async function MissedCallsPage() {
         {leads.length} missed lead{leads.length !== 1 ? "s" : ""}
       </p>
       <p className="text-xs text-rise-brown/70 mb-4">
-        Leads where the notes mention a missed call, haven&apos;t been called back in 7+ days (or were marked Did Not Pick Up 24+ hours ago), have a DNP counter below 4, and haven&apos;t booked or completed a call.
+        Leads where the notes mention a missed call, haven&apos;t been called back in 24+ hours, have a DNP counter below 4, haven&apos;t booked or completed a call, and whose call notes don&apos;t contain &quot;Call Done&quot;.
       </p>
       <MissedCallsClient leads={leads} userName={userName} />
     </div>
