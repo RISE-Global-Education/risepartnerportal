@@ -49,7 +49,7 @@ export default async function InterviewNotBookedPage() {
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const jan2026 = new Date("2026-01-01T00:00:00.000Z");
 
-  const EXCLUDED_STATUSES = new Set(["Drop", "Client", "Interview Booked"]);
+  const EXCLUDED_STATUSES = new Set(["Drop", "Client", "Interview Booked", "AWA1", "AWA2", "AWA3", "Call Payment"]);
 
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {
     fields: [
