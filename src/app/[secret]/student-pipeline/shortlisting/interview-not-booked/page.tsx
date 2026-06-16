@@ -37,6 +37,7 @@ export interface InterviewNotBookedApplicant {
   shortlistingCallNotes: string;
   createdTime: string;
   lastCallDate: string;
+  callPoc: string;
   dnpCounter: number;
 }
 
@@ -44,9 +45,8 @@ export default async function InterviewNotBookedPage() {
   const cookieStore = await cookies();
   const userName = cookieStore.get("team_auth")?.value ?? "";
   const now = new Date();
-  const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
-  const threeDaysAgo = new Date(now.getTime() - 69 * 60 * 60 * 1000);
-  const oneDayAgo = new Date(now.getTime() - 21 * 60 * 60 * 1000);
+  const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const jan2026 = new Date("2026-01-01T00:00:00.000Z");
 
   const EXCLUDED_STATUSES = new Set(["Drop", "Client", "Interview Booked"]);
@@ -83,6 +83,7 @@ export default async function InterviewNotBookedPage() {
       "Shortlisting Call Notes",
       "Created Time",
       "Last Call Date",
+      "Call POC",
       "DNP Counter",
     ],
   });
@@ -120,26 +121,20 @@ export default async function InterviewNotBookedPage() {
       shortlistingCallNotes: getField<string>(r, "Shortlisting Call Notes") ?? "",
       createdTime: getField<string>(r, "Created Time") ?? r.createdTime,
       lastCallDate: getField<string>(r, "Last Call Date") ?? "",
+      callPoc: getField<string>(r, "Call POC") ?? "",
       dnpCounter: getField<number>(r, "DNP Counter") ?? 0,
     }))
     .filter((a) => {
-      // Hard gates — always required
       if (a.dnpCounter >= 4) return false;
       if (new Date(a.createdTime) < jan2026) return false;
       if (!a.shortlistSentTime) return false;
       const shortlistSent = new Date(a.shortlistSentTime);
-      if (isNaN(shortlistSent.getTime()) || shortlistSent >= fiveDaysAgo) return false;
-      if (a.interviewDate) return false;
+      if (isNaN(shortlistSent.getTime()) || shortlistSent >= twoDaysAgo) return false;
       if (EXCLUDED_STATUSES.has(a.followUpStatus)) return false;
+      if (a.shortlistingCallNotes.toLowerCase().includes("call done")) return false;
 
       const lastCallDate = a.lastCallDate ? new Date(a.lastCallDate) : null;
-
-      // DNP override: shortlisting call notes contain "dnp" AND last call date > 24h ago
-      const hasDnp = a.shortlistingCallNotes.toLowerCase().includes("dnp");
-      if (hasDnp && lastCallDate && lastCallDate < oneDayAgo) return true;
-
-      // Last Call Date is blank OR more than 3 days ago
-      if (lastCallDate && !isNaN(lastCallDate.getTime()) && lastCallDate >= threeDaysAgo) return false;
+      if (lastCallDate && !isNaN(lastCallDate.getTime()) && lastCallDate >= oneDayAgo) return false;
 
       return true;
     });
@@ -150,7 +145,7 @@ export default async function InterviewNotBookedPage() {
         {applicants.length} student{applicants.length !== 1 ? "s" : ""} — interview not yet booked
       </p>
       <p className="text-xs text-rise-brown/70 mb-4">
-        Students shortlisted 5+ days ago who haven&apos;t booked an interview, haven&apos;t been called in 3+ days (or were marked Did Not Pick Up 24+ hours ago), have a DNP counter below 4, and applied in 2026.
+        Students shortlisted 2+ days ago who haven&apos;t been called in 24+ hours, have a DNP counter below 4, applied in 2026, and whose call notes don&apos;t contain &quot;Call Done&quot;.
       </p>
       <InterviewNotBookedClient applicants={applicants} userName={userName} />
     </div>

@@ -99,10 +99,21 @@ function Modal({
     setSaving(true);
     try {
       const existing = applicant.shortlistingCallNotes;
-      const datePrefix = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-      const combined = existing.trim() && newNotes.trim()
-        ? existing.trimEnd() + "\n" + datePrefix + ": " + newNotes.trim()
-        : existing.trim() ? existing : datePrefix + ": " + newNotes.trim();
+      const date = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+      let newEntry = "";
+      if (status === "none") {
+        newEntry = `Call Done ${date} : ${newNotes.trim()}`;
+      } else if (status === "dnp") {
+        newEntry = `DNP ${date}`;
+      } else if (status === "invalid") {
+        newEntry = `Invalid Number ${date}`;
+      } else if (status === "drop") {
+        newEntry = `Drop ${date} : ${newNotes.trim()}`;
+      }
+
+      const combined = existing.trim() ? existing.trimEnd() + "\n" + newEntry : newEntry;
+
       const body: Record<string, unknown> = {
         shortlistingCallNotes: combined,
         lastCallDate: today,
@@ -110,7 +121,6 @@ function Modal({
       };
       if (status === "dnp") {
         body.incrementDnp = 1;
-        body.shortlistingCallNotes = existing.trim() ? existing.trimEnd() + "\ndnp" : "dnp";
       } else if (status === "invalid") {
         body.incrementDnp = 4;
       } else if (status === "drop") {
@@ -189,6 +199,12 @@ function Modal({
                 <dd className="text-sm text-rise-black">{formatDate(applicant.lastCallDate)}</dd>
               </div>
             )}
+            {applicant.callPoc && (
+              <div>
+                <dt className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-0.5">Call POC</dt>
+                <dd className="text-sm text-rise-black">{applicant.callPoc}</dd>
+              </div>
+            )}
           </section>
 
           {/* Student & Parent */}
@@ -242,7 +258,7 @@ function Modal({
                     className="accent-rise-green cursor-pointer"
                   />
                   <span className="text-sm text-rise-black">
-                    {val === "none" ? "None" : val === "dnp" ? "Did Not Pick Up" : val === "invalid" ? "Invalid Number" : "Drop"}
+                    {val === "none" ? "Call Done" : val === "dnp" ? "Did Not Pick Up" : val === "invalid" ? "Invalid Number" : "Drop"}
                   </span>
                 </label>
               ))}
@@ -275,7 +291,7 @@ function Modal({
               onChange={(e) => setNewNotes(e.target.value)}
               onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }}
               rows={3}
-              disabled={status === "dnp"}
+              disabled={status === "dnp" || status === "invalid"}
               placeholder="Add notes for this call…"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-rise-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rise-green/40 resize-none overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50"
             />
