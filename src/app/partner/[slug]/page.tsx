@@ -31,7 +31,7 @@ export default async function PartnerPage({
 
   let conversations = undefined;
   if (isCeoView) {
-    conversations = await getConversationsForCounselor(counselor.counselorId);
+    conversations = await getConversationsForCounselor(counselor.id);
   }
 
   return (
