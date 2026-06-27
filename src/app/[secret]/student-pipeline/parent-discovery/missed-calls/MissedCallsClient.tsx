@@ -464,6 +464,9 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
               <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Country
               </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-rise-brown uppercase tracking-wide">
+                Consultation Date
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-rise-brown uppercase tracking-wide">
                 Details
               </th>
@@ -472,7 +475,7 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-rise-brown text-sm">
+                <td colSpan={6} className="px-4 py-8 text-center text-rise-brown text-sm">
                   No results{query || country || region ? " for current filters" : ""}
                 </td>
               </tr>
@@ -483,6 +486,7 @@ export default function MissedCallsClient({ leads, userName }: { leads: Discover
                   <td className="px-4 py-3 font-medium text-rise-black">{lead.studentName}</td>
                   <td className="px-4 py-3 text-rise-brown">{lead.parentName || "—"}</td>
                   <td className="px-4 py-3 text-rise-brown">{lead.country || "—"}</td>
+                  <td className="px-4 py-3 text-xs text-rise-brown">{lead.consultationDate ? formatDate(lead.consultationDate) : "—"}</td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => setSelected(lead)}
