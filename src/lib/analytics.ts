@@ -157,11 +157,19 @@ function getStageFromFollowUp(status: string | null): FunnelStage {
 
 // --- Time helpers ---
 
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30
+
+function toIST(dateStr: string): Date {
+  const utc = new Date(dateStr).getTime();
+  return new Date(utc + IST_OFFSET_MS);
+}
+
 function daysAgo(days: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  // Midnight IST today, expressed as UTC
+  const nowIST = new Date(Date.now() + IST_OFFSET_MS);
+  nowIST.setUTCHours(0, 0, 0, 0);
+  nowIST.setUTCDate(nowIST.getUTCDate() - days);
+  return new Date(nowIST.getTime() - IST_OFFSET_MS);
 }
 
 function periodToDays(period: string): number | null {
@@ -182,16 +190,16 @@ function daysBetween(d1: string, d2: string): number {
 }
 
 function toDateKey(dateStr: string): string {
-  return new Date(dateStr).toISOString().split("T")[0];
+  const ist = toIST(dateStr);
+  return ist.toISOString().split("T")[0];
 }
 
 function toWeekKey(dateStr: string): string {
-  const d = new Date(dateStr);
-  // Get Monday of that week
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().split("T")[0];
+  const ist = toIST(dateStr);
+  const day = ist.getUTCDay();
+  const diff = ist.getUTCDate() - day + (day === 0 ? -6 : 1);
+  ist.setUTCDate(diff);
+  return ist.toISOString().split("T")[0];
 }
 
 // --- Compute analytics ---
