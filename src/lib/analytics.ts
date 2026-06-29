@@ -66,8 +66,7 @@ export async function getAllDiscoveryCalls(): Promise<DiscoveryCallRecord[]> {
 
 export async function getAllLeads(): Promise<LeadRecord[]> {
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
-    fields: ["Student Name", "Student Email ID", "Created", "Qualified"],
-    filterByFormula: `{Qualified} != "No"`,
+    fields: ["Student Name", "Student Email ID", "Created"],
   });
 
   return records.map((r) => ({
@@ -241,9 +240,6 @@ export function computeAnalytics(
   // Deduplicate: applications take priority over discovery calls
   const applicationEmails = new Set(applications.map((a) => a.email).filter(Boolean));
   const uniqueLeads = leads.filter((l) => l.email && !applicationEmails.has(l.email));
-
-  // Build unified student list for current period counts
-  const now = new Date();
 
   // --- STAGE COUNTS (current period) ---
   const stageCounts: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0, Client: 0 };
