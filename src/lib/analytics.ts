@@ -77,34 +77,10 @@ export async function getAllLeads(): Promise<LeadRecord[]> {
   }));
 }
 
-function parseBrochureDate(raw: string): string {
-  if (!raw || typeof raw !== "string") return new Date().toISOString();
-  // Format: "17/1/2026 8:37pm" → ISO
-  const match = raw.match(/^(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)(am|pm)$/i);
-  if (!match) return new Date(raw).toISOString();
-  const [, day, month, year, hourStr, min, ampm] = match;
-  let hour = parseInt(hourStr, 10);
-  if (ampm.toLowerCase() === "pm" && hour !== 12) hour += 12;
-  if (ampm.toLowerCase() === "am" && hour === 12) hour = 0;
-  return new Date(
-    parseInt(year, 10),
-    parseInt(month, 10) - 1,
-    parseInt(day, 10),
-    hour,
-    parseInt(min, 10)
-  ).toISOString();
-}
 
 export async function getAllBrochureDownloads(): Promise<BrochureDownloadRecord[]> {
-  const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, BROCHURE_DOWNLOADS_TABLE, {
-    fields: ["Created Time"],
-  });
-
-  return records.map((r) => {
-    const raw = getField<unknown>(r, "Created Time");
-    const dateStr = typeof raw === "string" ? raw : r.createdTime;
-    return { id: r.id, date: parseBrochureDate(dateStr) };
-  });
+  const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, BROCHURE_DOWNLOADS_TABLE, {});
+  return records.map((r) => ({ id: r.id, date: r.createdTime }));
 }
 
 function parseClientDate(raw: string | null): string | null {
