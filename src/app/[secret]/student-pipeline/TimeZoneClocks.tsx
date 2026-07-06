@@ -22,7 +22,7 @@ function formatTime(iana: string, hour12: boolean): string {
 
 export default function TimeZoneClocks() {
   const [hour12, setHour12] = useState(true);
-  const [times, setTimes] = useState<string[]>(() => ZONES.map((z) => formatTime(z.iana, true)));
+  const [times, setTimes] = useState<string[] | null>(null);
 
   useEffect(() => {
     setTimes(ZONES.map((z) => formatTime(z.iana, hour12)));
@@ -40,7 +40,7 @@ export default function TimeZoneClocks() {
             <span className="text-xs font-semibold text-rise-brown uppercase tracking-wide">
               {zone.label}
             </span>
-            <span className="text-sm font-mono text-rise-black">{times[i]}</span>
+            <span className="text-sm font-mono text-rise-black">{times ? times[i] : "--:--:--"}</span>
           </div>
         ))}
       </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const STATUS_OPTIONS = ["Pending", "MOU Signed", "Partnership", "Rejected", "Unqualified"];
-const RISE_POC_OPTIONS = ["Yash", "Shreyans", "Prachi"];
+const RISE_POC_OPTIONS = ["Yash", "Shreyans", "Prachi", "Muskaan", "Arth"];
 const PARTNER_TYPE_OPTIONS = ["Counsellor", "School"];
 const WORKSHOP_TYPE_OPTIONS = ["Offline", "Online", "Both", "None"];
 

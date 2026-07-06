@@ -3,7 +3,7 @@ import UnqualifiedClient from "./UnqualifiedClient";
 
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
-const DISCOVERY_EVENT_TYPE_ID = 4654239;
+const DISCOVERY_EVENT_TYPE_IDS = [4654239, 6083591];
 
 export interface UnqualifiedRow {
   recordId: string;
@@ -20,12 +20,13 @@ export interface UnqualifiedRow {
 async function fetchAllUpcomingBookings() {
   const take = 100;
   const all: { uid: string; attendeeEmail: string; start: string; hostName: string }[] = [];
+  const seenUids = new Set<string>();
   let page = 1;
   let hasMore = true;
 
   while (hasMore) {
     const params = new URLSearchParams({
-      eventTypeId: String(DISCOVERY_EVENT_TYPE_ID),
+      eventTypeIds: DISCOVERY_EVENT_TYPE_IDS.join(","),
       status: "upcoming",
       take: String(take),
       skip: String((page - 1) * take),
@@ -43,12 +44,19 @@ async function fetchAllUpcomingBookings() {
     if (!res.ok) break;
 
     const json = await res.json();
-    for (const b of json.data ?? []) {
+    const data = json.data ?? [];
+    for (const b of data) {
+      // Offset pagination can shift between page requests (e.g. ties on
+      // `start`), which can surface the same booking on consecutive pages.
+      if (seenUids.has(b.uid)) continue;
+      seenUids.add(b.uid);
       const email = b.attendees?.[0]?.email ?? "";
       if (email) all.push({ uid: b.uid, attendeeEmail: email.toLowerCase().trim(), start: b.start, hostName: b.hosts?.[0]?.name ?? "—" });
     }
 
-    hasMore = json.pagination?.hasNextPage ?? false;
+    // Cal.com's `pagination.hasNextPage` can report true even on the last page,
+    // so use the page size instead to detect the end.
+    hasMore = data.length === take;
     page++;
   }
 

@@ -33,6 +33,7 @@ interface StalePartner {
   risePoc: string[];
   followUpStatus: string;
   partnerType: string;
+  country: string;
   lastConversationDate: string | null;
   days: number | null;
 }
@@ -40,14 +41,17 @@ interface StalePartner {
 export default function CallsClient({
   partners,
   allRisePocs,
+  allCountries,
   secret,
 }: {
   partners: StalePartner[];
   allRisePocs: string[];
+  allCountries: string[];
   secret: string;
 }) {
   const [selectedPoc, setSelectedPoc] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
+  const [selectedCountry, setSelectedCountry] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [visible, setVisible] = useState<StalePartner[]>(partners);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -55,6 +59,7 @@ export default function CallsClient({
   const filtered = visible
     .filter((p) => selectedPoc === "all" || p.risePoc.includes(selectedPoc))
     .filter((p) => selectedType === "all" || p.partnerType === selectedType)
+    .filter((p) => selectedCountry === "all" || p.country === selectedCountry)
     .filter((p) => {
       if (!query.trim()) return true;
       const q = query.toLowerCase();
@@ -141,8 +146,21 @@ export default function CallsClient({
         </div>
       </div>
 
-      {/* Partner Type filter */}
-      <div className="flex items-center justify-end mb-4">
+      {/* Partner Type + Country filters */}
+      <div className="flex items-center justify-end gap-6 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-rise-brown">Country:</span>
+          <select
+            value={selectedCountry}
+            onChange={(e) => setSelectedCountry(e.target.value)}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-rise-brown focus:outline-none focus:ring-2 focus:ring-rise-green/30"
+          >
+            <option value="all">All</option>
+            {allCountries.map((country) => (
+              <option key={country} value={country}>{country}</option>
+            ))}
+          </select>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-rise-brown">Partner Type:</span>
           <div className="flex gap-1.5">
