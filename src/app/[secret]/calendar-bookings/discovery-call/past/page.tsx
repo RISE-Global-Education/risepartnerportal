@@ -3,7 +3,7 @@ import { fetchAllRecords, getField } from "@/lib/airtable";
 
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
-const DISCOVERY_EVENT_TYPE_ID = 4654239;
+const DISCOVERY_EVENT_TYPE_IDS = [4654239, 6083591];
 
 export interface DiscoveryBooking {
   uid: string;
@@ -28,12 +28,13 @@ export interface MatchedBooking {
 async function fetchAllBookings(): Promise<DiscoveryBooking[]> {
   const take = 100;
   const all: DiscoveryBooking[] = [];
+  const seenUids = new Set<string>();
   let page = 1;
   let hasMore = true;
 
   while (hasMore) {
     const params = new URLSearchParams({
-      eventTypeId: String(DISCOVERY_EVENT_TYPE_ID),
+      eventTypeIds: DISCOVERY_EVENT_TYPE_IDS.join(","),
       status: "past",
       take: String(take),
       skip: String((page - 1) * take),
@@ -51,7 +52,12 @@ async function fetchAllBookings(): Promise<DiscoveryBooking[]> {
     if (!res.ok) break;
 
     const json = await res.json();
-    for (const b of json.data ?? []) {
+    const data = json.data ?? [];
+    for (const b of data) {
+      // Offset pagination can shift between page requests (e.g. ties on
+      // `start`), which can surface the same booking on consecutive pages.
+      if (seenUids.has(b.uid)) continue;
+      seenUids.add(b.uid);
       all.push({
         uid: b.uid,
         attendeeName: b.attendees?.[0]?.name ?? "—",
@@ -61,7 +67,9 @@ async function fetchAllBookings(): Promise<DiscoveryBooking[]> {
       });
     }
 
-    hasMore = json.pagination?.hasNextPage ?? false;
+    // Cal.com's `pagination.hasNextPage` can report true even on the last page,
+    // so use the page size instead to detect the end.
+    hasMore = data.length === take;
     page++;
   }
 

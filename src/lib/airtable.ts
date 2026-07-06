@@ -1,5 +1,11 @@
+import { unstable_cache, revalidateTag } from "next/cache";
+
 const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN!;
 const BASE_URL = "https://api.airtable.com/v0";
+
+// Data barely changes second-to-second; caching this long turns most
+// navigations into cache hits instead of a fresh full-table pull from Airtable.
+const CACHE_SECONDS = 60;
 
 interface AirtableRecord {
   id: string;
@@ -12,7 +18,11 @@ interface AirtableResponse {
   offset?: string;
 }
 
-export async function fetchAllRecords(
+function tableTag(baseId: string, tableId: string): string {
+  return `airtable:${baseId}:${tableId}`;
+}
+
+async function fetchAllRecordsUncached(
   baseId: string,
   tableId: string,
   options?: {
@@ -43,7 +53,6 @@ export async function fetchAllRecords(
     }
 
     const url = `${BASE_URL}/${baseId}/${tableId}?${params.toString()}`;
-    console.log(`[Airtable] Fetching: ${baseId}/${tableId} (offset: ${offset || "none"})`);
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${AIRTABLE_TOKEN}`,
@@ -61,12 +70,40 @@ export async function fetchAllRecords(
     }
 
     const data: AirtableResponse = await res.json();
-    console.log(`[Airtable] Got ${data.records.length} records (total: ${allRecords.length + data.records.length})`);
     allRecords.push(...data.records);
     offset = data.offset;
   } while (offset);
 
   return allRecords;
+}
+
+// unstable_cache tags are fixed at wrap-time, not per-call, so a wrapper is
+// created once per (baseId, tableId) and reused — not recreated per request.
+const cachedFetchersByTable = new Map<string, typeof fetchAllRecordsUncached>();
+
+function getCachedFetcher(baseId: string, tableId: string) {
+  const tag = tableTag(baseId, tableId);
+  let fn = cachedFetchersByTable.get(tag);
+  if (!fn) {
+    fn = unstable_cache(fetchAllRecordsUncached, ["airtable-fetch-all-records", tag], {
+      revalidate: CACHE_SECONDS,
+      tags: [tag],
+    });
+    cachedFetchersByTable.set(tag, fn);
+  }
+  return fn;
+}
+
+export async function fetchAllRecords(
+  baseId: string,
+  tableId: string,
+  options?: {
+    fields?: string[];
+    filterByFormula?: string;
+    view?: string;
+  }
+): Promise<AirtableRecord[]> {
+  return getCachedFetcher(baseId, tableId)(baseId, tableId, options);
 }
 
 export function getField<T>(record: AirtableRecord, fieldName: string): T | null {
@@ -96,6 +133,7 @@ export async function createRecord(
     throw new Error(`Airtable create error (${res.status}): ${error}`);
   }
 
+  revalidateTag(tableTag(baseId, tableId), { expire: 0 });
   return res.json();
 }
 
@@ -142,6 +180,7 @@ export async function updateRecord(
     throw new Error(`Airtable update error (${res.status}): ${error}`);
   }
 
+  revalidateTag(tableTag(baseId, tableId), { expire: 0 });
   return res.json();
 }
 
@@ -163,4 +202,6 @@ export async function deleteRecord(
     const error = await res.text();
     throw new Error(`Airtable delete error (${res.status}): ${error}`);
   }
+
+  revalidateTag(tableTag(baseId, tableId), { expire: 0 });
 }

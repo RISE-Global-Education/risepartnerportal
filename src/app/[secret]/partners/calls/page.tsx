@@ -1,6 +1,8 @@
 import { getAllCounselors } from "@/lib/counselors";
 import CallsClient from "./CallsClient";
 
+const ALL_RISE_POCS = ["Shreyans", "Yash", "Prachi", "Arth", "Muskaan"];
+
 function daysSince(dateStr: string): number {
   const diff = Date.now() - new Date(dateStr).getTime();
   return Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -37,13 +39,25 @@ export default async function CallsPage({
       risePoc: c.risePoc,
       followUpStatus: c.followUpStatus,
       partnerType: c.partnerType,
+      country: c.country,
       lastConversationDate: c.lastConversationDate,
       days: c.lastConversationDate ? daysSince(c.lastConversationDate) : null,
     }));
 
   const allRisePocs = Array.from(
-    new Set(stale.flatMap((c) => c.risePoc))
+    new Set([...ALL_RISE_POCS, ...stale.flatMap((c) => c.risePoc)])
   ).sort();
 
-  return <CallsClient partners={stale} allRisePocs={allRisePocs} secret={secret} />;
+  const allCountries = Array.from(
+    new Set(stale.map((c) => c.country).filter(Boolean))
+  ).sort();
+
+  return (
+    <CallsClient
+      partners={stale}
+      allRisePocs={allRisePocs}
+      allCountries={allCountries}
+      secret={secret}
+    />
+  );
 }
