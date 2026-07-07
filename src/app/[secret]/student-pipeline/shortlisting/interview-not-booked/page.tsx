@@ -52,6 +52,19 @@ export default async function InterviewNotBookedPage() {
   const EXCLUDED_STATUSES = new Set(["Drop", "Client", "Interview Booked", "AWA1", "AWA2", "AWA3", "Call Payment"]);
 
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {
+    filterByFormula: `AND(
+      IS_AFTER({Created Time}, "${jan2026.toISOString()}"),
+      {Shortlist Email Sent Time} != "",
+      IS_BEFORE({Shortlist Email Sent Time}, "${twoDaysAgo.toISOString()}"),
+      {Follow Up Status} != "Drop",
+      {Follow Up Status} != "Client",
+      {Follow Up Status} != "Interview Booked",
+      {Follow Up Status} != "AWA1",
+      {Follow Up Status} != "AWA2",
+      {Follow Up Status} != "AWA3",
+      {Follow Up Status} != "Call Payment",
+      OR({DNP Counter} = BLANK(), {DNP Counter} < 4)
+    )`,
     fields: [
       "Applicant ID",
       "Name",
