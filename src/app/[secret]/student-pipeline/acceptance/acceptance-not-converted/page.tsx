@@ -52,6 +52,14 @@ export default async function AcceptanceNotConvertedPage() {
   const EXCLUDED_STATUSES = new Set(["Drop", "Client"]);
 
   const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, APPLICATION_TABLE, {
+    filterByFormula: `AND(
+      IS_AFTER({Created Time}, "${jan2026.toISOString()}"),
+      {Acceptances Email Sent Time} != "",
+      IS_BEFORE({Acceptances Email Sent Time}, "${twoDaysAgo.toISOString()}"),
+      {Follow Up Status} != "Drop",
+      {Follow Up Status} != "Client",
+      OR({DNP Counter} = BLANK(), {DNP Counter} < 4)
+    )`,
     fields: [
       "Applicant ID",
       "Name",
