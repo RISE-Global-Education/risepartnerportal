@@ -1,6 +1,7 @@
 import type { Student, FunnelStage } from "@/lib/types";
+import StudentProgressButton from "./StudentProgressButton";
 
-const STAGE_BADGE: Record<FunnelStage, string> = {
+export const STAGE_BADGE: Record<FunnelStage, string> = {
   Lead: "bg-rise-cream text-rise-brown",
   Application: "bg-blue-50 text-blue-700",
   Interview: "bg-amber-50 text-amber-700",
@@ -17,7 +18,17 @@ function formatDate(dateStr: string): string {
   });
 }
 
-export default function StudentTable({ students }: { students: Student[] }) {
+export default function StudentTable({
+  students,
+  isCeoView = false,
+  partnerSlug,
+  secret,
+}: {
+  students: Student[];
+  isCeoView?: boolean;
+  partnerSlug?: string;
+  secret?: string;
+}) {
   if (students.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm p-8 text-center text-rise-brown">
@@ -40,6 +51,7 @@ export default function StudentTable({ students }: { students: Student[] }) {
               <th className="px-6 py-3 font-medium text-rise-brown">Name</th>
               <th className="px-6 py-3 font-medium text-rise-brown">Stage</th>
               <th className="px-6 py-3 font-medium text-rise-brown">Date Entered</th>
+              {isCeoView && <th className="px-6 py-3" />}
             </tr>
           </thead>
           <tbody>
@@ -61,6 +73,19 @@ export default function StudentTable({ students }: { students: Student[] }) {
                 <td className="px-6 py-3 text-rise-brown">
                   {formatDate(student.dateEntered)}
                 </td>
+                {isCeoView && (
+                  <td className="px-6 py-3 text-right">
+                    {student.stage === "Client" && partnerSlug && secret && (
+                      <StudentProgressButton
+                        studentId={student.id}
+                        studentName={student.name}
+                        stage={student.stage}
+                        partnerSlug={partnerSlug}
+                        secret={secret}
+                      />
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
