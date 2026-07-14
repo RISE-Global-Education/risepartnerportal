@@ -54,7 +54,12 @@ export default async function PartnerPage({
           secret={process.env.DASHBOARD_SECRET!}
         />
         <FunnelStats counts={funnelCounts} total={total} />
-        <StudentTable students={students} />
+        <StudentTable
+          students={students}
+          isCeoView={isCeoView}
+          partnerSlug={slug}
+          secret={process.env.DASHBOARD_SECRET}
+        />
         {isCeoView && (
           <AddConversationForm
             counselorId={counselor.id}
