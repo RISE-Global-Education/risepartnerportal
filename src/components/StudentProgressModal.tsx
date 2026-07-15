@@ -200,14 +200,12 @@ export default function StudentProgressModal({
   studentName,
   stage,
   partnerSlug,
-  secret,
   onClose,
 }: {
   studentId: string;
   studentName: string;
   stage: FunnelStage;
   partnerSlug: string;
-  secret: string;
   onClose: () => void;
 }) {
   const [loading, setLoading] = useState(true);
@@ -218,7 +216,7 @@ export default function StudentProgressModal({
 
   useEffect(() => {
     fetch(
-      `/api/meeting-feedback?secret=${encodeURIComponent(secret)}&slug=${encodeURIComponent(partnerSlug)}&studentId=${encodeURIComponent(studentId)}`
+      `/api/meeting-feedback?slug=${encodeURIComponent(partnerSlug)}&studentId=${encodeURIComponent(studentId)}`
     )
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to load feedback");
@@ -228,7 +226,7 @@ export default function StudentProgressModal({
       })
       .catch(() => setError("Failed to load feedback. Please try again."))
       .finally(() => setLoading(false));
-  }, [secret, partnerSlug, studentId]);
+  }, [partnerSlug, studentId]);
 
   const upcomingOnly = filter === "Upcoming";
   const isAll = filter === "All";

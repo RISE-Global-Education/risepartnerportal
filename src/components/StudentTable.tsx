@@ -20,14 +20,10 @@ function formatDate(dateStr: string): string {
 
 export default function StudentTable({
   students,
-  isCeoView = false,
   partnerSlug,
-  secret,
 }: {
   students: Student[];
-  isCeoView?: boolean;
   partnerSlug?: string;
-  secret?: string;
 }) {
   if (students.length === 0) {
     return (
@@ -51,7 +47,7 @@ export default function StudentTable({
               <th className="px-6 py-3 font-medium text-rise-brown">Name</th>
               <th className="px-6 py-3 font-medium text-rise-brown">Stage</th>
               <th className="px-6 py-3 font-medium text-rise-brown">Date Entered</th>
-              {isCeoView && <th className="px-6 py-3" />}
+              <th className="px-6 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -73,19 +69,16 @@ export default function StudentTable({
                 <td className="px-6 py-3 text-rise-brown">
                   {formatDate(student.dateEntered)}
                 </td>
-                {isCeoView && (
-                  <td className="px-6 py-3 text-right">
-                    {student.stage === "Client" && partnerSlug && secret && (
-                      <StudentProgressButton
-                        studentId={student.id}
-                        studentName={student.name}
-                        stage={student.stage}
-                        partnerSlug={partnerSlug}
-                        secret={secret}
-                      />
-                    )}
-                  </td>
-                )}
+                <td className="px-6 py-3 text-right">
+                  {student.stage === "Client" && partnerSlug && (
+                    <StudentProgressButton
+                      studentId={student.id}
+                      studentName={student.name}
+                      stage={student.stage}
+                      partnerSlug={partnerSlug}
+                    />
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
