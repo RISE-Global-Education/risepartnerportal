@@ -9,13 +9,11 @@ export default function StudentProgressButton({
   studentName,
   stage,
   partnerSlug,
-  secret,
 }: {
   studentId: string;
   studentName: string;
   stage: FunnelStage;
   partnerSlug: string;
-  secret: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -34,7 +32,6 @@ export default function StudentProgressButton({
           studentName={studentName}
           stage={stage}
           partnerSlug={partnerSlug}
-          secret={secret}
           onClose={() => setOpen(false)}
         />
       )}

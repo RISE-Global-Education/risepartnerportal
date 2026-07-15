@@ -13,9 +13,9 @@ const MEETING_TYPE_SOURCE: Record<string, FeedbackSource> = {
 export interface UpcomingSession {
   id: string;
   source: FeedbackSource;
+  programId: string | null;
   meetingNumber: number | null;
   startDateTime: string; // ISO
-  hostEmail: string | null;
 }
 
 export async function getUpcomingSessionsForStudent(
@@ -38,9 +38,9 @@ export async function getUpcomingSessionsForStudent(
       return {
         id: record.id,
         source,
+        programId: getField<string>(record, "Program ID"),
         meetingNumber: getField<number>(record, "Meeting Number"),
         startDateTime,
-        hostEmail: getField<string>(record, "Host Email"),
       };
     })
     .filter((s): s is UpcomingSession => s !== null);
