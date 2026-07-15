@@ -5,13 +5,8 @@ import { createPortal } from "react-dom";
 import type { FunnelStage } from "@/lib/types";
 import type { FeedbackSource, MeetingFeedback } from "@/lib/meeting-feedback";
 import type { UpcomingSession } from "@/lib/upcoming-sessions";
+import type { ProgramTeam } from "@/lib/program-team";
 import { STAGE_BADGE } from "./StudentTable";
-
-const AUTHOR_LABEL: Record<FeedbackSource, string> = {
-  Mentor: "Mentor",
-  "Writing Coach": "Writing Coach",
-  "Review Meet": "Program Manager",
-};
 
 type FilterValue = FeedbackSource | "All" | "Upcoming";
 
@@ -97,12 +92,6 @@ function FeedbackAccordionItem({ entry }: { entry: MeetingFeedback }) {
               </span>
             )}
             <OnTrackBadge value={entry.onTrack} />
-            {entry.authorLabel && (
-              <span className="text-xs text-rise-brown">
-                {AUTHOR_LABEL[entry.source]}:{" "}
-                <span className="font-medium text-rise-black">{entry.authorLabel}</span>
-              </span>
-            )}
           </div>
           <p className="text-sm text-rise-black/80 whitespace-pre-wrap leading-relaxed">
             {entry.summary}
@@ -186,9 +175,6 @@ function UpcomingSessionRow({ session }: { session: UpcomingSession }) {
     <div className="flex items-center justify-between gap-3 px-4 py-3 border border-gray-200 rounded-lg">
       <div className="min-w-0">
         <span className="font-medium text-rise-black text-sm">{title}</span>
-        {session.hostEmail && (
-          <span className="block text-xs text-rise-brown truncate">{session.hostEmail}</span>
-        )}
       </div>
       <span className="text-xs text-rise-brown shrink-0">{formatDateTime(session.startDateTime)}</span>
     </div>
@@ -212,6 +198,7 @@ export default function StudentProgressModal({
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState<MeetingFeedback[] | null>(null);
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[] | null>(null);
+  const [programTeam, setProgramTeam] = useState<ProgramTeam | null>(null);
   const [filter, setFilter] = useState<FilterValue>("All");
 
   useEffect(() => {
@@ -223,6 +210,7 @@ export default function StudentProgressModal({
         const data = await res.json();
         setFeedback(data.feedback);
         setUpcomingSessions(data.upcomingSessions);
+        setProgramTeam(data.programTeam);
       })
       .catch(() => setError("Failed to load feedback. Please try again."))
       .finally(() => setLoading(false));
@@ -243,28 +231,51 @@ export default function StudentProgressModal({
         className="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-100 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <h2 className="text-lg font-bold text-rise-black font-heading truncate">{studentName}</h2>
-            <span
-              className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${STAGE_BADGE[stage]}`}
-            >
-              {stage}
-            </span>
+        <div className="px-6 py-4 border-b border-gray-100 shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-lg font-bold text-rise-black font-heading truncate">{studentName}</h2>
+              <span
+                className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${STAGE_BADGE[stage]}`}
+              >
+                {stage}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <FilterDropdown value={filter} onChange={setFilter} />
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-rise-brown hover:text-rise-black p-1"
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <FilterDropdown value={filter} onChange={setFilter} />
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-rise-brown hover:text-rise-black p-1"
-              aria-label="Close"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+          {programTeam && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+              {programTeam.mentorName && (
+                <span className="text-xs text-rise-brown">
+                  Mentor: <span className="font-medium text-rise-black">{programTeam.mentorName}</span>
+                </span>
+              )}
+              {programTeam.writingCoachName && (
+                <span className="text-xs text-rise-brown">
+                  Writing Coach:{" "}
+                  <span className="font-medium text-rise-black">{programTeam.writingCoachName}</span>
+                </span>
+              )}
+              {programTeam.programManagerName && (
+                <span className="text-xs text-rise-brown">
+                  Program Manager:{" "}
+                  <span className="font-medium text-rise-black">{programTeam.programManagerName}</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="px-6 py-4 overflow-y-auto space-y-2">

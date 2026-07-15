@@ -16,7 +16,7 @@ export type FeedbackSource = "Mentor" | "Writing Coach" | "Review Meet";
 export interface MeetingFeedback {
   id: string;
   source: FeedbackSource;
-  authorLabel: string | null;
+  programId: string | null;
   date: string; // ISO timestamp
   meetingNumber: number | null;
   progressStage: string | null;
@@ -30,7 +30,7 @@ async function fetchFeedbackFromTable(
   source: FeedbackSource,
   studentName: string,
   attendedField: string,
-  authorField: string,
+  programIdField: string,
   feedbackField: string
 ): Promise<MeetingFeedback[]> {
   const escapedName = studentName.trim().replace(/"/g, '\\"');
@@ -41,7 +41,7 @@ async function fetchFeedbackFromTable(
   const feedback = records.map((record) => ({
     id: record.id,
     source,
-    authorLabel: getField<string>(record, authorField),
+    programId: getField<string>(record, programIdField),
     date: getField<string>(record, "Created Time") || record.createdTime,
     meetingNumber: getField<number>(record, "Meeting Number"),
     progressStage: getField<string>(record, PROGRESS_STAGE_FIELD),
@@ -66,7 +66,7 @@ export async function getMeetingFeedbackForStudent(
       "Mentor",
       studentName,
       "Did the student attended the session?",
-      "Mentor Name 2",
+      "Program ID.",
       OBSERVATIONS_FIELD
     ),
     fetchFeedbackFromTable(
@@ -74,7 +74,7 @@ export async function getMeetingFeedbackForStudent(
       "Writing Coach",
       studentName,
       "Did the student attended the session",
-      "Writing Coach Email ID",
+      "Program ID 2",
       OBSERVATIONS_FIELD
     ),
     fetchFeedbackFromTable(
@@ -82,7 +82,7 @@ export async function getMeetingFeedbackForStudent(
       "Review Meet",
       studentName,
       "Did the student attend the session?",
-      "Program Manager Email ID",
+      "Program ID 2",
       COUNSELLOR_MESSAGE_FIELD
     ),
   ]);
