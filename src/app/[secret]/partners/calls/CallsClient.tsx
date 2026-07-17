@@ -34,6 +34,7 @@ interface StalePartner {
   followUpStatus: string;
   partnerType: string;
   country: string;
+  capacity: string;
   lastConversationDate: string | null;
   days: number | null;
 }
@@ -187,6 +188,7 @@ export default function CallsClient({
             <tr className="border-b border-gray-100 text-left">
               <th className="px-5 py-3 font-medium text-rise-brown">Partner</th>
               <th className="px-5 py-3 font-medium text-rise-brown">Partner POC</th>
+              <th className="px-5 py-3 font-medium text-rise-brown">Capacity</th>
               <th className="px-5 py-3 font-medium text-rise-brown">Follow Up Status</th>
               <th className="px-5 py-3 font-medium text-rise-brown">POC (RISE)</th>
               <th className="px-5 py-3 font-medium text-rise-brown">Last Conversation</th>
@@ -203,6 +205,9 @@ export default function CallsClient({
                   <td className="px-5 py-3 font-medium text-rise-black">{c.companyName}</td>
                   <td className="px-5 py-3 text-rise-brown">
                     {c.pocNames.length > 0 ? c.pocNames.join(", ") : "—"}
+                  </td>
+                  <td className="px-5 py-3 text-rise-brown">
+                    {c.capacity || "—"}
                   </td>
                   <td className="px-5 py-3">
                     <div className="relative inline-block">
@@ -266,7 +271,7 @@ export default function CallsClient({
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-5 py-10 text-center text-rise-brown">
+                <td colSpan={8} className="px-5 py-10 text-center text-rise-brown">
                   {selectedPoc === "all"
                     ? "All partners have been contacted in the last 28 days."
                     : `No overdue partners for ${selectedPoc}.`}

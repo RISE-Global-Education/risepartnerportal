@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getCounselorBySlug, getContactsForCounselor } from "@/lib/counselors";
 import { getStudentsForCounselor, computeFunnelCounts } from "@/lib/students";
 import { getConversationsForCounselor } from "@/lib/conversations";
@@ -23,6 +24,15 @@ export default async function PartnerPage({
   }
 
   const { counselor, isCeoView } = result;
+
+  if (isCeoView) {
+    const cookieStore = await cookies();
+    const authed = cookieStore.get("partner_auth")?.value === "1";
+    if (!authed) {
+      redirect(`/partner/${slug}/login`);
+    }
+  }
+
   const students = await getStudentsForCounselor(counselor.counselorId);
   const funnelCounts = computeFunnelCounts(students);
   const total = students.length;
