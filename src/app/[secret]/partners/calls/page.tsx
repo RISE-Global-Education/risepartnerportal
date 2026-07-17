@@ -40,6 +40,7 @@ export default async function CallsPage({
       followUpStatus: c.followUpStatus,
       partnerType: c.partnerType,
       country: c.country.trim(),
+      capacity: c.capacity,
       lastConversationDate: c.lastConversationDate,
       days: c.lastConversationDate ? daysSince(c.lastConversationDate) : null,
     }));
