@@ -56,6 +56,13 @@ export default function CallsClient({
   const [query, setQuery] = useState("");
   const [visible, setVisible] = useState<StalePartner[]>(partners);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [capacitySort, setCapacitySort] = useState<"asc" | "desc" | null>(null);
+
+  function toggleCapacitySort() {
+    setCapacitySort((prev) =>
+      prev === null ? "desc" : prev === "desc" ? "asc" : null
+    );
+  }
 
   const filtered = visible
     .filter((p) => selectedPoc === "all" || p.risePoc.includes(selectedPoc))
@@ -70,6 +77,20 @@ export default function CallsClient({
         p.risePoc.some((r) => r.toLowerCase().includes(q))
       );
     });
+
+  if (capacitySort) {
+    filtered.sort((a, b) => {
+      const aNum = parseFloat(a.capacity);
+      const bNum = parseFloat(b.capacity);
+      const aValid = !Number.isNaN(aNum);
+      const bValid = !Number.isNaN(bNum);
+      // Partners without a capacity value always sort to the bottom
+      if (!aValid && !bValid) return 0;
+      if (!aValid) return 1;
+      if (!bValid) return -1;
+      return capacitySort === "asc" ? aNum - bNum : bNum - aNum;
+    });
+  }
 
   async function handleStatusChange(partner: StalePartner, newStatus: string) {
     setUpdating(partner.id);
@@ -188,7 +209,18 @@ export default function CallsClient({
             <tr className="border-b border-gray-100 text-left">
               <th className="px-5 py-3 font-medium text-rise-brown">Partner</th>
               <th className="px-5 py-3 font-medium text-rise-brown">Partner POC</th>
-              <th className="px-5 py-3 font-medium text-rise-brown">Capacity</th>
+              <th className="px-5 py-3 font-medium text-rise-brown">
+                <button
+                  type="button"
+                  onClick={toggleCapacitySort}
+                  className="flex items-center gap-1 hover:text-rise-black transition-colors"
+                >
+                  Capacity
+                  <span className="text-[10px]">
+                    {capacitySort === "asc" ? "▲" : capacitySort === "desc" ? "▼" : "⇅"}
+                  </span>
+                </button>
+              </th>
               <th className="px-5 py-3 font-medium text-rise-brown">Follow Up Status</th>
               <th className="px-5 py-3 font-medium text-rise-brown">POC (RISE)</th>
               <th className="px-5 py-3 font-medium text-rise-brown">Last Conversation</th>
