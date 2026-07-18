@@ -18,13 +18,8 @@ export default async function CallsPage({
 
   const HIDDEN_STATUSES = ["Rejected", "Unqualified"];
 
-  const stale = counselors
-    .filter((c) => {
-      // Hide partners marked as Rejected or Unqualified
-      if (HIDDEN_STATUSES.includes(c.followUpStatus)) return false;
-      if (!c.lastConversationDate) return true;
-      return daysSince(c.lastConversationDate) > 28;
-    })
+  const partners = counselors
+    .filter((c) => !HIDDEN_STATUSES.includes(c.followUpStatus))
     .sort((a, b) => {
       if (!a.lastConversationDate) return -1;
       if (!b.lastConversationDate) return 1;
@@ -46,16 +41,16 @@ export default async function CallsPage({
     }));
 
   const allRisePocs = Array.from(
-    new Set([...ALL_RISE_POCS, ...stale.flatMap((c) => c.risePoc)])
+    new Set([...ALL_RISE_POCS, ...partners.flatMap((c) => c.risePoc)])
   ).sort();
 
   const allCountries = Array.from(
-    new Set(stale.map((c) => c.country).filter(Boolean))
+    new Set(partners.map((c) => c.country).filter(Boolean))
   ).sort();
 
   return (
     <CallsClient
-      partners={stale}
+      partners={partners}
       allRisePocs={allRisePocs}
       allCountries={allCountries}
       secret={secret}

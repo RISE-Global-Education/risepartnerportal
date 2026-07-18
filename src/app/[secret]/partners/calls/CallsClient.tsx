@@ -15,6 +15,15 @@ type FollowUpStatus = (typeof FOLLOW_UP_OPTIONS)[number] | "";
 
 const HIDDEN_STATUSES: FollowUpStatus[] = ["Rejected", "Unqualified"];
 
+const RECENCY_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "7", label: "7 Days" },
+  { value: "14", label: "14 Days" },
+  { value: "28", label: "28 Days" },
+] as const;
+
+type RecencyFilter = (typeof RECENCY_OPTIONS)[number]["value"];
+
 const STATUS_STYLES: Record<string, string> = {
   "MOU Signed":  "bg-green-100 text-green-700",
   "Partnership": "bg-blue-100 text-blue-700",
@@ -53,14 +62,36 @@ export default function CallsClient({
   const [selectedPoc, setSelectedPoc] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
+  const [recencyFilter, setRecencyFilter] = useState<RecencyFilter>("all");
   const [query, setQuery] = useState("");
   const [visible, setVisible] = useState<StalePartner[]>(partners);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [capacitySort, setCapacitySort] = useState<"asc" | "desc" | null>(null);
+  const [dateSort, setDateSort] = useState<"asc" | "desc" | null>(null);
+
+  function toggleCapacitySort() {
+    setDateSort(null);
+    setCapacitySort((prev) =>
+      prev === null ? "desc" : prev === "desc" ? "asc" : null
+    );
+  }
+
+  function toggleDateSort() {
+    setCapacitySort(null);
+    setDateSort((prev) =>
+      prev === null ? "desc" : prev === "desc" ? "asc" : null
+    );
+  }
 
   const filtered = visible
     .filter((p) => selectedPoc === "all" || p.risePoc.includes(selectedPoc))
     .filter((p) => selectedType === "all" || p.partnerType === selectedType)
     .filter((p) => selectedCountry === "all" || p.country === selectedCountry)
+    .filter((p) => {
+      if (recencyFilter === "all") return true;
+      if (p.days === null) return false;
+      return p.days <= Number(recencyFilter);
+    })
     .filter((p) => {
       if (!query.trim()) return true;
       const q = query.toLowerCase();
@@ -70,6 +101,30 @@ export default function CallsClient({
         p.risePoc.some((r) => r.toLowerCase().includes(q))
       );
     });
+
+  if (capacitySort) {
+    filtered.sort((a, b) => {
+      const aNum = parseFloat(a.capacity);
+      const bNum = parseFloat(b.capacity);
+      const aValid = !Number.isNaN(aNum);
+      const bValid = !Number.isNaN(bNum);
+      // Partners without a capacity value always sort to the bottom
+      if (!aValid && !bValid) return 0;
+      if (!aValid) return 1;
+      if (!bValid) return -1;
+      return capacitySort === "asc" ? aNum - bNum : bNum - aNum;
+    });
+  } else if (dateSort) {
+    filtered.sort((a, b) => {
+      // Never-contacted partners always sort to the bottom
+      if (!a.lastConversationDate && !b.lastConversationDate) return 0;
+      if (!a.lastConversationDate) return 1;
+      if (!b.lastConversationDate) return -1;
+      const aTime = new Date(a.lastConversationDate).getTime();
+      const bTime = new Date(b.lastConversationDate).getTime();
+      return dateSort === "asc" ? aTime - bTime : bTime - aTime;
+    });
+  }
 
   async function handleStatusChange(partner: StalePartner, newStatus: string) {
     setUpdating(partner.id);
@@ -115,8 +170,30 @@ export default function CallsClient({
       />
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm text-rise-brown">
-          {filtered.length} partner{filtered.length !== 1 ? "s" : ""} with no conversation in the last 28 days
+          {filtered.length} partner{filtered.length !== 1 ? "s" : ""}
+          {recencyFilter !== "all" &&
+            ` reached out to in the last ${recencyFilter} days`}
         </p>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-rise-brown">Reached Out:</span>
+          <div className="flex gap-1.5">
+            {RECENCY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setRecencyFilter(opt.value)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  recencyFilter === opt.value
+                    ? "bg-rise-green text-white"
+                    : "bg-gray-100 text-rise-brown hover:bg-gray-200"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-end mb-3">
         <div className="flex items-center gap-2">
           <span className="text-sm text-rise-brown">POC (RISE):</span>
           <div className="flex gap-1.5">
@@ -188,10 +265,32 @@ export default function CallsClient({
             <tr className="border-b border-gray-100 text-left">
               <th className="px-5 py-3 font-medium text-rise-brown">Partner</th>
               <th className="px-5 py-3 font-medium text-rise-brown">Partner POC</th>
-              <th className="px-5 py-3 font-medium text-rise-brown">Capacity</th>
+              <th className="px-5 py-3 font-medium text-rise-brown">
+                <button
+                  type="button"
+                  onClick={toggleCapacitySort}
+                  className="flex items-center gap-1 hover:text-rise-black transition-colors"
+                >
+                  Capacity
+                  <span className="text-[10px]">
+                    {capacitySort === "asc" ? "▲" : capacitySort === "desc" ? "▼" : "⇅"}
+                  </span>
+                </button>
+              </th>
               <th className="px-5 py-3 font-medium text-rise-brown">Follow Up Status</th>
               <th className="px-5 py-3 font-medium text-rise-brown">POC (RISE)</th>
-              <th className="px-5 py-3 font-medium text-rise-brown">Last Conversation</th>
+              <th className="px-5 py-3 font-medium text-rise-brown">
+                <button
+                  type="button"
+                  onClick={toggleDateSort}
+                  className="flex items-center gap-1 hover:text-rise-black transition-colors"
+                >
+                  Last Conversation
+                  <span className="text-[10px]">
+                    {dateSort === "asc" ? "▲" : dateSort === "desc" ? "▼" : "⇅"}
+                  </span>
+                </button>
+              </th>
               <th className="px-5 py-3 font-medium text-rise-brown">Days Ago</th>
               <th className="px-5 py-3" />
             </tr>
@@ -272,9 +371,11 @@ export default function CallsClient({
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-5 py-10 text-center text-rise-brown">
-                  {selectedPoc === "all"
-                    ? "All partners have been contacted in the last 28 days."
-                    : `No overdue partners for ${selectedPoc}.`}
+                  {recencyFilter === "all"
+                    ? "No partners match the current filters."
+                    : `No partners reached out to in the last ${recencyFilter} days${
+                        selectedPoc === "all" ? "" : ` for ${selectedPoc}`
+                      }.`}
                 </td>
               </tr>
             )}
