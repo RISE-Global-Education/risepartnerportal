@@ -5,7 +5,11 @@ import ParentsDiscoveryBookingClient from "./ParentsDiscoveryBookingClient";
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
 
-const BOOKING_SEQUENCES = ["Parents  Discovery - Booking Link", "Parents Discovery - Booking Link (Updated)"];
+const BOOKING_SEQUENCES = [
+  "Parents  Discovery - Booking Link",
+  "Parents Discovery - Booking Link (Updated)",
+  "Parents Discovery - Booking Link Pakistan",
+];
 
 export interface MappedRow {
   recordId: string;
