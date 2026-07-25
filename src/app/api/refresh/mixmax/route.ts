@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchFromMixmax, writeCache } from "@/app/api/mixmax/route";
+import { startMixmaxRefresh } from "@/lib/mixmax-refresh";
 
 export async function POST() {
   const apiKey = process.env.MIXMAX_API_KEY;
@@ -8,9 +8,8 @@ export async function POST() {
   }
 
   try {
-    const data = await fetchFromMixmax(apiKey);
-    await writeCache(data);
-    return NextResponse.json({ ok: true, cachedAt: new Date().toISOString() });
+    const { sequences, alreadyRunning } = await startMixmaxRefresh(apiKey);
+    return NextResponse.json({ ok: true, started: true, total: sequences, alreadyRunning });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
