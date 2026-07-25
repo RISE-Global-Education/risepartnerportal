@@ -9,6 +9,7 @@ const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
 const BOOKING_SEQUENCES = [
   "Parents  Discovery - Booking Link",
   "Parents Discovery - Booking Link (Updated)",
+  "Parents Discovery - Booking Link Pakistan",
 ];
 
 export interface NotBookedNoEmailLead {
