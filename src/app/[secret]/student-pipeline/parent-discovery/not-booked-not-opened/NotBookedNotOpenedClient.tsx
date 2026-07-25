@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useMixmaxRefresh } from "@/lib/hooks/useMixmaxRefresh";
 import type { NotBookedNotOpenedLead } from "./page";
 
 const REGION_MAP: Record<string, string[]> = {
@@ -385,19 +386,17 @@ export default function NotBookedNotOpenedClient({
   mixmaxCachedAt: string | null;
   userName: string;
 }) {
-  const router = useRouter();
   const [selected, setSelected] = useState<NotBookedNotOpenedLead | null>(null);
   const [query, setQuery] = useState("");
   const [country, setCountry] = useState("");
   const [region, setRegion] = useState("");
   const [idSort, setIdSort] = useState<"asc" | "desc" | null>("asc");
   const [sentSort, setSentSort] = useState<"asc" | "desc" | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const { refresh: handleRefresh, refreshing, refreshError } = useMixmaxRefresh();
 
   function cycleSentSort() {
     setSentSort((s) => (s === null ? "asc" : s === "asc" ? "desc" : null));
   }
-  const [refreshError, setRefreshError] = useState<string | null>(null);
   const [toast, setToast] = useState(false);
 
   useEffect(() => {
@@ -405,23 +404,6 @@ export default function NotBookedNotOpenedClient({
     const t = setTimeout(() => setToast(false), 3000);
     return () => clearTimeout(t);
   }, [toast]);
-
-  async function handleRefresh() {
-    setRefreshing(true);
-    setRefreshError(null);
-    try {
-      const res = await fetch("/api/refresh/mixmax", { method: "POST" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      router.refresh();
-    } catch (e) {
-      setRefreshError(e instanceof Error ? e.message : "Refresh failed");
-    } finally {
-      setRefreshing(false);
-    }
-  }
 
   const filtered = leads
     .filter((l) => {
