@@ -160,10 +160,8 @@ export async function fetchFromMixmax(apiKey: string): Promise<MixmaxInsightsRes
   return _fetchInFlight;
 }
 
-const MIXMAX_USER_ID = "68416315ed588cc0a766f5eb";
-
 async function _doFetchFromMixmax(apiKey: string): Promise<MixmaxInsightsResponse> {
-  // 1. Fetch all sequences, filtering to MIXMAX_USER_ID only
+  // 1. Fetch all sequences across every Mixmax user on the account
   const sequences: MixmaxSequence[] = [];
   let cursor: string | null = null;
 
@@ -172,8 +170,7 @@ async function _doFetchFromMixmax(apiKey: string): Promise<MixmaxInsightsRespons
       ? `/sequences?next=${encodeURIComponent(cursor)}&limit=50`
       : "/sequences?limit=50";
     const page = await mixmaxGet(url, apiKey);
-    const mine = (page.results ?? []).filter((s: MixmaxSequence & { userId: string }) => s.userId === MIXMAX_USER_ID);
-    sequences.push(...mine);
+    sequences.push(...(page.results ?? []));
     cursor = page.hasNext ? page.next : null;
   } while (cursor);
 
