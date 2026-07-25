@@ -5,10 +5,10 @@ import { Redis } from "@upstash/redis";
 import { writeCache } from "@/app/api/mixmax/route";
 import type { MixmaxRecipient, MixmaxInsightsResponse } from "@/app/api/mixmax/route";
 
-const MIXMAX_USER_ID = "68416315ed588cc0a766f5eb";
 const CHUNK_SIZE = 7;
 const PARTIAL_KEY = "mixmax:partial";
 const SEQUENCES_KEY = "mixmax:sequences";
+const PROGRESS_KEY = "mixmax:progress";
 
 function getRedis() {
   return new Redis({
@@ -127,12 +127,14 @@ async function handler(req: NextRequest) {
   if (done) {
     await redis.del(PARTIAL_KEY);
     await redis.del(SEQUENCES_KEY);
+    await redis.del(PROGRESS_KEY);
     console.log(`[QStash/Mixmax] Complete — ${merged.length} recipients`);
     return NextResponse.json({ ok: true, done: true, recipients: merged.length });
   }
 
-  // Save merged partial back to Redis
+  // Save merged partial + progress back to Redis
   await redis.set(PARTIAL_KEY, merged, { ex: 2 * 60 * 60 });
+  await redis.set(PROGRESS_KEY, newNextIndex, { ex: 2 * 60 * 60 });
 
   // Enqueue next chunk — only passes the index, not the data
   const qstash = getQStash();
