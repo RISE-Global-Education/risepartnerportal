@@ -106,7 +106,7 @@ export default async function MixmaxInsightsPage({
           <span className="text-xs text-rise-brown bg-white border border-gray-200 rounded-md px-3 py-1.5">
             Powered by Mixmax · All sequences
           </span>
-          <RefreshButton apiPath="/api/refresh/mixmax" />
+          <RefreshButton apiPath="/api/refresh/mixmax" poll />
           <MasterTestButton secret={secret} />
         </div>
       </div>
