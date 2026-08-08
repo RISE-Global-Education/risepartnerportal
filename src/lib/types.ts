@@ -24,6 +24,7 @@ export interface Counselor {
   workshopType: string;
   lastConversationDate: string | null;
   slug: string; // auto-generated from company name
+  partnerPassword: string; // partner-set password gating /partner/[slug]; empty until they create one
 }
 
 export interface Student {

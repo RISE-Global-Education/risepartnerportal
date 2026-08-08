@@ -43,6 +43,7 @@ export async function getAllCounselors(): Promise<Counselor[]> {
       "Partner Type",
       "Workshop Type",
       "Last Conversation Date",
+      "Partner Password",
     ],
   });
 
@@ -76,6 +77,7 @@ export async function getAllCounselors(): Promise<Counselor[]> {
         workshopType: getField<string>(record, "Workshop Type") || "",
         lastConversationDate: getField<string>(record, "Last Conversation Date") || null,
         slug: generateSlug(companyName),
+        partnerPassword: getField<string>(record, "Partner Password") || "",
       };
     })
     .filter((c) => c.companyName && c.counselorId);
