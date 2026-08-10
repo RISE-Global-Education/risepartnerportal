@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export default function PartnerLoginClient({ slug }: { slug: string }) {
+export default function CeoPartnerLoginClient({ slug }: { slug: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -12,10 +12,10 @@ export default function PartnerLoginClient({ slug }: { slug: string }) {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/partner-login", {
+    const res = await fetch("/api/auth/ceo-partner-login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug, password }),
+      body: JSON.stringify({ password }),
     });
 
     if (res.ok) {

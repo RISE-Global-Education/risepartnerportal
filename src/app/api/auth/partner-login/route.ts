@@ -1,14 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCounselorBySlug } from "@/lib/counselors";
 
 export async function POST(req: NextRequest) {
-  const { password } = await req.json();
+  const { slug, password } = await req.json();
 
-  if (password !== process.env.PARTNER_PASSWORD) {
+  const result = await getCounselorBySlug(slug);
+  if (!result) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
+  const { counselor } = result;
+
+  if (!counselor.partnerPassword) {
+    return NextResponse.json({ error: "No password has been set yet." }, { status: 409 });
+  }
+
+  if (password !== counselor.partnerPassword) {
     return NextResponse.json({ error: "Invalid password." }, { status: 401 });
   }
 
   const res = NextResponse.json({ ok: true });
-  res.cookies.set("partner_auth", "1", {
+  const existing = req.cookies.get("partner_auth")?.value ?? "";
+  const ids = new Set(existing.split(",").filter(Boolean));
+  ids.add(counselor.counselorId);
+  res.cookies.set("partner_auth", Array.from(ids).join(","), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",

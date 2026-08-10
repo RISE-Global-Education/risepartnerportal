@@ -10,6 +10,7 @@ import StudentTable from "@/components/StudentTable";
 import ConversationLog from "@/components/ConversationLog";
 import AddConversationForm from "@/components/AddConversationForm";
 import CounselorDetails from "@/components/CounselorDetails";
+import PartnerLoginGate from "@/components/PartnerLoginGate";
 
 export default async function PartnerPage({
   params,
@@ -25,11 +26,29 @@ export default async function PartnerPage({
 
   const { counselor, isCeoView } = result;
 
+  const cookieStore = await cookies();
+
+  // Shown when a partner hasn't opted into password protection yet — lets them
+  // create one voluntarily instead of forcing it on their first visit.
+  let showSecureLoginButton = false;
+
   if (isCeoView) {
-    const cookieStore = await cookies();
-    const authed = cookieStore.get("partner_auth")?.value === "1";
+    // CEO-view links use the shared internal password, unrelated to the partner's own password.
+    const ceoAuthed = cookieStore.get("ceo_partner_auth")?.value === "1";
+    if (!ceoAuthed) {
+      redirect(`/partner/${slug}/ceo-login`);
+    }
+  } else {
+    const authedIds = (cookieStore.get("partner_auth")?.value ?? "").split(",").filter(Boolean);
+    const authed = authedIds.includes(counselor.counselorId);
+
     if (!authed) {
-      redirect(`/partner/${slug}/login`);
+      if (counselor.partnerPassword) {
+        // A password has been set — the page is protected from here on.
+        return <PartnerLoginGate slug={slug} companyName={counselor.companyName} />;
+      }
+      // No password set yet — password protection is opt-in, so the page stays open.
+      showSecureLoginButton = true;
     }
   }
 
@@ -54,6 +73,16 @@ export default async function PartnerPage({
             <div className="flex-1 px-4 py-2 bg-rise-green/10 rounded-lg text-sm text-rise-green font-medium">
               CEO View — This page includes internal data not visible to the partner.
             </div>
+          </div>
+        )}
+        {showSecureLoginButton && (
+          <div className="flex justify-end mb-4">
+            <a
+              href={`/partner/${slug}/create-password`}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-rise-green rounded-lg hover:bg-rise-green/90 transition-colors"
+            >
+              Secure Login
+            </a>
           </div>
         )}
         <PartnerHeader counselor={counselor} isCeoView={isCeoView} secret={process.env.DASHBOARD_SECRET} />
