@@ -303,6 +303,7 @@ export default function MentorFinderClient({ mentors }: { mentors: CompletedMent
               </th>
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Full Name</th>
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">University</th>
+              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Research Areas</th>
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Rate</th>
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Resume</th>
               <th className="px-4 py-3"></th>
@@ -311,7 +312,7 @@ export default function MentorFinderClient({ mentors }: { mentors: CompletedMent
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-rise-brown">
+                <td colSpan={7} className="px-4 py-6 text-center text-rise-brown">
                   No completed mentors found.
                 </td>
               </tr>
@@ -329,6 +330,7 @@ export default function MentorFinderClient({ mentors }: { mentors: CompletedMent
                   </td>
                   <td className="px-4 py-3 font-medium text-rise-black">{m.name}</td>
                   <td className="px-4 py-3 text-rise-brown">{m.university ?? <span className="text-gray-300">—</span>}</td>
+                  <td className="px-4 py-3 text-rise-brown">{m.researchAreas ?? <span className="text-gray-300">—</span>}</td>
                   <td className="px-4 py-3 text-rise-brown">{m.rate ?? <span className="text-gray-300">—</span>}</td>
                   <td className="px-4 py-3">
                     {m.resumeUrl ? (

@@ -61,7 +61,7 @@ export default async function WriterFinderPage() {
   return (
     <div>
       <p className="text-sm text-rise-brown mb-4">
-        {writers.length} active writer{writers.length !== 1 ? "s" : ""}
+        {writers.length} active WC{writers.length !== 1 ? "s" : ""}
       </p>
       <WriterFinderClient writers={writers} />
     </div>

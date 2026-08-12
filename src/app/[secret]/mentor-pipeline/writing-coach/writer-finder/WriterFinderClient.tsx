@@ -42,7 +42,7 @@ function DetailPopup({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-rise-black">Writer Details</h3>
+          <h3 className="text-base font-semibold text-rise-black">WC Details</h3>
           <div className="flex items-center gap-3">
             <button
               onClick={onCopy}
@@ -135,7 +135,7 @@ function HeaderCheckbox({
       type="checkbox"
       checked={checked}
       onChange={onChange}
-      aria-label="Select all writers"
+      aria-label="Select all WCs"
       className="w-4 h-4 rounded border-gray-300 text-rise-green focus:ring-rise-green"
     />
   );
@@ -186,7 +186,7 @@ export default function WriterFinderClient({ writers }: { writers: ActiveWriter[
   async function copyWriters(list: ActiveWriter[]) {
     if (list.length === 0) return;
     await navigator.clipboard.writeText(writersToTSV(list));
-    setToast(`Copied ${list.length} writer${list.length !== 1 ? "s" : ""} to clipboard`);
+    setToast(`Copied ${list.length} WC${list.length !== 1 ? "s" : ""} to clipboard`);
     setTimeout(() => setToast(null), 2500);
   }
 
@@ -227,7 +227,7 @@ export default function WriterFinderClient({ writers }: { writers: ActiveWriter[
 
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm text-rise-brown">
-          <span className="font-semibold text-rise-black">{filtered.length}</span> writer{filtered.length !== 1 ? "s" : ""}
+          <span className="font-semibold text-rise-black">{filtered.length}</span> WC{filtered.length !== 1 ? "s" : ""}
         </p>
 
         {selectedIds.size > 0 && (
@@ -273,7 +273,7 @@ export default function WriterFinderClient({ writers }: { writers: ActiveWriter[
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-rise-brown">
-                  No active writers found.
+                  No active WCs found.
                 </td>
               </tr>
             ) : (
