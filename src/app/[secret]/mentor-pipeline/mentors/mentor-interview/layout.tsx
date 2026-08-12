@@ -1,4 +1,4 @@
-import MeetingsChart from "@/app/[secret]/calendar-bookings/MeetingsChart";
+import MeetingsChart from "@/components/dashboard/MeetingsChart";
 import MentorInterviewSubTabNav from "./SubTabNav";
 
 const MENTOR_INTERVIEW_EVENT_TYPE_ID = 5275411;

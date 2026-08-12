@@ -8,6 +8,7 @@ export default function WCTabNav({ secret }: { secret: string }) {
 
   const tabs = [
     { label: "WC Interview", href: `${base}/wc-interview` },
+    { label: "Writer Finder", href: `${base}/writer-finder` },
   ];
 
   return (

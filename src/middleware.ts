@@ -68,19 +68,18 @@ export function middleware(req: NextRequest) {
     // Restrict mentor-pipeline to Mentor Success employees only
     if (rest.startsWith("/mentor-pipeline") && !isMentorSuccess) {
       const url = req.nextUrl.clone();
-      url.pathname = `/${secret}/student-pipeline`;
+      url.pathname = `/${secret}/no-access`;
       return NextResponse.redirect(url);
     }
 
     // Restrict to allowed routes only
     const allowed =
-      rest.startsWith("/student-pipeline") ||
-      rest.startsWith("/calendar-bookings") ||
-      rest.startsWith("/mentor-pipeline");
+      rest.startsWith("/mentor-pipeline") ||
+      rest === "/no-access";
 
     if (!allowed) {
       const url = req.nextUrl.clone();
-      url.pathname = `/${secret}/student-pipeline`;
+      url.pathname = `/${secret}/no-access`;
       return NextResponse.redirect(url);
     }
   }
