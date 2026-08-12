@@ -33,7 +33,7 @@ export default function LoginClient({ secret, isCeo }: { secret: string; isCeo: 
         body: JSON.stringify({ secret, email, password }),
       });
       if (res.ok) {
-        window.location.href = `/${secret}/student-pipeline`;
+        window.location.href = `/${secret}/mentor-pipeline`;
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error ?? "Invalid email or password.");
@@ -47,7 +47,7 @@ export default function LoginClient({ secret, isCeo }: { secret: string; isCeo: 
       <div className="bg-white rounded-2xl shadow-md p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold text-gray-800 mb-1">RISE Portal</h1>
         <p className="text-sm text-gray.500 mb-6">
-          {isCeo ? "Enter your password to continue" : "Sign in to access the student pipeline"}
+          {isCeo ? "Enter your password to continue" : "Sign in to continue"}
         </p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">

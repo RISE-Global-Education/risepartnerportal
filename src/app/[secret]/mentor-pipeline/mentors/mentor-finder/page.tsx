@@ -17,6 +17,8 @@ export interface CompletedMentor {
   researchAreas: string | null;
   notes: string | null;
   interviewDate: string | null;
+  resumeUrl: string | null;
+  resumeFilename: string | null;
 }
 
 export default async function MentorFinderPage() {
@@ -35,6 +37,7 @@ export default async function MentorFinderPage() {
       "Mentor ID",
       "Notes",
       "Interview Date",
+      "Please upload your resume.",
     ],
     filterByFormula: `FIND("Completed", ARRAYJOIN({Contract Status}))`,
   });
@@ -43,6 +46,9 @@ export default async function MentorFinderPage() {
     const uniSelect = getField<string>(r, "Please select your university");
     const uniOther = getField<string>(r, `If "Other" University, please mention here`);
     const university = uniSelect === "Other" ? (uniOther ?? "Other") : (uniSelect ?? null);
+
+    const resumeAttachments = getField<{ url: string; filename: string }[]>(r, "Please upload your resume.");
+    const resume = resumeAttachments && resumeAttachments.length > 0 ? resumeAttachments[0] : null;
 
     return {
       recordId: r.id,
@@ -57,6 +63,8 @@ export default async function MentorFinderPage() {
       researchAreas: getField<string>(r, "Research areas/fields you would be interested to mentor students") ?? null,
       notes: getField<string>(r, "Notes") ?? null,
       interviewDate: getField<string>(r, "Interview Date") ?? null,
+      resumeUrl: resume?.url ?? null,
+      resumeFilename: resume?.filename ?? null,
     };
   });
 
