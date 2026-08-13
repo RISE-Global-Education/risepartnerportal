@@ -189,7 +189,6 @@ export interface AnalyticsData {
   // Section 2: Flow over time
   leadsOverTime: { date: string; leads: number; applications: number; brochureDownloads: number; clients: number }[];
   stageEntriesOverTime: { date: string; Lead: number; Application: number; Interview: number }[];
-  interviewsOverTime: { date: string; count: number }[];
 
   // Section 3: Conversion & drop-off
   conversionFunnel: { stage: string; count: number; rate: number }[];
@@ -347,19 +346,6 @@ export function computeAnalytics(
 
   const stageEntriesOverTime = Array.from(stageTimeMap.entries())
     .map(([date, counts]) => ({ date, ...counts }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  // --- INTERVIEWS OVER TIME ---
-  const interviewTimeMap = new Map<string, number>();
-  for (const app of applications) {
-    if (!app.interviewDate) continue;
-    if (!isInPeriod(app.interviewDate, periodStart)) continue;
-    const key = toWeekKey(app.interviewDate);
-    interviewTimeMap.set(key, (interviewTimeMap.get(key) || 0) + 1);
-  }
-
-  const interviewsOverTime = Array.from(interviewTimeMap.entries())
-    .map(([date, count]) => ({ date, count }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // --- CONVERSION FUNNEL ---
@@ -560,7 +546,6 @@ export function computeAnalytics(
     subStageCounts,
     leadsOverTime,
     stageEntriesOverTime,
-    interviewsOverTime,
     conversionFunnel,
     dropOffs,
     velocity,
