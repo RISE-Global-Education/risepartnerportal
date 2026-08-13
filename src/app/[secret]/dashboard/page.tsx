@@ -5,7 +5,6 @@ import TimePeriodSelector from "@/components/dashboard/TimePeriodSelector";
 import FunnelOverviewCards from "@/components/dashboard/FunnelOverviewCards";
 import PendingActionsChart from "@/components/dashboard/PendingActionsChart";
 import LeadsVsApplicationsChart from "@/components/dashboard/LeadsVsApplicationsChart";
-import InterviewsChart from "@/components/dashboard/InterviewsChart";
 import ConversionFunnel from "@/components/dashboard/ConversionFunnel";
 import DropOffChart from "@/components/dashboard/DropOffChart";
 import VelocityChart from "@/components/dashboard/VelocityChart";
@@ -67,9 +66,6 @@ export default async function DashboardPage({
       <section className="mt-8">
         <h2 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">Flow Over Time</h2>
         <LeadsVsApplicationsChart data={analytics.leadsOverTime} />
-        <div className="mt-4">
-          <InterviewsChart data={analytics.interviewsOverTime} />
-        </div>
       </section>
 
       {/* Section 3: Conversion & Drop-off */}
