@@ -5,13 +5,12 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } f
 const COLORS = {
   Lead: "#f59e0b",
   Application: "#3b82f6",
-  Interview: "#8b5cf6",
 };
 
 export default function StageEntriesChart({
   data,
 }: {
-  data: { date: string; Lead: number; Application: number; Interview: number }[];
+  data: { date: string; Lead: number; Application: number }[];
 }) {
   return (
     <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">

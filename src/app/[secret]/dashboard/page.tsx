@@ -3,7 +3,6 @@ import { getAllLeads, getAllApplications, getAllCounselorRecords, getAllDiscover
 import { getAllCounselors } from "@/lib/counselors";
 import TimePeriodSelector from "@/components/dashboard/TimePeriodSelector";
 import FunnelOverviewCards from "@/components/dashboard/FunnelOverviewCards";
-import PendingActionsChart from "@/components/dashboard/PendingActionsChart";
 import LeadsVsApplicationsChart from "@/components/dashboard/LeadsVsApplicationsChart";
 import ConversionFunnel from "@/components/dashboard/ConversionFunnel";
 import DropOffChart from "@/components/dashboard/DropOffChart";
@@ -12,7 +11,6 @@ import TopCounselorsChart from "@/components/dashboard/TopCounselorsChart";
 import CounselorActivityChart from "@/components/dashboard/CounselorActivityChart";
 import DiscoveryOverviewCards from "@/components/dashboard/DiscoveryOverviewCards";
 import DiscoveryLeadsChart from "@/components/dashboard/DiscoveryLeadsChart";
-import DiscoveryConsultationsChart from "@/components/dashboard/DiscoveryConsultationsChart";
 
 export default async function DashboardPage({
   searchParams,
@@ -57,9 +55,6 @@ export default async function DashboardPage({
           stageCounts={analytics.stageCounts}
           stageCountsPrevious={analytics.stageCountsPrevious}
         />
-        <div className="mt-4">
-          <PendingActionsChart subStageCounts={analytics.subStageCounts} />
-        </div>
       </section>
 
       {/* Section 2: Flow Over Time */}
@@ -87,9 +82,8 @@ export default async function DashboardPage({
       <section className="mt-8">
         <h2 className="text-xs font-semibold text-rise-brown uppercase tracking-wide mb-3">Discovery Call Pipeline</h2>
         <DiscoveryOverviewCards summary={analytics.discoverySummary} />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        <div className="mt-4">
           <DiscoveryLeadsChart data={analytics.discoveryLeadsOverTime} />
-          <DiscoveryConsultationsChart data={analytics.discoveryConsultationsOverTime} />
         </div>
       </section>
 

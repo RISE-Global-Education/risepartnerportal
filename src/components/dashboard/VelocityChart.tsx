@@ -2,7 +2,8 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
-const COLORS = ["#f59e0b", "#3b82f6", "#10b981"];
+// Amber for the leg starting at Lead, green for the leg ending at Client — bookends the journey.
+const COLORS = ["#f59e0b", "#10b981"];
 
 export default function VelocityChart({
   data,

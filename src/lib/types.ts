@@ -1,4 +1,4 @@
-export type FunnelStage = "Lead" | "Application" | "Interview" | "Client";
+export type FunnelStage = "Lead" | "Application" | "Client";
 
 export interface Counselor {
   id: string; // Airtable record ID from Base 2

@@ -5,7 +5,6 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } fro
 const COLORS = {
   Lead: "#f59e0b",
   Application: "#3b82f6",
-  Interview: "#8b5cf6",
   Client: "#10b981",
 };
 
@@ -17,7 +16,6 @@ export default function TopCounselorsChart({
     total: number;
     Lead: number;
     Application: number;
-    Interview: number;
     Client: number;
   }[];
 }) {
@@ -36,7 +34,6 @@ export default function TopCounselorsChart({
               <Legend />
               <Bar dataKey="Lead" stackId="a" fill={COLORS.Lead} name="Lead" />
               <Bar dataKey="Application" stackId="a" fill={COLORS.Application} name="Application" />
-              <Bar dataKey="Interview" stackId="a" fill={COLORS.Interview} name="Interview" />
               <Bar dataKey="Client" stackId="a" fill={COLORS.Client} name="Client" />
             </BarChart>
           </ResponsiveContainer>

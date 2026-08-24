@@ -1,6 +1,7 @@
 "use client";
 
-const COLORS = ["#f59e0b", "#3b82f6", "#8b5cf6", "#10b981"];
+// Lead, Application, Client — matches the color used for each stage everywhere else on the dashboard.
+const COLORS = ["#f59e0b", "#3b82f6", "#10b981"];
 
 export default function ConversionFunnel({
   data,
