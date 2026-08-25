@@ -9,6 +9,7 @@ function formatDateTime(iso: string) {
   return d.toUTCString().replace("GMT", "UTC");
 }
 
+<<<<<<< Updated upstream
 function StatusBadge({ status }: { status: ContractStatusLabel }) {
   const styles: Record<ContractStatusLabel, string> = {
     "Completed":         "bg-blue-100 text-blue-700",
@@ -16,6 +17,48 @@ function StatusBadge({ status }: { status: ContractStatusLabel }) {
     "Send Contract":     "bg-yellow-100 text-yellow-700",
     "Not Needed":        "bg-gray-100 text-gray-500",
     "Contract Not Sent": "bg-red-100 text-red-600",
+=======
+function csvEscape(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+function toCsv(rows: PastInterview[]): string {
+  const header = ["Name", "Email", "Booking Time (UTC)", "Status"];
+  const lines = [header.map(csvEscape).join(",")];
+  for (const r of rows) {
+    lines.push(
+      [r.mentorName, r.mentorEmail, formatDateTime(r.bookingStart), r.contractStatus.label]
+        .map(csvEscape)
+        .join(",")
+    );
+  }
+  return lines.join("\r\n");
+}
+
+function slugify(title: string): string {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function downloadSectionCsv(title: string, rows: PastInterview[]) {
+  const csv = toCsv(rows);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${slugify(title)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function StatusBadge({ status }: { status: ContractStatusInfo }) {
+  const styles: Record<ContractStatusTone, string> = {
+    "completed": "bg-blue-100 text-blue-700",
+    "sent":      "bg-green-100 text-green-700",
+    "pending":   "bg-yellow-100 text-yellow-700",
+    "not-sent":  "bg-red-100 text-red-600",
+>>>>>>> Stashed changes
   };
   return (
     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
@@ -126,6 +169,7 @@ export default function PastClient({
         </table>
       </div>
 
+<<<<<<< Updated upstream
       {unmatched.length > 0 && (
         <div>
           <h3 className="text-sm font-semibold text-rise-black mb-3">
@@ -163,6 +207,28 @@ export default function PastClient({
                 ))}
               </tbody>
             </table>
+=======
+        return (
+          <div key={section.tone}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-rise-black">
+                {section.title}{" "}
+                <span className="text-rise-brown font-normal">({filtered.length})</span>
+              </h3>
+              <button
+                onClick={() => downloadSectionCsv(section.title, filtered)}
+                disabled={filtered.length === 0}
+                className="text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 hover:border-gray-400 rounded-md px-3 py-1 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300"
+              >
+                Download CSV
+              </button>
+            </div>
+            <SectionTable
+              interviews={filtered}
+              showStatusColumn={section.tone === "pending"}
+              onSendContract={setContractTarget}
+            />
+>>>>>>> Stashed changes
           </div>
         </div>
       )}
