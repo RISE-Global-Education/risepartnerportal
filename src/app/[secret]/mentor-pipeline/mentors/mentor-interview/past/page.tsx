@@ -54,12 +54,23 @@ function formatRawStatus(raw: string | string[] | null): string | null {
   return raw.trim() || null;
 }
 
-const TONE_ORDER: Record<ContractStatusTone, number> = {
-  "not-sent": 0,
-  "pending": 1,
-  "sent": 2,
-  "completed": 3,
+export interface PastSection {
+  tone: ContractStatusTone;
+  title: string;
+  interviews: PastInterview[];
+}
+
+// Section order + titles the Past tab is grouped into. "pending" (case 4 — an Info entry but
+// no Interview/Contract entry) keeps its per-row raw label since it varies row to row; the
+// other three have one fixed label per section, shown once in the header instead of per row.
+const SECTION_TITLES: Record<ContractStatusTone, string> = {
+  "not-sent": "Contract Not Sent",
+  "pending": "Awaiting Contract",
+  "sent": "Contact Information Missing from Interview Table",
+  "completed": "Contract Complete",
 };
+
+const SECTION_ORDER: ContractStatusTone[] = ["not-sent", "pending", "sent", "completed"];
 
 async function fetchAllPastBookings() {
   const take = 100;
@@ -156,14 +167,18 @@ export default async function PastPage() {
     };
   });
 
-  interviews.sort((a, b) => TONE_ORDER[a.contractStatus.tone] - TONE_ORDER[b.contractStatus.tone]);
+  const sections: PastSection[] = SECTION_ORDER.map((tone) => ({
+    tone,
+    title: SECTION_TITLES[tone],
+    interviews: interviews.filter((i) => i.contractStatus.tone === tone),
+  }));
 
   return (
     <div>
       <p className="text-sm text-rise-brown mb-4">
         {interviews.length} past interview{interviews.length !== 1 ? "s" : ""}
       </p>
-      <PastClient interviews={interviews} />
+      <PastClient sections={sections} />
     </div>
   );
 }
