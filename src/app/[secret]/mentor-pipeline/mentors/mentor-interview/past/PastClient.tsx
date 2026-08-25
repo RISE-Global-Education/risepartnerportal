@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { MatchedMentor, UnmatchedMentor, ContractStatusLabel } from "./page";
+import type { PastInterview, ContractStatusInfo, ContractStatusTone } from "./page";
 import ContractPopup from "@/components/mentor/ContractPopup";
 
 function formatDateTime(iso: string) {
@@ -9,54 +9,30 @@ function formatDateTime(iso: string) {
   return d.toUTCString().replace("GMT", "UTC");
 }
 
-function StatusBadge({ status }: { status: ContractStatusLabel }) {
-  const styles: Record<ContractStatusLabel, string> = {
-    "Completed":         "bg-blue-100 text-blue-700",
-    "Contract Sent":     "bg-green-100 text-green-700",
-    "Send Contract":     "bg-yellow-100 text-yellow-700",
-    "Not Needed":        "bg-gray-100 text-gray-500",
-    "Contract Not Sent": "bg-red-100 text-red-600",
+function StatusBadge({ status }: { status: ContractStatusInfo }) {
+  const styles: Record<ContractStatusTone, string> = {
+    "completed": "bg-blue-100 text-blue-700",
+    "sent":      "bg-green-100 text-green-700",
+    "pending":   "bg-yellow-100 text-yellow-700",
+    "not-sent":  "bg-red-100 text-red-600",
   };
   return (
-    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${styles[status]}`}>
-      {status}
+    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${styles[status.tone]}`}>
+      {status.label}
     </span>
   );
 }
 
-function UndertakingBadge({ uploaded }: { uploaded: boolean }) {
-  return uploaded ? (
-    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Uploaded</span>
-  ) : (
-    <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">Missing</span>
-  );
-}
-
-
-export default function PastClient({
-  matched,
-  unmatched,
-}: {
-  matched: MatchedMentor[];
-  unmatched: UnmatchedMentor[];
-}) {
+export default function PastClient({ interviews }: { interviews: PastInterview[] }) {
   const [query, setQuery] = useState("");
   const [contractTarget, setContractTarget] = useState<{ name: string; email: string } | null>(null);
 
-
-  const filteredMatched = query.trim()
-    ? matched.filter((r) =>
+  const filtered = query.trim()
+    ? interviews.filter((r) =>
         r.mentorName.toLowerCase().includes(query.toLowerCase()) ||
         r.hostName.toLowerCase().includes(query.toLowerCase())
       )
-    : matched;
-
-  const filteredUnmatched = query.trim()
-    ? unmatched.filter((r) =>
-        r.attendeeName.toLowerCase().includes(query.toLowerCase()) ||
-        r.attendeeEmail.toLowerCase().includes(query.toLowerCase())
-      )
-    : unmatched;
+    : interviews;
 
   return (
     <div className="space-y-10">
@@ -86,19 +62,19 @@ export default function PastClient({
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Host</th>
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Booking Time (UTC)</th>
               <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Contract Status</th>
-              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Undertaking</th>
+              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Rate</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filteredMatched.length === 0 ? (
+            {filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-rise-brown">
                   No past interviews found.
                 </td>
               </tr>
             ) : (
-              filteredMatched.map((r) => (
+              filtered.map((r) => (
                 <tr key={r.uid} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 font-medium text-rise-black">{r.mentorName}</td>
                   <td className="px-4 py-3 text-rise-brown">{r.hostName}</td>
@@ -108,8 +84,8 @@ export default function PastClient({
                   <td className="px-4 py-3">
                     <StatusBadge status={r.contractStatus} />
                   </td>
-                  <td className="px-4 py-3">
-                    <UndertakingBadge uploaded={r.undertakingUploaded} />
+                  <td className="px-4 py-3 text-rise-brown whitespace-nowrap">
+                    {r.rate || "—"}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
@@ -125,47 +101,6 @@ export default function PastClient({
           </tbody>
         </table>
       </div>
-
-      {unmatched.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-rise-black mb-3">
-            Mentors not present in the pipeline
-          </h3>
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 text-rise-brown">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Attendee Name</th>
-                  <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Email</th>
-                  <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Host</th>
-                  <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Booking Time (UTC)</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredUnmatched.map((r) => (
-                  <tr key={r.uid} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-rise-black">{r.attendeeName}</td>
-                    <td className="px-4 py-3 text-rise-brown">{r.attendeeEmail}</td>
-                    <td className="px-4 py-3 text-rise-brown">{r.hostName}</td>
-                    <td className="px-4 py-3 text-rise-brown whitespace-nowrap">
-                      {formatDateTime(r.bookingStart)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => setContractTarget({ name: r.attendeeName, email: r.attendeeEmail })}
-                        className="text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 hover:border-gray-400 rounded-md px-3 py-1 transition-colors whitespace-nowrap"
-                      >
-                        Send Contract
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
