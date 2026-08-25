@@ -7,6 +7,17 @@ import type { Counselor } from "@/lib/types";
 
 const POC_OPTIONS = ["Shreyans", "Yash", "Prachi", "Arth", "Muskaan"];
 
+// Mirrors generateSlug() in src/lib/counselors.ts — the URL is derived from the
+// company name, so renaming it must redirect to the new slug or the page 404s.
+function generateSlug(companyName: string): string {
+  return companyName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .trim();
+}
+
 export default function PartnerHeader({
   counselor,
   isCeoView,
@@ -20,6 +31,54 @@ export default function PartnerHeader({
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string[]>(counselor.risePoc);
   const [saving, setSaving] = useState(false);
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(counselor.companyName);
+  const [savingName, setSavingName] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  function startEditName() {
+    setNameDraft(counselor.companyName);
+    setNameError(null);
+    setEditingName(true);
+  }
+
+  function cancelEditName() {
+    setEditingName(false);
+    setNameError(null);
+  }
+
+  async function saveName() {
+    const trimmed = nameDraft.trim();
+    if (!trimmed) {
+      setNameError("Name can't be empty.");
+      return;
+    }
+    setSavingName(true);
+    setNameError(null);
+    try {
+      const res = await fetch("/api/counselors", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret,
+          recordId: counselor.id,
+          fields: { "Partner Name": trimmed },
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Failed to save");
+      }
+
+      const newSlug = generateSlug(trimmed);
+      const newUrl = isCeoView ? `/partner/${newSlug}-${counselor.counselorId.toLowerCase()}` : `/partner/${newSlug}`;
+      router.push(newUrl);
+    } catch (err) {
+      setNameError(err instanceof Error ? err.message : "Failed to save");
+      setSavingName(false);
+    }
+  }
 
   function toggle(name: string) {
     setSelected((prev) =>
@@ -64,10 +123,50 @@ export default function PartnerHeader({
           height={60}
           className="object-contain"
         />
-        <div>
-          <h1 className="text-3xl font-bold text-rise-black font-heading">
-            {counselor.companyName}
-          </h1>
+        <div className="flex-1">
+          {editingName ? (
+            <div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={nameDraft}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  disabled={savingName}
+                  autoFocus
+                  className="text-2xl font-bold text-rise-black font-heading border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+                />
+                <button
+                  onClick={saveName}
+                  disabled={savingName}
+                  className="px-3 py-1.5 text-xs font-semibold bg-rise-green text-white rounded-lg hover:bg-rise-green/90 transition-colors disabled:opacity-60"
+                >
+                  {savingName ? "Saving…" : "Save"}
+                </button>
+                <button
+                  onClick={cancelEditName}
+                  disabled={savingName}
+                  className="px-3 py-1.5 text-xs font-medium text-rise-brown hover:text-rise-black transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+              {nameError && <p className="mt-1 text-xs text-red-600">{nameError}</p>}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-rise-black font-heading">
+                {counselor.companyName}
+              </h1>
+              {isCeoView && (
+                <button
+                  onClick={startEditName}
+                  className="text-xs text-rise-green hover:text-rise-green/80"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+          )}
           <p className="text-rise-brown mt-1">Partner Portal</p>
         </div>
       </div>
