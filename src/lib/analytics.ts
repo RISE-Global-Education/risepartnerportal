@@ -79,7 +79,12 @@ export async function getAllLeads(): Promise<LeadRecord[]> {
 
 
 export async function getAllBrochureDownloads(): Promise<BrochureDownloadRecord[]> {
-  const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, BROCHURE_DOWNLOADS_TABLE, {});
+  // Only record id/createdTime are used below (both metadata, unaffected by field
+  // selection) — fetching no fields keeps the cached payload well under unstable_cache's
+  // 2MB item limit, which an unfiltered fetch of this table was starting to exceed.
+  const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, BROCHURE_DOWNLOADS_TABLE, {
+    fields: ["Type"],
+  });
   return records.map((r) => ({ id: r.id, date: r.createdTime }));
 }
 
@@ -120,13 +125,15 @@ export async function getAllCounselorRecords(): Promise<CounselorRecord[]> {
 
 // --- Stage classification (mirrors students.ts logic) ---
 
-const APPLICATION_STATUSES = new Set<string | null>([null, "", "SWA1", "SWA2", "SWA3", "Call Shortlisting"]);
-const INTERVIEW_STATUSES = new Set<string | null>(["Interview Completed", "AWA1", "AWA2", "AWA3", "Call Payment"]);
+// "Interview" was a distinct FunnelStage; these statuses now classify as "Application".
+const APPLICATION_STATUSES = new Set<string | null>([
+  null, "", "SWA1", "SWA2", "SWA3", "Call Shortlisting",
+  "Interview Completed", "AWA1", "AWA2", "AWA3", "Call Payment",
+]);
 const CLIENT_STATUSES = new Set<string | null>(["Client"]);
 
 function getStageFromFollowUp(status: string | null): FunnelStage {
   if (!status || APPLICATION_STATUSES.has(status)) return "Application";
-  if (INTERVIEW_STATUSES.has(status)) return "Interview";
   if (CLIENT_STATUSES.has(status)) return "Client";
   return "Application";
 }
@@ -184,11 +191,10 @@ export interface AnalyticsData {
   // Section 1: Pipeline snapshot
   stageCounts: Record<FunnelStage, number>;
   stageCountsPrevious: Record<FunnelStage, number>;
-  subStageCounts: Record<string, number>;
 
   // Section 2: Flow over time
   leadsOverTime: { date: string; leads: number; applications: number; brochureDownloads: number; clients: number }[];
-  stageEntriesOverTime: { date: string; Lead: number; Application: number; Interview: number }[];
+  stageEntriesOverTime: { date: string; Lead: number; Application: number }[];
 
   // Section 3: Conversion & drop-off
   conversionFunnel: { stage: string; count: number; rate: number }[];
@@ -198,12 +204,11 @@ export interface AnalyticsData {
   velocity: { label: string; avgDays: number }[];
 
   // Section 5: Counselor insights
-  topCounselors: { name: string; total: number; Lead: number; Application: number; Interview: number; Client: number }[];
+  topCounselors: { name: string; total: number; Lead: number; Application: number; Client: number }[];
   counselorActivity: { name: string; lastReferralDate: string; totalStudents: number; isActive: boolean }[];
 
   // Section 6: Discovery call analytics
   discoveryLeadsOverTime: { date: string; count: number }[];
-  discoveryConsultationsOverTime: { date: string; total: number; qualified: number; missed: number; unqualified: number }[];
   discoverySummary: { totalLeads: number; totalConsultations: number };
 }
 
@@ -225,8 +230,8 @@ export function computeAnalytics(
   const uniqueLeads = leads.filter((l) => l.email && !applicationEmails.has(l.email));
 
   // --- STAGE COUNTS (current period) ---
-  const stageCounts: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0, Client: 0 };
-  const stageCountsPrevious: Record<FunnelStage, number> = { Lead: 0, Application: 0, Interview: 0, Client: 0 };
+  const stageCounts: Record<FunnelStage, number> = { Lead: 0, Application: 0, Client: 0 };
+  const stageCountsPrevious: Record<FunnelStage, number> = { Lead: 0, Application: 0, Client: 0 };
 
   // Leads
   for (const lead of uniqueLeads) {
@@ -252,22 +257,6 @@ export function computeAnalytics(
       if (prevPeriodStart && isInPeriod(app.lastModified, prevPeriodStart) && !isInPeriod(app.lastModified, periodStart)) {
         stageCountsPrevious[stage]++;
       }
-    }
-  }
-
-  // --- SUB-STAGE BREAKDOWN ---
-  const subStages = ["SWA1", "SWA2", "SWA3", "Call Shortlisting", "Interview Completed", "AWA1", "AWA2", "AWA3", "Call Payment"];
-  const subStageCounts: Record<string, number> = {};
-  for (const ss of subStages) subStageCounts[ss] = 0;
-
-  for (const app of applications) {
-    if (app.followUpStatus === "Drop") continue;
-    const status = app.followUpStatus || "";
-    if (subStages.includes(status)) {
-      subStageCounts[status]++;
-    } else if (!status || status === "") {
-      // No status = early application stage, count as SWA1
-      subStageCounts["SWA1"]++;
     }
   }
 
@@ -315,12 +304,12 @@ export function computeAnalytics(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // --- TIME SERIES: Stage entries ---
-  const stageTimeMap = new Map<string, { Lead: number; Application: number; Interview: number }>();
+  const stageTimeMap = new Map<string, { Lead: number; Application: number }>();
 
   for (const lead of uniqueLeads) {
     if (!isInPeriod(lead.createdDate, periodStart)) continue;
     const key = keyFn(lead.createdDate);
-    const entry = stageTimeMap.get(key) || { Lead: 0, Application: 0, Interview: 0 };
+    const entry = stageTimeMap.get(key) || { Lead: 0, Application: 0 };
     entry.Lead++;
     stageTimeMap.set(key, entry);
   }
@@ -329,17 +318,10 @@ export function computeAnalytics(
     if (app.followUpStatus === "Drop") continue;
     const stage = getStageFromFollowUp(app.followUpStatus);
     if (stage === "Client") continue;
-    let dateToUse: string;
-    if (stage === "Application") {
-      dateToUse = app.createdDate;
-    } else if (stage === "Interview" && app.interviewDate) {
-      dateToUse = app.interviewDate;
-    } else {
-      dateToUse = app.lastModified;
-    }
+    const dateToUse = app.createdDate;
     if (!isInPeriod(dateToUse, periodStart)) continue;
     const key = keyFn(dateToUse);
-    const entry = stageTimeMap.get(key) || { Lead: 0, Application: 0, Interview: 0 };
+    const entry = stageTimeMap.get(key) || { Lead: 0, Application: 0 };
     entry[stage]++;
     stageTimeMap.set(key, entry);
   }
@@ -351,9 +333,6 @@ export function computeAnalytics(
   // --- CONVERSION FUNNEL ---
   const totalLeads = uniqueLeads.length + applications.length;
   const totalApplications = applications.filter((a) => a.followUpStatus !== "Drop").length;
-  const totalInterviews = applications.filter(
-    (a) => a.followUpStatus !== "Drop" && (INTERVIEW_STATUSES.has(a.followUpStatus) || CLIENT_STATUSES.has(a.followUpStatus))
-  ).length;
   const totalClients = applications.filter(
     (a) => CLIENT_STATUSES.has(a.followUpStatus)
   ).length;
@@ -361,24 +340,14 @@ export function computeAnalytics(
   const conversionFunnel = [
     { stage: "Lead", count: totalLeads, rate: 100 },
     { stage: "Application", count: totalApplications, rate: totalLeads > 0 ? Math.round((totalApplications / totalLeads) * 100) : 0 },
-    { stage: "Interview", count: totalInterviews, rate: totalApplications > 0 ? Math.round((totalInterviews / totalApplications) * 100) : 0 },
-    { stage: "Client", count: totalClients, rate: totalInterviews > 0 ? Math.round((totalClients / totalInterviews) * 100) : 0 },
+    { stage: "Client", count: totalClients, rate: totalApplications > 0 ? Math.round((totalClients / totalApplications) * 100) : 0 },
   ];
 
   // --- DROP-OFF ANALYSIS ---
-  const dropApplications = applications.filter((a) => a.followUpStatus === "Drop");
-  const dropByStage: Record<string, number> = { Lead: 0, Application: 0, Interview: 0 };
-
-  for (const app of dropApplications) {
-    // Infer drop stage from the table they're in
-    // Since they're all in Application table, they dropped at Application or later
-    // We can look at whether they have interview date to determine
-    if (app.interviewDate) {
-      dropByStage["Interview"]++;
-    } else {
-      dropByStage["Application"]++;
-    }
-  }
+  const dropByStage: Record<string, number> = {
+    Lead: 0,
+    Application: applications.filter((a) => a.followUpStatus === "Drop").length,
+  };
 
   // Leads who never applied (not in applications table and older than 30 days)
   const thirtyDaysAgo = daysAgo(30);
@@ -394,8 +363,7 @@ export function computeAnalytics(
 
   // --- VELOCITY ---
   const leadToAppDays: number[] = [];
-  const appToInterviewDays: number[] = [];
-  const interviewToClientDays: number[] = [];
+  const appToClientDays: number[] = [];
 
   // Build email→lead created date map
   const leadDateMap = new Map<string, string>();
@@ -413,16 +381,10 @@ export function computeAnalytics(
       if (d >= 0 && d < 365) leadToAppDays.push(d);
     }
 
-    // Application → Interview
-    if (app.interviewDate) {
-      const d = daysBetween(app.createdDate, app.interviewDate);
-      if (d >= 0 && d < 365) appToInterviewDays.push(d);
-    }
-
-    // Interview → Client
-    if (app.interviewDate && CLIENT_STATUSES.has(app.followUpStatus)) {
-      const d = daysBetween(app.interviewDate, app.lastModified);
-      if (d >= 0 && d < 365) interviewToClientDays.push(d);
+    // Application → Client
+    if (CLIENT_STATUSES.has(app.followUpStatus)) {
+      const d = daysBetween(app.createdDate, app.lastModified);
+      if (d >= 0 && d < 365) appToClientDays.push(d);
     }
   }
 
@@ -430,8 +392,7 @@ export function computeAnalytics(
 
   const velocity = [
     { label: "Lead → Application", avgDays: avg(leadToAppDays) },
-    { label: "Application → Interview", avgDays: avg(appToInterviewDays) },
-    { label: "Interview → Client", avgDays: avg(interviewToClientDays) },
+    { label: "Application → Client", avgDays: avg(appToClientDays) },
   ];
 
   // --- COUNSELOR INSIGHTS ---
@@ -443,7 +404,6 @@ export function computeAnalytics(
     total: number;
     Lead: number;
     Application: number;
-    Interview: number;
     Client: number;
     latestDate: string;
   }>();
@@ -451,7 +411,7 @@ export function computeAnalytics(
   for (const cr of counselorRecords) {
     if (!cr.counselorId) continue;
     const stats = counselorStatsMap.get(cr.counselorId) || {
-      total: 0, Lead: 0, Application: 0, Interview: 0, Client: 0, latestDate: "",
+      total: 0, Lead: 0, Application: 0, Client: 0, latestDate: "",
     };
 
     for (const appId of cr.applicationIds) {
@@ -499,8 +459,6 @@ export function computeAnalytics(
 
   // --- DISCOVERY CALL ANALYTICS ---
   const discoveryLeadsMap = new Map<string, number>();
-  type ConsultBucket = { total: number; qualified: number; missed: number; unqualified: number };
-  const discoveryConsultationsMap = new Map<string, ConsultBucket>();
   let discoveryTotalLeads = 0;
   let discoveryTotalConsultations = 0;
 
@@ -514,17 +472,6 @@ export function computeAnalytics(
 
     // Consultations that happened in period (by consultationDate)
     if (dc.consultationDate && isInPeriod(dc.consultationDate, periodStart)) {
-      const key = keyFn(dc.consultationDate);
-      const bucket = discoveryConsultationsMap.get(key) || { total: 0, qualified: 0, missed: 0, unqualified: 0 };
-      bucket.total++;
-      if (dc.applicationFormStatus === "Form Sent") {
-        bucket.qualified++;
-      } else if (dc.notes?.toLowerCase().includes("missed")) {
-        bucket.missed++;
-      } else if (dc.applicationFormStatus === "Don't Send" || dc.applicationFormStatus === "Drop") {
-        bucket.unqualified++;
-      }
-      discoveryConsultationsMap.set(key, bucket);
       discoveryTotalConsultations++;
     }
   }
@@ -535,15 +482,11 @@ export function computeAnalytics(
       .sort((a, b) => a.date.localeCompare(b.date));
 
   const discoveryLeadsOverTime = toSortedArray(discoveryLeadsMap);
-  const discoveryConsultationsOverTime = Array.from(discoveryConsultationsMap.entries())
-    .map(([date, bucket]) => ({ date, ...bucket }))
-    .sort((a, b) => a.date.localeCompare(b.date));
   const discoverySummary = { totalLeads: discoveryTotalLeads, totalConsultations: discoveryTotalConsultations };
 
   return {
     stageCounts,
     stageCountsPrevious,
-    subStageCounts,
     leadsOverTime,
     stageEntriesOverTime,
     conversionFunnel,
@@ -552,7 +495,6 @@ export function computeAnalytics(
     topCounselors,
     counselorActivity,
     discoveryLeadsOverTime,
-    discoveryConsultationsOverTime,
     discoverySummary,
   };
 }

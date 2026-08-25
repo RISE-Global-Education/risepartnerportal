@@ -4,7 +4,6 @@ import StudentProgressButton from "./StudentProgressButton";
 export const STAGE_BADGE: Record<FunnelStage, string> = {
   Lead: "bg-rise-cream text-rise-brown",
   Application: "bg-blue-50 text-blue-700",
-  Interview: "bg-amber-50 text-amber-700",
   Client: "bg-emerald-50 text-rise-green",
 };
 

@@ -22,6 +22,18 @@ function tableTag(baseId: string, tableId: string): string {
   return `airtable:${baseId}:${tableId}`;
 }
 
+// Cache invalidation is best-effort: a mutation that already succeeded against
+// Airtable must not be reported as failed just because revalidateTag couldn't
+// run (e.g. its Next.js work-store invariant not being available in this
+// context). Reads self-heal within CACHE_SECONDS regardless.
+function safeRevalidate(tag: string): void {
+  try {
+    revalidateTag(tag, { expire: 0 });
+  } catch (err) {
+    console.warn(`[Airtable] revalidateTag failed for ${tag}:`, err);
+  }
+}
+
 async function fetchAllRecordsUncached(
   baseId: string,
   tableId: string,
@@ -133,7 +145,7 @@ export async function createRecord(
     throw new Error(`Airtable create error (${res.status}): ${error}`);
   }
 
-  revalidateTag(tableTag(baseId, tableId), { expire: 0 });
+  safeRevalidate(tableTag(baseId, tableId));
   return res.json();
 }
 
@@ -180,7 +192,7 @@ export async function updateRecord(
     throw new Error(`Airtable update error (${res.status}): ${error}`);
   }
 
-  revalidateTag(tableTag(baseId, tableId), { expire: 0 });
+  safeRevalidate(tableTag(baseId, tableId));
   return res.json();
 }
 
@@ -203,5 +215,5 @@ export async function deleteRecord(
     throw new Error(`Airtable delete error (${res.status}): ${error}`);
   }
 
-  revalidateTag(tableTag(baseId, tableId), { expire: 0 });
+  safeRevalidate(tableTag(baseId, tableId));
 }

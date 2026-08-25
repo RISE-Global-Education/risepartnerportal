@@ -2,7 +2,8 @@
 
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
-const COLORS = ["#f59e0b", "#3b82f6", "#8b5cf6"];
+// Lead, Application — matches the color used for each stage everywhere else on the dashboard.
+const COLORS = ["#f59e0b", "#3b82f6"];
 
 export default function DropOffChart({
   data,
