@@ -3,40 +3,74 @@ import PastClient from "./PastClient";
 
 const MENTOR_PIPELINE_BASE = "appFavjto15k519od";
 const MENTOR_INFO_TABLE = "tblt4vfMm1tiywIeQ";
+// Table the "Send Contract" flow (api/mentor-contract) writes into — separate from the
+// Mentor Info intake form above. An entry here means a contract has been sent.
+const CONTRACT_TABLE = "tblubNgMLWtH4pzGf";
 const MENTOR_INTERVIEW_EVENT_TYPE_ID = 5275411;
-const UNDERTAKING_FIELD = "Please upload a signed copy of the mentor undertaking shared with you. (File type - PDF, max size - 2MB)";
 
-export type ContractStatusLabel = "Send Contract" | "Contract Sent" | "Contract Not Sent" | "Not Needed" | "Completed";
+export type ContractStatusTone = "not-sent" | "pending" | "sent" | "completed";
 
-export interface MatchedMentor {
+export interface ContractStatusInfo {
+  label: string;
+  tone: ContractStatusTone;
+}
+
+export interface PastInterview {
   uid: string;
   mentorName: string;
   mentorEmail: string;
   hostName: string;
-  interviewDate: string | null;
   bookingStart: string;
-  contractStatus: ContractStatusLabel;
-  undertakingUploaded: boolean;
+  contractStatus: ContractStatusInfo;
+  rate: string | null;
 }
 
-export interface UnmatchedMentor {
-  uid: string;
-  attendeeName: string;
-  attendeeEmail: string;
-  hostName: string;
-  bookingStart: string;
+// Status is derived purely from where the mentor's email shows up, not from a manually-set
+// field (that field lives on a different table than the one "Send Contract" writes to, so it
+// can't be trusted to reflect what actually happened):
+//   1. no Contract entry, no Info entry  -> "Contract Not Sent"
+//   2. Contract entry,    no Info entry  -> "Contract Sent"
+//   3. Contract entry,    Info entry     -> "Completed"
+//   4. no Contract entry, Info entry     -> whatever the Info record's own "Contract Status" says
+function resolveContractStatus(
+  hasContract: boolean,
+  hasInfo: boolean,
+  rawInfoStatus: string | string[] | null
+): ContractStatusInfo {
+  if (hasContract && hasInfo) return { label: "Completed", tone: "completed" };
+  if (hasContract && !hasInfo) return { label: "Contract Sent", tone: "sent" };
+  if (!hasContract && hasInfo) {
+    const raw = formatRawStatus(rawInfoStatus);
+    return raw ? { label: raw, tone: "pending" } : { label: "Contract Not Sent", tone: "not-sent" };
+  }
+  return { label: "Contract Not Sent", tone: "not-sent" };
 }
 
-const NOT_NEEDED = new Set(["Rejected", "Sent (Issue)", "Not Interested", "Removed"]);
-
-function resolveContractStatus(raw: string[] | null): ContractStatusLabel {
-  if (!raw || raw.length === 0) return "Contract Not Sent";
-  if (raw.includes("Completed")) return "Completed";
-  if (raw.includes("Send Contract")) return "Send Contract";
-  if (raw.includes("Sent")) return "Contract Sent";
-  if (raw.some((s) => NOT_NEEDED.has(s))) return "Not Needed";
-  return "Contract Not Sent";
+// The "Contract Status" field has been observed as a single value; guard against a
+// multi-select shape too so this never throws regardless of the field's actual type.
+function formatRawStatus(raw: string | string[] | null): string | null {
+  if (!raw) return null;
+  if (Array.isArray(raw)) return raw.length > 0 ? raw.join(", ") : null;
+  return raw.trim() || null;
 }
+
+export interface PastSection {
+  tone: ContractStatusTone;
+  title: string;
+  interviews: PastInterview[];
+}
+
+// Section order + titles the Past tab is grouped into. "pending" (case 4 — an Info entry but
+// no Interview/Contract entry) keeps its per-row raw label since it varies row to row; the
+// other three have one fixed label per section, shown once in the header instead of per row.
+const SECTION_TITLES: Record<ContractStatusTone, string> = {
+  "not-sent": "Contract Not Sent",
+  "pending": "Awaiting Contract",
+  "sent": "Contact Information Missing from Interview Table",
+  "completed": "Contract Complete",
+};
+
+const SECTION_ORDER: ContractStatusTone[] = ["not-sent", "pending", "sent", "completed"];
 
 async function fetchAllPastBookings() {
   const take = 100;
@@ -85,69 +119,66 @@ async function fetchAllPastBookings() {
 }
 
 export default async function PastPage() {
-  const [records, bookings] = await Promise.all([
+  const [infoRecords, contractRecords, bookings] = await Promise.all([
     fetchAllRecords(MENTOR_PIPELINE_BASE, MENTOR_INFO_TABLE, {
-      fields: ["Full Name", "Email ID", "Contract Status", "Interview Date", UNDERTAKING_FIELD],
+      fields: ["Full Name", "Email ID", "Contract Status", "Interview Date"],
+    }),
+    fetchAllRecords(MENTOR_PIPELINE_BASE, CONTRACT_TABLE, {
+      fields: ["Email ID", "Name", "Rate"],
     }),
     fetchAllPastBookings(),
   ]);
 
   const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "").trim();
 
-  const recordByEmail = new Map<string, typeof records[number]>();
-  for (const r of records) {
+  const infoByEmail = new Map<string, typeof infoRecords[number]>();
+  for (const r of infoRecords) {
     const email = normalize(getField<string>(r, "Email ID") ?? "");
-    if (email) recordByEmail.set(email, r);
+    if (email) infoByEmail.set(email, r);
   }
 
-  const matched: MatchedMentor[] = [];
-  const unmatched: UnmatchedMentor[] = [];
-
-  for (const b of bookings) {
-    const record = recordByEmail.get(normalize(b.attendeeEmail));
-    if (record) {
-      const rawStatus = getField<string[]>(record, "Contract Status");
-      const undertaking = getField<{ url: string }[]>(record, UNDERTAKING_FIELD);
-      matched.push({
-        uid: b.uid,
-        mentorName: getField<string>(record, "Full Name") ?? "—",
-        mentorEmail: b.attendeeEmail,
-        hostName: b.hostName,
-        interviewDate: getField<string>(record, "Interview Date"),
-        bookingStart: b.start,
-        contractStatus: resolveContractStatus(rawStatus),
-        undertakingUploaded: Array.isArray(undertaking) && undertaking.length > 0,
-      });
-    } else {
-      unmatched.push({
-        uid: b.uid,
-        attendeeName: b.attendeeName,
-        attendeeEmail: b.attendeeEmail,
-        hostName: b.hostName,
-        bookingStart: b.start,
-      });
-    }
+  const contractByEmail = new Map<string, typeof contractRecords[number]>();
+  for (const r of contractRecords) {
+    const email = normalize(getField<string>(r, "Email ID") ?? "");
+    if (email) contractByEmail.set(email, r);
   }
 
-  const STATUS_ORDER: Record<ContractStatusLabel, number> = {
-    "Contract Not Sent": 0,
-    "Send Contract": 1,
-    "Contract Sent": 2,
-    "Not Needed": 3,
-    "Completed": 4,
-  };
+  const interviews: PastInterview[] = bookings.map((b) => {
+    const email = normalize(b.attendeeEmail);
+    const infoRecord = infoByEmail.get(email);
+    const contractRecord = contractByEmail.get(email);
 
-  matched.sort((a, b) => STATUS_ORDER[a.contractStatus] - STATUS_ORDER[b.contractStatus]);
+    const mentorName =
+      (infoRecord && getField<string>(infoRecord, "Full Name")) ||
+      (contractRecord && getField<string>(contractRecord, "Name")) ||
+      b.attendeeName;
+
+    const rawInfoStatus = infoRecord ? getField<string | string[]>(infoRecord, "Contract Status") : null;
+    const rate = contractRecord ? getField<string>(contractRecord, "Rate") : null;
+
+    return {
+      uid: b.uid,
+      mentorName,
+      mentorEmail: b.attendeeEmail,
+      hostName: b.hostName,
+      bookingStart: b.start,
+      contractStatus: resolveContractStatus(!!contractRecord, !!infoRecord, rawInfoStatus),
+      rate,
+    };
+  });
+
+  const sections: PastSection[] = SECTION_ORDER.map((tone) => ({
+    tone,
+    title: SECTION_TITLES[tone],
+    interviews: interviews.filter((i) => i.contractStatus.tone === tone),
+  }));
 
   return (
     <div>
       <p className="text-sm text-rise-brown mb-4">
-        {matched.length} matched interview{matched.length !== 1 ? "s" : ""}
-        {unmatched.length > 0 && (
-          <>, <span className="text-rise-black font-medium">{unmatched.length}</span> not in pipeline</>
-        )}
+        {interviews.length} past interview{interviews.length !== 1 ? "s" : ""}
       </p>
-      <PastClient matched={matched} unmatched={unmatched} />
+      <PastClient sections={sections} />
     </div>
   );
 }
