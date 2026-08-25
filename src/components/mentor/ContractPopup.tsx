@@ -26,11 +26,16 @@ export default function ContractPopup({ initialName = "", initialEmail = "", onC
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState("");
 
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
+  const [notesError, setNotesError] = useState("");
+
   const rateValid = RATE_REGEX.test(rate.trim());
 
   useEffect(() => {
     setChecked(false);
     setExistingRate(null);
+    setNotesSaved(false);
   }, [email]);
 
   function handleRateChange(val: string) {
@@ -87,6 +92,32 @@ export default function ContractPopup({ initialName = "", initialEmail = "", onC
       setSendError("Failed to send. Please try again.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleAddNotesClick() {
+    setSavingNotes(true);
+    setNotesError("");
+    setNotesSaved(false);
+    try {
+      const res = await fetch("/api/mentor-contract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email: email.trim(),
+          rate: rate.trim(),
+          interviewDate: interviewDate || null,
+          interviewNotes: interviewNotes || null,
+          action: "notes",
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setNotesSaved(true);
+    } catch {
+      setNotesError("Failed to save notes. Please try again.");
+    } finally {
+      setSavingNotes(false);
     }
   }
 
@@ -164,6 +195,10 @@ export default function ContractPopup({ initialName = "", initialEmail = "", onC
           )}
 
           {sendError && <p className="text-xs text-red-500">{sendError}</p>}
+          {notesError && <p className="text-xs text-red-500">{notesError}</p>}
+          {notesSaved && !sent && (
+            <p className="text-xs text-rise-green font-medium">Notes saved!</p>
+          )}
 
           {sent ? (
             <p className="text-sm text-center text-rise-green font-medium py-2">Contract sent!</p>
@@ -184,13 +219,22 @@ export default function ContractPopup({ initialName = "", initialEmail = "", onC
               </button>
             </div>
           ) : (
-            <button
-              onClick={handleSendClick}
-              disabled={!name.trim() || !email.trim() || !rateValid || sending}
-              className="w-full bg-gray-800 text-white text-sm font-medium py-2 rounded-lg hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              {sending ? "Checking…" : "Send Contract"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddNotesClick}
+                disabled={!name.trim() || !email.trim() || !rateValid || sending || savingNotes}
+                className="flex-1 border border-gray-300 text-gray-700 text-sm font-medium py-2 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {savingNotes ? "Saving…" : "Add Notes"}
+              </button>
+              <button
+                onClick={handleSendClick}
+                disabled={!name.trim() || !email.trim() || !rateValid || sending || savingNotes}
+                className="flex-1 bg-gray-800 text-white text-sm font-medium py-2 rounded-lg hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {sending ? "Checking…" : "Send Contract"}
+              </button>
+            </div>
           )}
         </div>
       </div>
