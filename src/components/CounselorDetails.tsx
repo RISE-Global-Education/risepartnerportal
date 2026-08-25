@@ -1005,6 +1005,15 @@ export default function CounselorDetails({
                   onSaved={onSaved}
                 />
                 <EditableField
+                  label="First Name"
+                  value={counselor.firstName}
+                  fieldName="First Name"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  onSaved={onSaved}
+                />
+                <EditableField
                   label="Scholarship Amount"
                   value={counselor.scholarshipAmount != null ? String(counselor.scholarshipAmount) : ""}
                   fieldName="Scholarship Amount"
