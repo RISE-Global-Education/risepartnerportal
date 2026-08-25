@@ -3,7 +3,6 @@ import type { FunnelStage } from "@/lib/types";
 const STAGE_CONFIG: Record<FunnelStage, { bg: string; text: string; label: string }> = {
   Lead: { bg: "bg-amber-50", text: "text-amber-800", label: "Leads" },
   Application: { bg: "bg-blue-50", text: "text-blue-800", label: "Applications" },
-  Interview: { bg: "bg-purple-50", text: "text-purple-800", label: "Interviews" },
   Client: { bg: "bg-emerald-50", text: "text-emerald-800", label: "Clients" },
 };
 
@@ -14,10 +13,10 @@ export default function FunnelOverviewCards({
   stageCounts: Record<FunnelStage, number>;
   stageCountsPrevious: Record<FunnelStage, number>;
 }) {
-  const stages: FunnelStage[] = ["Lead", "Application", "Interview", "Client"];
+  const stages: FunnelStage[] = ["Lead", "Application", "Client"];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div className="grid grid-cols-3 gap-4">
       {stages.map((stage) => {
         const config = STAGE_CONFIG[stage];
         const current = stageCounts[stage];

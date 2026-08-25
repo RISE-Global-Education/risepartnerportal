@@ -6,13 +6,15 @@ const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const DISCOVERY_CALL_TABLE = "tblCQAqQEbO1cHavW";
 const APPLICATION_TABLE = "tblpsa6QdGW9qmyll";
 
-const APPLICATION_STATUSES = new Set([null, "", "SWA1", "SWA2", "SWA3", "Call Shortlisting"]);
-const INTERVIEW_STATUSES = new Set(["Interview Completed", "AWA1", "AWA2", "AWA3", "Call Payment"]);
+// "Interview" was a distinct FunnelStage; these statuses now classify as "Application".
+const APPLICATION_STATUSES = new Set([
+  null, "", "SWA1", "SWA2", "SWA3", "Call Shortlisting",
+  "Interview Completed", "AWA1", "AWA2", "AWA3", "Call Payment",
+]);
 const CLIENT_STATUSES = new Set(["Client"]);
 
 function getStageFromFollowUp(status: string | null): FunnelStage {
   if (!status || APPLICATION_STATUSES.has(status)) return "Application";
-  if (INTERVIEW_STATUSES.has(status)) return "Interview";
   if (CLIENT_STATUSES.has(status)) return "Client";
   return "Application"; // default for unknown statuses
 }
@@ -120,7 +122,6 @@ export function computeFunnelCounts(students: Student[]): Record<FunnelStage, nu
   const counts: Record<FunnelStage, number> = {
     Lead: 0,
     Application: 0,
-    Interview: 0,
     Client: 0,
   };
 

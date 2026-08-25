@@ -11,11 +11,6 @@ const STAGE_CONFIG: Record<FunnelStage, { label: string; color: string; bg: stri
     color: "text-blue-700",
     bg: "bg-blue-50",
   },
-  Interview: {
-    label: "Interviews",
-    color: "text-amber-700",
-    bg: "bg-amber-50",
-  },
   Client: {
     label: "Clients",
     color: "text-rise-green",
@@ -30,7 +25,7 @@ export default function FunnelStats({
   counts: Record<FunnelStage, number>;
   total: number;
 }) {
-  const stages: FunnelStage[] = ["Lead", "Application", "Interview", "Client"];
+  const stages: FunnelStage[] = ["Lead", "Application", "Client"];
 
   return (
     <div className="mb-8">
@@ -42,7 +37,7 @@ export default function FunnelStats({
           {total} total student{total !== 1 ? "s" : ""}
         </span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {stages.map((stage) => {
           const config = STAGE_CONFIG[stage];
           return (

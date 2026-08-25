@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ActiveWriter } from "./page";
+import { WC_RATE_PATTERN, WC_RATE_HINT } from "@/lib/rate-format";
 
 const WRITER_FIELDS: { label: string; get: (w: ActiveWriter) => string }[] = [
   { label: "Coach ID", get: (w) => w.coachId },
@@ -30,11 +31,53 @@ function DetailPopup({
   writer,
   onClose,
   onCopy,
+  onRateSaved,
 }: {
   writer: ActiveWriter;
   onClose: () => void;
   onCopy: () => void;
+  onRateSaved: (recordId: string, newRate: string) => void;
 }) {
+  const [editingRate, setEditingRate] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEdit() {
+    setDraft(writer.rate ?? "");
+    setError(null);
+    setEditingRate(true);
+  }
+
+  function cancelEdit() {
+    setEditingRate(false);
+    setError(null);
+  }
+
+  async function saveRate() {
+    if (!WC_RATE_PATTERN.test(draft)) {
+      setError(WC_RATE_HINT);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/wc-finder/${writer.recordId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rate: draft }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? "Failed to update rate");
+      onRateSaved(writer.recordId, draft);
+      setEditingRate(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update rate");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
       <div
@@ -44,6 +87,14 @@ function DetailPopup({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-semibold text-rise-black">WC Details</h3>
           <div className="flex items-center gap-3">
+            {!editingRate && (
+              <button
+                onClick={startEdit}
+                className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-200 text-rise-brown hover:border-gray-400 hover:text-rise-black transition-colors"
+              >
+                Edit Rate
+              </button>
+            )}
             <button
               onClick={onCopy}
               className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-200 text-rise-brown hover:border-gray-400 hover:text-rise-black transition-colors"
@@ -75,9 +126,40 @@ function DetailPopup({
             <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Backup Contact</dt>
             <dd className="text-rise-black">{writer.backupContact ?? <span className="text-gray-300">—</span>}</dd>
           </div>
-          <div>
+          <div className={editingRate ? "col-span-2" : undefined}>
             <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Rate</dt>
-            <dd className="text-rise-black">{writer.rate ?? <span className="text-gray-300">—</span>}</dd>
+            {editingRate ? (
+              <div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="e.g. 1200 INR"
+                    disabled={saving}
+                    autoFocus
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-rise-black focus:outline-none focus:ring-2 focus:ring-rise-green/40"
+                  />
+                  <button
+                    onClick={saveRate}
+                    disabled={saving}
+                    className="px-3 py-1.5 text-xs font-semibold bg-rise-green text-white rounded-lg hover:bg-rise-green/90 transition-colors disabled:opacity-60"
+                  >
+                    {saving ? "Saving…" : "Save"}
+                  </button>
+                  <button
+                    onClick={cancelEdit}
+                    disabled={saving}
+                    className="px-3 py-1.5 text-xs font-medium text-rise-brown hover:text-rise-black transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {error && <p className="mt-1.5 text-xs text-red-600">{error}</p>}
+              </div>
+            ) : (
+              <dd className="text-rise-black">{writer.rate ?? <span className="text-gray-300">—</span>}</dd>
+            )}
           </div>
           <div>
             <dt className="text-xs text-rise-brown font-medium uppercase tracking-wide mb-0.5">Interview Date</dt>
@@ -141,7 +223,8 @@ function HeaderCheckbox({
   );
 }
 
-export default function WriterFinderClient({ writers }: { writers: ActiveWriter[] }) {
+export default function WriterFinderClient({ writers: initialWriters }: { writers: ActiveWriter[] }) {
+  const [writers, setWriters] = useState(initialWriters);
   const [query, setQuery] = useState("");
   const [interestFilter, setInterestFilter] = useState("");
   const [selected, setSelected] = useState<ActiveWriter | null>(null);
@@ -190,6 +273,13 @@ export default function WriterFinderClient({ writers }: { writers: ActiveWriter[
     setTimeout(() => setToast(null), 2500);
   }
 
+  function handleRateSaved(recordId: string, newRate: string) {
+    setWriters((prev) => prev.map((w) => (w.recordId === recordId ? { ...w, rate: newRate } : w)));
+    setSelected((prev) => (prev && prev.recordId === recordId ? { ...prev, rate: newRate } : prev));
+    setToast("Rate updated");
+    setTimeout(() => setToast(null), 2500);
+  }
+
   const selectedWriters = writers.filter((w) => selectedIds.has(w.recordId));
 
   return (
@@ -205,6 +295,7 @@ export default function WriterFinderClient({ writers }: { writers: ActiveWriter[
           writer={selected}
           onClose={() => setSelected(null)}
           onCopy={() => copyWriters([selected])}
+          onRateSaved={handleRateSaved}
         />
       )}
 
