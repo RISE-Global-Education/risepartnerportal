@@ -25,6 +25,24 @@ export interface PastInterview {
   rate: string | null;
 }
 
+export interface PastSection {
+  tone: ContractStatusTone;
+  title: string;
+  interviews: PastInterview[];
+}
+
+// Section order + titles the Past tab is grouped into. "pending" (case 4 — an Info entry but
+// no Interview/Contract entry) keeps its per-row raw label since it varies row to row; the
+// other three have one fixed label per section, shown once in the header instead of per row.
+const SECTION_TITLES: Record<ContractStatusTone, string> = {
+  "not-sent": "Contract Not Sent",
+  "pending": "Awaiting Contract",
+  "sent": "Contact Information Missing from Interview Table",
+  "completed": "Contract Complete",
+};
+
+const SECTION_ORDER: ContractStatusTone[] = ["not-sent", "pending", "sent", "completed"];
+
 // Status is derived purely from where the mentor's email shows up, not from a manually-set
 // field (that field lives on a different table than the one "Send Contract" writes to, so it
 // can't be trusted to reflect what actually happened):
@@ -53,24 +71,6 @@ function formatRawStatus(raw: string | string[] | null): string | null {
   if (Array.isArray(raw)) return raw.length > 0 ? raw.join(", ") : null;
   return raw.trim() || null;
 }
-
-export interface PastSection {
-  tone: ContractStatusTone;
-  title: string;
-  interviews: PastInterview[];
-}
-
-// Section order + titles the Past tab is grouped into. "pending" (case 4 — an Info entry but
-// no Interview/Contract entry) keeps its per-row raw label since it varies row to row; the
-// other three have one fixed label per section, shown once in the header instead of per row.
-const SECTION_TITLES: Record<ContractStatusTone, string> = {
-  "not-sent": "Contract Not Sent",
-  "pending": "Awaiting Contract",
-  "sent": "Contact Information Missing from Interview Table",
-  "completed": "Contract Complete",
-};
-
-const SECTION_ORDER: ContractStatusTone[] = ["not-sent", "pending", "sent", "completed"];
 
 async function fetchAllPastBookings() {
   const take = 100;
