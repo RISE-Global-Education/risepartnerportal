@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PastInterview, ContractStatusInfo, ContractStatusTone } from "./page";
+import type { PastSection, PastInterview, ContractStatusInfo, ContractStatusTone } from "./page";
 import ContractPopup from "@/components/mentor/ContractPopup";
 
 function formatDateTime(iso: string) {
@@ -23,16 +23,80 @@ function StatusBadge({ status }: { status: ContractStatusInfo }) {
   );
 }
 
-export default function PastClient({ interviews }: { interviews: PastInterview[] }) {
+function SectionTable({
+  interviews,
+  showStatusColumn,
+  onSendContract,
+}: {
+  interviews: PastInterview[];
+  showStatusColumn: boolean;
+  onSendContract: (target: { name: string; email: string }) => void;
+}) {
+  const colCount = showStatusColumn ? 5 : 4;
+
+  return (
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table className="min-w-full text-sm">
+        <thead className="bg-gray-50 text-rise-brown">
+          <tr>
+            <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Mentor Name</th>
+            <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Host</th>
+            <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Booking Time (UTC)</th>
+            {showStatusColumn && (
+              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Contract Status</th>
+            )}
+            <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Rate</th>
+            <th className="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {interviews.length === 0 ? (
+            <tr>
+              <td colSpan={colCount + 1} className="px-4 py-6 text-center text-rise-brown">
+                No mentors found.
+              </td>
+            </tr>
+          ) : (
+            interviews.map((r) => (
+              <tr key={r.uid} className="hover:bg-gray-50 transition-colors">
+                <td className="px-4 py-3 font-medium text-rise-black">{r.mentorName}</td>
+                <td className="px-4 py-3 text-rise-brown">{r.hostName}</td>
+                <td className="px-4 py-3 text-rise-brown whitespace-nowrap">
+                  {formatDateTime(r.bookingStart)}
+                </td>
+                {showStatusColumn && (
+                  <td className="px-4 py-3">
+                    <StatusBadge status={r.contractStatus} />
+                  </td>
+                )}
+                <td className="px-4 py-3 text-rise-brown whitespace-nowrap">
+                  {r.rate || "—"}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <button
+                    onClick={() => onSendContract({ name: r.mentorName, email: r.mentorEmail })}
+                    className="text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 hover:border-gray-400 rounded-md px-3 py-1 transition-colors whitespace-nowrap"
+                  >
+                    Send Contract
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default function PastClient({ sections }: { sections: PastSection[] }) {
   const [query, setQuery] = useState("");
   const [contractTarget, setContractTarget] = useState<{ name: string; email: string } | null>(null);
 
-  const filtered = query.trim()
-    ? interviews.filter((r) =>
-        r.mentorName.toLowerCase().includes(query.toLowerCase()) ||
-        r.hostName.toLowerCase().includes(query.toLowerCase())
-      )
-    : interviews;
+  const matches = (r: PastInterview) =>
+    !query.trim() ||
+    r.mentorName.toLowerCase().includes(query.toLowerCase()) ||
+    r.hostName.toLowerCase().includes(query.toLowerCase());
 
   return (
     <div className="space-y-10">
@@ -54,53 +118,24 @@ export default function PastClient({ interviews }: { interviews: PastInterview[]
         />
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-rise-brown">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Mentor Name</th>
-              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Host</th>
-              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Booking Time (UTC)</th>
-              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Contract Status</th>
-              <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Rate</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-rise-brown">
-                  No past interviews found.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((r) => (
-                <tr key={r.uid} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-rise-black">{r.mentorName}</td>
-                  <td className="px-4 py-3 text-rise-brown">{r.hostName}</td>
-                  <td className="px-4 py-3 text-rise-brown whitespace-nowrap">
-                    {formatDateTime(r.bookingStart)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={r.contractStatus} />
-                  </td>
-                  <td className="px-4 py-3 text-rise-brown whitespace-nowrap">
-                    {r.rate || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => setContractTarget({ name: r.mentorName, email: r.mentorEmail })}
-                      className="text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 hover:border-gray-400 rounded-md px-3 py-1 transition-colors whitespace-nowrap"
-                    >
-                      Send Contract
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {sections.map((section) => {
+        const filtered = section.interviews.filter(matches);
+        if (query.trim() && filtered.length === 0) return null;
+
+        return (
+          <div key={section.tone}>
+            <h3 className="text-sm font-semibold text-rise-black mb-3">
+              {section.title}{" "}
+              <span className="text-rise-brown font-normal">({filtered.length})</span>
+            </h3>
+            <SectionTable
+              interviews={filtered}
+              showStatusColumn={section.tone === "pending"}
+              onSendContract={setContractTarget}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
