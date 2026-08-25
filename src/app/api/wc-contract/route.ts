@@ -23,12 +23,12 @@ async function findByEmail(email: string) {
   return data.records?.[0] ?? null;
 }
 
-async function createRecord(name: string, email: string, rate: string, interviewDate: string | null, interviewNotes: string | null) {
+async function createRecord(name: string, email: string, rate: string, interviewDate: string | null, interviewNotes: string | null, status: string) {
   const fields: Record<string, string> = {
     "Email ID": email.toLowerCase().trim(),
     "Name": name,
     "Rate": rate,
-    "Contract Status": "Sent",
+    "Contract Status": status,
   };
   if (interviewDate) fields["Interview Date"] = interviewDate;
   if (interviewNotes) fields["Interview Notes"] = interviewNotes;
@@ -44,8 +44,11 @@ async function createRecord(name: string, email: string, rate: string, interview
   return res.ok;
 }
 
-async function updateRecord(recordId: string, rate: string, interviewDate: string | null, interviewNotes: string | null) {
-  const fields: Record<string, string> = { "Rate": rate, "Contract Status": "Sent" };
+// `status` is omitted (not just falsy-checked) when the caller doesn't want to touch the
+// field — e.g. "Add Notes" on a record that's already "Sent" shouldn't downgrade it.
+async function updateRecord(recordId: string, rate: string, interviewDate: string | null, interviewNotes: string | null, status?: string) {
+  const fields: Record<string, string> = { "Rate": rate };
+  if (status) fields["Contract Status"] = status;
   if (interviewDate) fields["Interview Date"] = interviewDate;
   if (interviewNotes) fields["Interview Notes"] = interviewNotes;
 
@@ -110,22 +113,37 @@ export async function GET(req: NextRequest) {
   });
 }
 
+// action: "send" (default) sends the contract: create/update record, set Contract
+// Status to "Sent", trigger the webhook (docx generation + email), and mark the WC
+// Interest Form record "Contract Sent". action: "notes" just records interview notes:
+// create/update the record without firing the webhook or touching the WC Interest
+// Form, and set Contract Status to "Not Sent - Notes Added" — unless a contract was
+// already sent, in which case the status is left as "Sent".
 export async function POST(req: NextRequest) {
-  const { name, email, rate, interviewDate, interviewNotes } = await req.json();
+  const { name, email, rate, interviewDate, interviewNotes, action } = await req.json();
   if (!name || !email || !rate) {
     return NextResponse.json({ error: "name, email and rate required" }, { status: 400 });
   }
 
+  const notesOnly = action === "notes";
   const record = await findByEmail(email);
+
+  const status = notesOnly
+    ? (record?.fields["Contract Status"] === "Sent" ? undefined : "Not Sent - Notes Added")
+    : "Sent";
 
   let ok: boolean;
   if (record) {
-    ok = await updateRecord(record.id, rate, interviewDate ?? null, interviewNotes ?? null);
+    ok = await updateRecord(record.id, rate, interviewDate ?? null, interviewNotes ?? null, status);
   } else {
-    ok = await createRecord(name, email, rate, interviewDate ?? null, interviewNotes ?? null);
+    ok = await createRecord(name, email, rate, interviewDate ?? null, interviewNotes ?? null, status ?? "Not Sent - Notes Added");
   }
 
   if (!ok) return NextResponse.json({ error: "Airtable update failed" }, { status: 502 });
+
+  if (notesOnly) {
+    return NextResponse.json({ ok: true });
+  }
 
   await Promise.all([
     triggerWebhook(name, email, rate, interviewDate ?? null, interviewNotes ?? null),
