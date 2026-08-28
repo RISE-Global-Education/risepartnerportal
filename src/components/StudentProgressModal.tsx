@@ -36,9 +36,37 @@ function formatDateTime(dateStr: string): string {
   });
 }
 
+// Matches a URL but stops before trailing sentence punctuation.
+const URL_PATTERN = /(https?:\/\/[^\s<]*[^\s<.,;:!?)\]}])/g;
+
+function LinkifiedText({ text }: { text: string }) {
+  // String.split with a single capturing group alternates text/match, so every
+  // odd index is a captured URL.
+  const parts = text.split(URL_PATTERN);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-rise-green underline break-all hover:opacity-80"
+          >
+            {part}
+          </a>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
 function OnTrackBadge({ value }: { value: string | null }) {
   if (!value) return null;
-  const isOnTrack = value.toLowerCase() === "yes";
+  const isOnTrack = value.trim().toLowerCase() === "yes";
   return (
     <span
       className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -50,11 +78,45 @@ function OnTrackBadge({ value }: { value: string | null }) {
   );
 }
 
+function AttendedBadge({ value }: { value: string | null }) {
+  if (!value) return null;
+  const attended = value.trim().toLowerCase() === "yes";
+  return (
+    <span
+      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+        attended ? "bg-emerald-50 text-rise-green" : "bg-amber-50 text-amber-700"
+      }`}
+    >
+      {attended ? "Attended" : "Did not attend"}
+    </span>
+  );
+}
+
+function DetailSection({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-rise-brown mb-1">{label}</p>
+      <p className="text-sm text-rise-black/80 whitespace-pre-wrap leading-relaxed">
+        {children}
+      </p>
+    </div>
+  );
+}
+
 function FeedbackAccordionItem({ entry }: { entry: MeetingFeedback }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const title =
     entry.meetingNumber !== null ? `${entry.source} Session ${entry.meetingNumber}` : entry.source;
+  const summaryLabel =
+    entry.source === "Review Meet" ? "Message for the counsellor" : "Observations";
+  const hasBadges = Boolean(entry.attended || entry.progressStage || entry.onTrack);
 
   useEffect(() => {
     if (open) {
@@ -84,18 +146,32 @@ function FeedbackAccordionItem({ entry }: { entry: MeetingFeedback }) {
         </span>
       </button>
       {open && (
-        <div className="px-4 py-4 border-t border-gray-100">
-          <div className="flex items-center flex-wrap gap-2 mb-3">
-            {entry.progressStage && (
-              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                {entry.progressStage}
-              </span>
-            )}
-            <OnTrackBadge value={entry.onTrack} />
-          </div>
-          <p className="text-sm text-rise-black/80 whitespace-pre-wrap leading-relaxed">
-            {entry.summary}
-          </p>
+        <div className="px-4 py-4 border-t border-gray-100 space-y-4">
+          {hasBadges && (
+            <div className="flex items-center flex-wrap gap-2">
+              <AttendedBadge value={entry.attended} />
+              {entry.progressStage && (
+                <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                  {entry.progressStage}
+                </span>
+              )}
+              <OnTrackBadge value={entry.onTrack} />
+            </div>
+          )}
+
+          <DetailSection label={summaryLabel}>{entry.summary}</DetailSection>
+
+          {entry.nextWeekTasks && (
+            <DetailSection label="Key tasks or goals for the coming week">
+              <LinkifiedText text={entry.nextWeekTasks} />
+            </DetailSection>
+          )}
+
+          {entry.classNotes && (
+            <DetailSection label="Class notes & reference materials">
+              <LinkifiedText text={entry.classNotes} />
+            </DetailSection>
+          )}
         </div>
       )}
     </div>
