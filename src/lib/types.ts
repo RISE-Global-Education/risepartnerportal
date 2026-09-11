@@ -37,12 +37,17 @@ export interface Student {
   source: "discovery" | "application"; // which table they came from
 }
 
+export type ConversationIntent = "cold" | "neutral" | "warm";
+
 export interface Conversation {
   id: string;
   date: string;
   notes: string;
   attendee: string;
   companyName: string;
+  intent: ConversationIntent | null;
+  counselorRecordId?: string;
+  counselorName?: string;
 }
 
 export interface Contact {
