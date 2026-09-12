@@ -9,9 +9,10 @@ export default function NavBar({ secret, role, teamName, employeeTypes = [] }: {
   const router = useRouter();
   const basePath = `/${secret}`;
   const isPartners = pathname.includes("/partners");
+  const isConversations = pathname.includes("/conversations");
   const isInsights = pathname.includes("/insights");
   const isMentorPipeline = pathname.includes("/mentor-pipeline");
-  const isDashboard = pathname.includes("/dashboard") && !isPartners && !isInsights;
+  const isDashboard = pathname.includes("/dashboard") && !isPartners && !isInsights && !isConversations;
 
   const isMentorSuccess = role === "admin" || employeeTypes.includes("Mentor Success");
 
@@ -20,6 +21,7 @@ export default function NavBar({ secret, role, teamName, employeeTypes = [] }: {
     { label: "Partners", href: `${basePath}/partners`, active: isPartners, adminOnly: true, show: true },
     { label: "Mentor Pipeline", href: `${basePath}/mentor-pipeline`, active: isMentorPipeline, adminOnly: false, show: isMentorSuccess },
     { label: "Insights", href: `${basePath}/insights/mixmax`, active: isInsights, adminOnly: true, show: true },
+    { label: "Insights - Conversations", href: `${basePath}/conversations`, active: isConversations, adminOnly: true, show: true },
   ];
 
   const tabs = (role === "admin" ? allTabs : allTabs.filter((t) => !t.adminOnly)).filter((t) => t.show);
