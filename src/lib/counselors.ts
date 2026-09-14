@@ -1,6 +1,11 @@
 import { fetchAllRecords, getField } from "./airtable";
 import type { Counselor, Contact } from "./types";
 
+// Partners in these Follow Up statuses are dead leads — every "who hasn't
+// been contacted" or "who needs a call" view should exclude them rather
+// than nagging the team about accounts nobody is chasing anymore.
+export const HIDDEN_FOLLOWUP_STATUSES: readonly string[] = ["Rejected", "Unqualified"];
+
 // Base IDs
 const STUDENT_PIPELINE_BASE = "appyvj8Xh10kGWbJN";
 const COUNSELOR_DB_BASE = "appU2cJpIWIHQI4up";
