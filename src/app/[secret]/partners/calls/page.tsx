@@ -1,4 +1,4 @@
-import { getAllCounselors } from "@/lib/counselors";
+import { getAllCounselors, HIDDEN_FOLLOWUP_STATUSES } from "@/lib/counselors";
 import CallsClient from "./CallsClient";
 
 const ALL_RISE_POCS = ["Shreyans", "Yash", "Prachi", "Arth", "Muskaan"];
@@ -16,10 +16,8 @@ export default async function CallsPage({
   const { secret } = await params;
   const counselors = await getAllCounselors();
 
-  const HIDDEN_STATUSES = ["Rejected", "Unqualified"];
-
   const partners = counselors
-    .filter((c) => !HIDDEN_STATUSES.includes(c.followUpStatus))
+    .filter((c) => !HIDDEN_FOLLOWUP_STATUSES.includes(c.followUpStatus))
     .sort((a, b) => {
       if (!a.lastConversationDate) return -1;
       if (!b.lastConversationDate) return 1;
