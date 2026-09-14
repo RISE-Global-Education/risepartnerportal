@@ -50,35 +50,24 @@ When adding a new protected area, decide which of these three cookie/role system
 - Base IDs and table IDs are hardcoded constants at the top of each `lib/*.ts` file (e.g. `COUNSELOR_DB_BASE`, `STUDENT_PIPELINE_BASE` in [src/lib/counselors.ts](src/lib/counselors.ts)) — there are multiple distinct Airtable bases in play (Counselor DB, Student Pipeline, Contacts). Check which base/table a feature needs before assuming they're unified.
 - `getField<T>(record, fieldName)` reads Airtable's raw field-name-keyed `fields` object; domain code maps these into the typed shapes in [src/lib/types.ts](src/lib/types.ts) (`Counselor`, `Student`, `Contact`, `Conversation`, `PartnerData`).
 
-### Mixmax refresh: fan-out via QStash + Redis, not a long request
-
-Mixmax sequence/recipient data is too slow to fetch in one serverless invocation, so it's refreshed as a chunked background chain instead of a single API call:
-
-1. `startMixmaxRefresh()` ([src/lib/mixmax-refresh.ts](src/lib/mixmax-refresh.ts)) lists all sequences (cheap), seeds Upstash Redis (`mixmax:sequences`, `mixmax:partial`, `mixmax:progress`), and enqueues the first chunk via Upstash QStash to `/api/mixmax/process-chunk`.
-2. Each `/api/mixmax/process-chunk` invocation processes one chunk and re-publishes itself via QStash for the next chunk, until done.
-3. `/api/mixmax/status` and the `useMixmaxRefresh` hook ([src/lib/hooks/useMixmaxRefresh.ts](src/lib/hooks/useMixmaxRefresh.ts)) poll Redis progress for the UI.
-4. If a chain is already in flight (`SEQUENCES_KEY` set in Redis), `startMixmaxRefresh` is a no-op — it does **not** reset state, since that would race a running chain. Both the daily cron ([src/app/api/cron/mixmax/route.ts](src/app/api/cron/mixmax/route.ts)) and the manual refresh button trigger the same function; only one chain runs at a time.
-
-Cron endpoints (`/api/cron/*`) authenticate via `Authorization: Bearer {CRON_SECRET}`, matching the schedule in [vercel.json](vercel.json) (Vercel Cron).
-
 ### Route structure
 
-- `src/app/[secret]/` — team/admin dashboard: `calendar-bookings`, `mentor-pipeline` (mentors + writing coaches, each with interview sub-flows), `student-pipeline` (funnel stages: parent-discovery → shortlisting → interview-stage → acceptance), `insights`, `partners`, `dashboard`. Nested `layout.tsx` files provide sub-tab navigation (`SubTabNav.tsx`/`TabNav.tsx`) per section; `past`/`upcoming` splits are a recurring pattern for interview/booking lists.
+- `src/app/[secret]/` — team/admin dashboard: `calendar-bookings`, `mentor-pipeline` (mentors + writing coaches, each with interview sub-flows), `student-pipeline` (funnel stages: parent-discovery → shortlisting → interview-stage → acceptance), `conversations` (Insights - Conversations), `partners`, `dashboard`. Nested `layout.tsx` files provide sub-tab navigation (`SubTabNav.tsx`/`TabNav.tsx`) per section; `past`/`upcoming` splits are a recurring pattern for interview/booking lists.
 - `src/app/partner/[slug]/` — partner-facing pages (separate from the secret-gated dashboard), keyed by counselor slug.
-- `src/app/api/` — route handlers; mirrors the `lib/` domain split (`auth/`, `calcom/`, `mixmax/`, `cron/`, `counselors/`, `student-pipeline/`, etc.).
+- `src/app/api/` — route handlers; mirrors the `lib/` domain split (`auth/`, `calcom/`, `counselors/`, `student-pipeline/`, etc.).
 - `src/lib/` — all data access, business logic, and cross-cutting utilities (Airtable, analytics/funnel calculations, health checks, email/meeting-feedback, program-team lookups). UI components should not talk to Airtable directly — go through `lib/`.
 
 ### Other integrations
 
 - **Cal.com** (`src/app/api/calcom/`) — booking data (`CALCOM_API_KEY`).
-- **Google/Gmail** (`GOOGLE_CLIENT_ID/SECRET`, `GMAIL_*`) — used for sending emails (e.g. mentor contracts, MOUs) via `nodemailer`.
+- **Google/Gmail** (`GOOGLE_CLIENT_ID/SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM`) — used for sending emails (e.g. mentor contracts, MOUs) via `googleapis` (`src/app/api/send-email/`).
 - **docx-templates** — generates MOU/contract documents (`src/app/api/counselors/mou/generate`, `src/app/api/mentor-contract`, `src/app/api/wc-contract`) from Airtable data, with a PDF conversion step (`PDF_CONVERT_API_KEY`).
 - **fuse.js** — fuzzy search (e.g. duplicate-lead detection, partner search).
 - **recharts** — all dashboard charts under `src/components/dashboard/`.
 
 ### Env vars
 
-No `.env.example` is checked in (`.env*` is gitignored). Required vars are discoverable via `process.env.*` references throughout `src/`: `AIRTABLE_TOKEN`, `AIRTABLE_COUNSELOR_TOKEN`, `DASHBOARD_SECRET`, `USER_SECRET`, `DASHBOARD_PASSWORD`, `PARTNER_PASSWORD`, `CRON_SECRET`, `MIXMAX_API_KEY`, `QSTASH_TOKEN`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `CALCOM_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM`, `NOTIFY_EMAIL`, `PDF_CONVERT_API_KEY`, `NEXT_PUBLIC_BASE_URL`.
+No `.env.example` is checked in (`.env*` is gitignored). Required vars are discoverable via `process.env.*` references throughout `src/`: `AIRTABLE_TOKEN`, `AIRTABLE_COUNSELOR_TOKEN`, `DASHBOARD_SECRET`, `USER_SECRET`, `DASHBOARD_PASSWORD`, `PARTNER_PASSWORD`, `CALCOM_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM`, `PDF_CONVERT_API_KEY`, `NEXT_PUBLIC_BASE_URL`.
 
 ### Path alias
 
