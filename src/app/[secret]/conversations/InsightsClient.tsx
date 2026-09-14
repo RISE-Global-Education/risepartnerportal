@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -15,6 +15,22 @@ import CalendarWidget from "./CalendarWidget";
 import LogConversationForm from "./LogConversationForm";
 import ColumnFilterDropdown, { type ColumnFilterValue } from "./ColumnFilterDropdown";
 import PartnerDetailModal from "./PartnerDetailModal";
+import NeedsFollowUp, { type FollowUpPartner } from "./NeedsFollowUp";
+
+// Dead leads (Rejected / Unqualified) don't need chasing — every "who
+// hasn't been contacted" view across the portal excludes them.
+const HIDDEN_FOLLOWUP_STATUSES = new Set(["Rejected", "Unqualified"]);
+
+function daysSince(dateStr: string): number {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+// Sortable numeric value for a "latest contact" date where "" means never
+// contacted — always sorts oldest (i.e. last when sorting newest-first).
+function dateSortValue(dateStr: string): number {
+  return dateStr ? new Date(dateStr).getTime() : -Infinity;
+}
 
 const INTENT_COLORS: Record<ConversationIntent, string> = {
   cold: "#3b82f6",
@@ -41,8 +57,15 @@ function formatDate(dateStr: string): string {
   });
 }
 
+// Airtable dates are plain "YYYY-MM-DD" — parse as local, not UTC, so a
+// conversation doesn't shift a day depending on the viewer's timezone.
+function toLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function monthKey(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = toLocalDate(dateStr);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
@@ -54,12 +77,35 @@ function monthLabel(key: string): string {
   });
 }
 
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function dayLabel(key: string): string {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+const CHART_RANGE_OPTIONS = [
+  { value: "1", label: "Day", days: 1 },
+  { value: "7", label: "7 Days", days: 7 },
+  { value: "14", label: "14 Days", days: 14 },
+  { value: "month", label: "Month", days: null },
+] as const;
+
+type ChartRange = (typeof CHART_RANGE_OPTIONS)[number]["value"];
+
 interface PartnerJourney {
   counselorRecordId: string;
   companyName: string;
   conversations: Conversation[];
   latestIntent: ConversationIntent | null;
   latestDate: string;
+  followUpStatus: string;
+  risePoc: string[];
 }
 
 interface PartnerOption {
@@ -67,17 +113,31 @@ interface PartnerOption {
   companyName: string;
 }
 
+interface RosterEntry {
+  id: string;
+  companyName: string;
+  risePoc: string[];
+  followUpStatus: string;
+  lastConversationDate: string | null;
+}
+
 export default function InsightsClient({
   conversations,
   partners,
+  roster,
   secret,
 }: {
   conversations: Conversation[];
   partners: PartnerOption[];
+  roster: RosterEntry[];
   secret: string;
 }) {
   const [query, setQuery] = useState("");
+  const [logFormOpen, setLogFormOpen] = useState(false);
+  const [logFormPartner, setLogFormPartner] = useState<PartnerOption | null>(null);
+  const logFormRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<"partners" | "calendar">("partners");
+  const [chartRange, setChartRange] = useState<ChartRange>("7");
   const [columnFilters, setColumnFilters] = useState<{
     partner: ColumnFilterValue;
     intent: ColumnFilterValue;
@@ -94,40 +154,71 @@ export default function InsightsClient({
     [conversations]
   );
 
-  const stats = useMemo(() => {
-    const counts: Record<ConversationIntent, number> = { cold: 0, neutral: 0, warm: 0 };
-    let untagged = 0;
-    for (const c of dated) {
-      if (c.intent) counts[c.intent]++;
-      else untagged++;
-    }
-    return { counts, untagged, total: dated.length };
-  }, [dated]);
-
   const chartData = useMemo(() => {
-    const buckets = new Map<string, Record<ConversationIntent, number>>();
-    for (const c of dated) {
-      const key = monthKey(c.date);
-      if (!buckets.has(key)) buckets.set(key, { cold: 0, neutral: 0, warm: 0 });
-      if (c.intent) buckets.get(key)![c.intent]++;
+    if (chartRange === "month") {
+      const buckets = new Map<string, Record<ConversationIntent, number>>();
+      for (const c of dated) {
+        const key = monthKey(c.date);
+        if (!buckets.has(key)) buckets.set(key, { cold: 0, neutral: 0, warm: 0 });
+        if (c.intent) buckets.get(key)![c.intent]++;
+      }
+      return Array.from(buckets.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .slice(-12)
+        .map(([key, counts]) => ({ label: monthLabel(key), ...counts }));
     }
-    return Array.from(buckets.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-12)
-      .map(([key, counts]) => ({ month: monthLabel(key), ...counts }));
-  }, [dated]);
+
+    // Day-granularity ranges: one bar per calendar day, oldest to today.
+    const windowDays = CHART_RANGE_OPTIONS.find((o) => o.value === chartRange)!.days!;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const buckets = new Map<string, Record<ConversationIntent, number>>();
+    for (let i = windowDays - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      buckets.set(dayKey(d), { cold: 0, neutral: 0, warm: 0 });
+    }
+    for (const c of dated) {
+      const key = dayKey(toLocalDate(c.date));
+      const bucket = buckets.get(key);
+      if (bucket && c.intent) bucket[c.intent]++;
+    }
+    return Array.from(buckets.entries()).map(([key, counts]) => ({ label: dayLabel(key), ...counts }));
+  }, [dated, chartRange]);
 
   const journeys = useMemo(() => {
     const byPartner = new Map<string, PartnerJourney>();
+
+    // Seed every partner in the roster first — including ones with zero
+    // conversations logged in this app — so someone who has never been
+    // contacted still shows up instead of being invisible.
+    for (const c of roster) {
+      byPartner.set(c.id, {
+        counselorRecordId: c.id,
+        companyName: c.companyName,
+        conversations: [],
+        latestIntent: null,
+        latestDate: c.lastConversationDate || "",
+        followUpStatus: c.followUpStatus,
+        risePoc: c.risePoc,
+      });
+    }
+
     for (const c of dated) {
       const id = c.counselorRecordId!;
       if (!byPartner.has(id)) {
+        // Defensive: a conversation whose counselor fell out of the roster
+        // between fetches. Shouldn't happen — getAllConversations() only
+        // returns conversations already joined to a live counselor.
         byPartner.set(id, {
           counselorRecordId: id,
           companyName: c.counselorName || c.companyName,
           conversations: [],
           latestIntent: null,
           latestDate: "",
+          followUpStatus: "",
+          risePoc: [],
         });
       }
       byPartner.get(id)!.conversations.push(c);
@@ -135,18 +226,47 @@ export default function InsightsClient({
 
     const result: PartnerJourney[] = [];
     for (const partner of byPartner.values()) {
-      partner.conversations.sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
-      const latest = partner.conversations[partner.conversations.length - 1];
-      partner.latestIntent = latest.intent;
-      partner.latestDate = latest.date;
+      if (partner.conversations.length > 0) {
+        partner.conversations.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        const latest = partner.conversations[partner.conversations.length - 1];
+        partner.latestIntent = latest.intent;
+        // The conversation this page just logged is more current than the
+        // counselor record's cached "Last Conversation Date".
+        partner.latestDate = latest.date;
+      }
       result.push(partner);
     }
 
-    result.sort((a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime());
+    result.sort((a, b) => dateSortValue(b.latestDate) - dateSortValue(a.latestDate));
     return result;
-  }, [dated]);
+  }, [dated, roster]);
+
+  // Every active (non-dead-lead) partner, with days-since-contact computed.
+  // NeedsFollowUp applies its own recency threshold on top of this pool.
+  const activePartners = useMemo<FollowUpPartner[]>(() => {
+    return journeys
+      .filter((j) => !HIDDEN_FOLLOWUP_STATUSES.has(j.followUpStatus))
+      .map((j) => ({
+        counselorRecordId: j.counselorRecordId,
+        companyName: j.companyName,
+        risePoc: j.risePoc,
+        latestDate: j.latestDate,
+        days: j.latestDate ? daysSince(j.latestDate) : null,
+      }))
+      // Sorted by last contacted, ascending — oldest (and never-contacted)
+      // first, so the most overdue partners lead the list.
+      .sort((a, b) => dateSortValue(a.latestDate) - dateSortValue(b.latestDate));
+  }, [journeys]);
+
+  function openLogForm(partner?: PartnerOption) {
+    setLogFormPartner(partner ?? null);
+    setLogFormOpen(true);
+    if (partner) {
+      logFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
 
   const intentLabelOf = (intent: ConversationIntent | null) =>
     intent ? INTENT_LABELS[intent] : "—";
@@ -180,7 +300,7 @@ export default function InsightsClient({
   const dateOptions = useMemo(
     () =>
       Array.from(new Set(journeys.map((j) => j.latestDate)))
-        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+        .sort((a, b) => dateSortValue(b) - dateSortValue(a))
         .map(formatDate),
     [journeys]
   );
@@ -228,7 +348,7 @@ export default function InsightsClient({
     copy.sort((a, b) => {
       let cmp = 0;
       if (sortKey === "date") {
-        cmp = new Date(a.latestDate).getTime() - new Date(b.latestDate).getTime();
+        cmp = dateSortValue(a.latestDate) - dateSortValue(b.latestDate);
       } else if (sortKey === "name") {
         cmp = a.companyName.localeCompare(b.companyName);
       } else if (sortKey === "count") {
@@ -260,41 +380,114 @@ export default function InsightsClient({
     [journeys]
   );
 
+  function selectPartnerById(id: string) {
+    const j = journeysById.get(id);
+    if (j) setSelectedPartner(j);
+  }
+
   const partnersTracked = journeys.length;
+
+  const noConversationCount = useMemo(
+    () => journeys.filter((j) => j.conversations.length === 0).length,
+    [journeys]
+  );
+
+  // Has conversations logged, but the latest one didn't carry a parseable
+  // Cold/Neutral/Warm tag (older data logged before intent tracking, or
+  // notes that don't match the "Intent\nNotes: ..." format). Broken out on
+  // its own so No Conversation + Untagged + Warm + Cold + Neutral always
+  // sums to Total Partners.
+  const untaggedCount = useMemo(
+    () => journeys.filter((j) => j.conversations.length > 0 && !j.latestIntent).length,
+    [journeys]
+  );
+
+  const intentCounts = useMemo(() => {
+    const counts: Record<ConversationIntent, number> = { cold: 0, neutral: 0, warm: 0 };
+    for (const j of journeys) {
+      if (j.latestIntent) counts[j.latestIntent]++;
+    }
+    return counts;
+  }, [journeys]);
+
+  const pctOfPartners = (count: number) =>
+    partnersTracked ? Math.round((count / partnersTracked) * 100) : 0;
 
   return (
     <div>
-      <LogConversationForm partners={partners} secret={secret} />
+      <div ref={logFormRef}>
+        <LogConversationForm
+          partners={partners}
+          secret={secret}
+          open={logFormOpen}
+          initialPartner={logFormPartner}
+          onOpen={() => openLogForm()}
+          onClose={() => setLogFormOpen(false)}
+        />
+      </div>
+
+      <NeedsFollowUp
+        partners={activePartners}
+        onLogConversation={(p) =>
+          openLogForm({ id: p.counselorRecordId, companyName: p.companyName })
+        }
+        onSelectPartner={selectPartnerById}
+      />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
-        <StatCard label="Conversations Logged" value={stats.total} />
-        <StatCard label="Partners Tracked" value={partnersTracked} />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        <StatCard label="Total Partners" value={partnersTracked} />
+        <StatCard
+          label="No Conversation"
+          value={noConversationCount}
+          pct={pctOfPartners(noConversationCount)}
+        />
+        <StatCard
+          label="Untagged"
+          value={untaggedCount}
+          pct={pctOfPartners(untaggedCount)}
+        />
         <StatCard
           label="Warm"
-          value={stats.counts.warm}
-          pct={stats.total ? Math.round((stats.counts.warm / stats.total) * 100) : 0}
+          value={intentCounts.warm}
+          pct={pctOfPartners(intentCounts.warm)}
           color={INTENT_COLORS.warm}
         />
         <StatCard
-          label="Neutral"
-          value={stats.counts.neutral}
-          pct={stats.total ? Math.round((stats.counts.neutral / stats.total) * 100) : 0}
-          color={INTENT_COLORS.neutral}
+          label="Cold"
+          value={intentCounts.cold}
+          pct={pctOfPartners(intentCounts.cold)}
+          color={INTENT_COLORS.cold}
         />
         <StatCard
-          label="Cold"
-          value={stats.counts.cold}
-          pct={stats.total ? Math.round((stats.counts.cold / stats.total) * 100) : 0}
-          color={INTENT_COLORS.cold}
+          label="Neutral"
+          value={intentCounts.neutral}
+          pct={pctOfPartners(intentCounts.neutral)}
+          color={INTENT_COLORS.neutral}
         />
       </div>
 
       {/* Conversations over time by intent */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-6">
-        <h3 className="text-sm font-semibold text-rise-black mb-4">
-          Conversations Over Time
-        </h3>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h3 className="text-sm font-semibold text-rise-black">Conversations Over Time</h3>
+          <div className="flex gap-1.5">
+            {CHART_RANGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setChartRange(opt.value)}
+                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                  chartRange === opt.value
+                    ? "bg-rise-green text-white"
+                    : "bg-gray-100 text-rise-brown hover:bg-gray-200"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
         {chartData.length === 0 ? (
           <p className="text-sm text-rise-brown py-8 text-center">
             No dated conversations yet.
@@ -303,7 +496,7 @@ export default function InsightsClient({
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ left: 0, right: 10, top: 5, bottom: 5 }}>
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <XAxis dataKey="label" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                 <Tooltip />
                 <Legend />
@@ -367,6 +560,7 @@ export default function InsightsClient({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left">
+                <th className="px-5 py-3 font-medium text-rise-brown w-12">S.No</th>
                 <th className="px-5 py-3 font-medium text-rise-brown">
                   <div className="flex items-center gap-1.5">
                     <button
@@ -453,12 +647,13 @@ export default function InsightsClient({
               </tr>
             </thead>
             <tbody>
-              {sortedJourneys.map((j) => (
+              {sortedJourneys.map((j, i) => (
                 <tr
                   key={j.counselorRecordId}
                   onClick={() => setSelectedPartner(j)}
                   className="border-b border-gray-50 hover:bg-rise-cream/40 transition-colors cursor-pointer"
                 >
+                  <td className="px-5 py-3 text-rise-brown">{i + 1}</td>
                   <td className="px-5 py-3 font-medium text-rise-black">{j.companyName}</td>
                   <td className="px-5 py-3">
                     <JourneyDots conversations={j.conversations} />
@@ -484,7 +679,7 @@ export default function InsightsClient({
               ))}
               {sortedJourneys.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-10 text-center text-rise-brown">
+                  <td colSpan={7} className="px-5 py-10 text-center text-rise-brown">
                     No partners match the current filters.
                   </td>
                 </tr>
