@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const BASE = "appFavjto15k519od";
+// "Mentor Interview" table — shared with the mentor pipeline (api/mentor-contract writes here
+// too). Both mentor and WC contract sends are intentionally logged into this one table.
 const TABLE = "tblubNgMLWtH4pzGf";
 const AT_URL = `https://api.airtable.com/v0/${BASE}/${TABLE}`;
 
