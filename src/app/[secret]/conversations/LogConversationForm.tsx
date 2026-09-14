@@ -11,12 +11,22 @@ interface PartnerOption {
 export default function LogConversationForm({
   partners,
   secret,
+  open,
+  initialPartner,
+  onOpen,
+  onClose,
 }: {
   partners: PartnerOption[];
   secret: string;
+  /** Controlled by the parent so a "Log conversation" shortcut elsewhere on
+   *  the page (e.g. the Needs Follow-Up list) can pop this form open. */
+  open: boolean;
+  /** Partner to preselect the next time the form opens — null opens blank. */
+  initialPartner: PartnerOption | null;
+  onOpen: () => void;
+  onClose: () => void;
 }) {
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
 
   const [partnerQuery, setPartnerQuery] = useState("");
   const [partnerDropdownOpen, setPartnerDropdownOpen] = useState(false);
@@ -31,11 +41,18 @@ export default function LogConversationForm({
   const [attendees, setAttendees] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!open) return;
     fetch("/api/attendees")
       .then((r) => r.json())
       .then((data) => setAttendees(data.attendees ?? []));
-  }, [isOpen]);
+  }, [open]);
+
+  // Sync to whatever the parent wants preselected each time the form opens
+  // (a specific partner from the Needs Follow-Up list, or blank for the
+  // plain "+ Log Conversation" button).
+  useEffect(() => {
+    if (open) setSelectedPartner(initialPartner);
+  }, [open, initialPartner]);
 
   const matches = useMemo(() => {
     const q = partnerQuery.trim().toLowerCase();
@@ -83,7 +100,7 @@ export default function LogConversationForm({
       }
 
       reset();
-      setIsOpen(false);
+      onClose();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -92,11 +109,11 @@ export default function LogConversationForm({
     }
   }
 
-  if (!isOpen) {
+  if (!open) {
     return (
       <div className="flex justify-end mb-6">
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={onOpen}
           className="px-4 py-2 bg-rise-green text-white text-sm font-medium rounded-lg hover:bg-rise-green/90 transition-colors"
         >
           + Log Conversation
@@ -112,7 +129,7 @@ export default function LogConversationForm({
         <button
           onClick={() => {
             reset();
-            setIsOpen(false);
+            onClose();
           }}
           className="text-sm text-rise-brown hover:text-rise-black"
         >
