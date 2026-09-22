@@ -1,51 +1,57 @@
-import { fetchAllRecords, getField } from "./airtable";
+import { getProgramMeetings, type MeetingType } from "./program-meetings";
 import type { FeedbackSource } from "./meeting-feedback";
 
-const SCHEDULE_BASE = "appTEjth26azczzBC";
-const SCHEDULE_TABLE = "tbl45LaPG4RqbXIjh";
-
-const MEETING_TYPE_SOURCE: Record<string, FeedbackSource> = {
+// R (Review Meet) is deliberately absent: it is excluded from this
+// partner-facing view by design, same as in meeting-feedback.ts. A Partial
+// map (rather than Record<MeetingType, ...>) lets that meeting type fall
+// through the `if (!source) return null` below instead of being shown.
+const TYPE_TO_SOURCE: Partial<Record<MeetingType, FeedbackSource>> = {
   M: "Mentor",
   WC: "Writing Coach",
-  R: "Review Meet",
 };
 
 export interface UpcomingSession {
   id: string;
   source: FeedbackSource;
-  programId: string | null;
-  meetingNumber: number | null;
-  startDateTime: string; // ISO
+  startDateTime: string; // ISO, UTC
 }
 
-export async function getUpcomingSessionsForStudent(
-  studentEmail: string
+/**
+ * Sessions that are still booked and have not happened yet.
+ *
+ * Filing feedback moves a meeting to Completed or Missed in the same
+ * transaction, so "Scheduled" is exactly the set still outstanding. The start
+ * time is checked too, since a session whose feedback is overdue stays
+ * Scheduled until it is filed or the window lapses into Invalid.
+ *
+ * No session number is carried: the meeting's stored number is unreliable here
+ * for the same reason it is for feedback (see assignSessionNumbers in
+ * meeting-feedback.ts), and a future session has no place in a completed
+ * sequence yet.
+ */
+export async function getUpcomingSessionsForProgram(
+  programId: string
 ): Promise<UpcomingSession[]> {
-  if (!studentEmail) return [];
+  if (!programId) return [];
 
-  const escapedEmail = studentEmail.trim().replace(/"/g, '\\"');
-  const records = await fetchAllRecords(SCHEDULE_BASE, SCHEDULE_TABLE, {
-    filterByFormula: `AND(LOWER(TRIM({Student Email})) = LOWER("${escapedEmail}"), {Meeting Status} = "", IS_AFTER({UTC Start DateTime}, NOW()))`,
-  });
-
-  const sessions = records
-    .map((record) => {
-      const meetingType = getField<string>(record, "Meeting Type");
-      const source = meetingType ? MEETING_TYPE_SOURCE[meetingType] : null;
-      const startDateTime = getField<string>(record, "UTC Start DateTime");
-      if (!source || !startDateTime) return null;
-
+  const now = Date.now();
+  const sessions = (await getProgramMeetings(programId))
+    .filter((meeting) => meeting.status === "Scheduled")
+    .filter((meeting) => new Date(meeting.utcStart).getTime() > now)
+    .map((meeting): UpcomingSession | null => {
+      const source = TYPE_TO_SOURCE[meeting.meetingType];
+      if (!source) return null;
       return {
-        id: record.id,
+        id: String(meeting.id),
         source,
-        programId: getField<string>(record, "Program ID"),
-        meetingNumber: getField<number>(record, "Meeting Number"),
-        startDateTime,
+        startDateTime: meeting.utcStart,
       };
     })
     .filter((s): s is UpcomingSession => s !== null);
 
-  sessions.sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+  sessions.sort(
+    (a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+  );
 
   return sessions;
 }

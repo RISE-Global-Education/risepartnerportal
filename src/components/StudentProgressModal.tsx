@@ -3,9 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { FunnelStage } from "@/lib/types";
-import type { FeedbackSource, MeetingFeedback } from "@/lib/meeting-feedback";
+import type { FeedbackSource, FinalEvaluation, MeetingFeedback } from "@/lib/meeting-feedback";
 import type { UpcomingSession } from "@/lib/upcoming-sessions";
-import type { ProgramTeam } from "@/lib/program-team";
+
+interface ProgramTeam {
+  mentorName: string | null;
+  writingCoachName: string | null;
+}
 import { STAGE_BADGE } from "./StudentTable";
 
 type FilterValue = FeedbackSource | "All" | "Upcoming";
@@ -14,7 +18,6 @@ const FILTER_OPTIONS: { label: string; value: FilterValue }[] = [
   { label: "All sessions", value: "All" },
   { label: "Mentor", value: "Mentor" },
   { label: "Writing Coach", value: "Writing Coach" },
-  { label: "Review Meet", value: "Review Meet" },
   { label: "Upcoming", value: "Upcoming" },
 ];
 
@@ -64,30 +67,30 @@ function LinkifiedText({ text }: { text: string }) {
   );
 }
 
-function OnTrackBadge({ value }: { value: string | null }) {
-  if (!value) return null;
-  const isOnTrack = value.trim().toLowerCase() === "yes";
+// Older records predate the on-track question, so null means unknown rather
+// than "not on track" and renders no badge at all.
+function OnTrackBadge({ value }: { value: boolean | null }) {
+  if (value === null) return null;
   return (
     <span
       className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-        isOnTrack ? "bg-emerald-50 text-rise-green" : "bg-red-50 text-red-600"
+        value ? "bg-emerald-50 text-rise-green" : "bg-red-50 text-red-600"
       }`}
     >
-      {isOnTrack ? "On track" : "Not on track"}
+      {value ? "On track" : "Not on track"}
     </span>
   );
 }
 
-function AttendedBadge({ value }: { value: string | null }) {
-  if (!value) return null;
-  const attended = value.trim().toLowerCase() === "yes";
+function AttendedBadge({ value }: { value: boolean | null }) {
+  if (value === null) return null;
   return (
     <span
       className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-        attended ? "bg-emerald-50 text-rise-green" : "bg-amber-50 text-amber-700"
+        value ? "bg-emerald-50 text-rise-green" : "bg-amber-50 text-amber-700"
       }`}
     >
-      {attended ? "Attended" : "Did not attend"}
+      {value ? "Attended" : "Did not attend"}
     </span>
   );
 }
@@ -114,9 +117,8 @@ function FeedbackAccordionItem({ entry }: { entry: MeetingFeedback }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const title =
     entry.meetingNumber !== null ? `${entry.source} Session ${entry.meetingNumber}` : entry.source;
-  const summaryLabel =
-    entry.source === "Review Meet" ? "Message for the counsellor" : "Observations";
-  const hasBadges = Boolean(entry.attended || entry.progressStage || entry.onTrack);
+  const hasBadges =
+    entry.attended !== null || entry.onTrack !== null || Boolean(entry.progressStage);
 
   useEffect(() => {
     if (open) {
@@ -159,7 +161,7 @@ function FeedbackAccordionItem({ entry }: { entry: MeetingFeedback }) {
             </div>
           )}
 
-          <DetailSection label={summaryLabel}>{entry.summary}</DetailSection>
+          <DetailSection label="Observations">{entry.summary}</DetailSection>
 
           {entry.nextWeekTasks && (
             <DetailSection label="Key tasks or goals for the coming week">
@@ -170,6 +172,111 @@ function FeedbackAccordionItem({ entry }: { entry: MeetingFeedback }) {
           {entry.classNotes && (
             <DetailSection label="Class notes & reference materials">
               <LinkifiedText text={entry.classNotes} />
+            </DetailSection>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A program's last mentor session files a structured evaluation instead of
+// ordinary feedback, so it needs its own card rather than the accordion above.
+function FinalEvaluationItem({ entry }: { entry: FinalEvaluation }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      containerRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="border border-rise-green/40 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-rise-green/10 hover:bg-rise-green/20 transition-colors text-left"
+      >
+        <span className="font-medium text-rise-black text-sm">Final Evaluation</span>
+        <span className="flex items-center gap-3 shrink-0">
+          <span className="text-xs text-rise-brown">{formatDate(entry.date)}</span>
+          <svg
+            className={`w-4 h-4 text-rise-brown transition-transform ${open ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      </button>
+      {open && (
+        <div className="px-4 py-4 border-t border-gray-100 space-y-4">
+          <div className="flex items-center flex-wrap gap-2">
+            <AttendedBadge value={entry.attended} />
+            {entry.finalGrade && (
+              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-rise-green/15 text-rise-green">
+                Grade: {entry.finalGrade}
+              </span>
+            )}
+            {entry.researchField && (
+              <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                {entry.researchField}
+              </span>
+            )}
+          </div>
+
+          {entry.projectTitle && (
+            <DetailSection label="Project title">{entry.projectTitle}</DetailSection>
+          )}
+          {entry.overallEvaluation && (
+            <DetailSection label="Overall evaluation">
+              <LinkifiedText text={entry.overallEvaluation} />
+            </DetailSection>
+          )}
+          {entry.performanceSummary && (
+            <DetailSection label="Performance summary">
+              <LinkifiedText text={entry.performanceSummary} />
+            </DetailSection>
+          )}
+
+          {entry.metrics.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-rise-brown mb-2">Assessment</p>
+              <div className="space-y-2">
+                {entry.metrics.map((metric) => (
+                  <div key={metric.n} className="border border-gray-100 rounded-lg px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium text-rise-black">{metric.label}</span>
+                      <span className="text-xs text-rise-brown shrink-0">{metric.rating}</span>
+                    </div>
+                    {metric.feedback && (
+                      <p className="text-sm text-rise-black/80 mt-1 whitespace-pre-wrap leading-relaxed">
+                        {metric.feedback}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {entry.recommendation && (
+            <DetailSection label="Recommendation">
+              <LinkifiedText text={entry.recommendation} />
+            </DetailSection>
+          )}
+          {entry.mentorComment && (
+            <DetailSection label="Mentor comment">
+              <LinkifiedText text={entry.mentorComment} />
+            </DetailSection>
+          )}
+          {(entry.academicInstitution || entry.department) && (
+            <DetailSection label="Mentor affiliation">
+              {[entry.academicInstitution, entry.department].filter(Boolean).join(" — ")}
             </DetailSection>
           )}
         </div>
@@ -244,8 +351,9 @@ function FilterDropdown({
 }
 
 function UpcomingSessionRow({ session }: { session: UpcomingSession }) {
-  const title =
-    session.meetingNumber !== null ? `${session.source} Session ${session.meetingNumber}` : session.source;
+  // A future session carries no reliable sequence number, so it is labelled by
+  // kind and time only.
+  const title = session.source;
 
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 border border-gray-200 rounded-lg">
@@ -273,6 +381,7 @@ export default function StudentProgressModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState<MeetingFeedback[] | null>(null);
+  const [finalEvaluation, setFinalEvaluation] = useState<FinalEvaluation | null>(null);
   const [upcomingSessions, setUpcomingSessions] = useState<UpcomingSession[] | null>(null);
   const [programTeam, setProgramTeam] = useState<ProgramTeam | null>(null);
   const [filter, setFilter] = useState<FilterValue>("All");
@@ -285,6 +394,7 @@ export default function StudentProgressModal({
         if (!res.ok) throw new Error("Failed to load feedback");
         const data = await res.json();
         setFeedback(data.feedback);
+        setFinalEvaluation(data.finalEvaluation);
         setUpcomingSessions(data.upcomingSessions);
         setProgramTeam(data.programTeam);
       })
@@ -300,6 +410,15 @@ export default function StudentProgressModal({
     : feedback?.filter((f) => isAll || f.source === filter) ?? [];
   const visibleUpcomingInline = isAll ? upcomingSessions ?? [] : [];
   const visibleUpcomingOnly = upcomingOnly ? upcomingSessions ?? [] : [];
+
+  // The final evaluation is filed against the last mentor session, so it shows
+  // under the Mentor filter as well as the unfiltered view, and sits at the end
+  // of the mentor group rather than after every other session.
+  const visibleFinalEvaluation =
+    !upcomingOnly && (isAll || filter === "Mentor") ? finalEvaluation : null;
+  const mentorGroupEnd =
+    visibleFeedback.map((f) => f.source).lastIndexOf("Mentor") + 1;
+  const hasVisibleEntries = visibleFeedback.length > 0 || visibleFinalEvaluation !== null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
@@ -344,12 +463,6 @@ export default function StudentProgressModal({
                   <span className="font-medium text-rise-black">{programTeam.writingCoachName}</span>
                 </span>
               )}
-              {programTeam.programManagerName && (
-                <span className="text-xs text-rise-brown">
-                  Program Manager:{" "}
-                  <span className="font-medium text-rise-black">{programTeam.programManagerName}</span>
-                </span>
-              )}
             </div>
           )}
         </div>
@@ -372,12 +485,18 @@ export default function StudentProgressModal({
 
           {!loading && !error && !upcomingOnly && (
             <>
-              {feedback !== null && visibleFeedback.length === 0 && (
+              {feedback !== null && !hasVisibleEntries && (
                 <p className="text-sm text-rise-brown text-center py-8">
-                  {feedback.length === 0 ? "No meeting feedback logged yet." : "No sessions match this filter."}
+                  {feedback.length === 0 && !finalEvaluation
+                    ? "No meeting feedback logged yet."
+                    : "No sessions match this filter."}
                 </p>
               )}
-              {visibleFeedback.map((entry) => (
+              {visibleFeedback.slice(0, mentorGroupEnd).map((entry) => (
+                <FeedbackAccordionItem key={entry.id} entry={entry} />
+              ))}
+              {visibleFinalEvaluation && <FinalEvaluationItem entry={visibleFinalEvaluation} />}
+              {visibleFeedback.slice(mentorGroupEnd).map((entry) => (
                 <FeedbackAccordionItem key={entry.id} entry={entry} />
               ))}
 

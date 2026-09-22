@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-RISE Counselor Portal — a Next.js 16 (App Router) internal dashboard for RISE's team, partners (education counselors), and mentors. All data lives in Airtable (multiple bases); there is no application database. Auth is cookie-based per role, no external auth provider.
+RISE Counselor Portal — a Next.js 16 (App Router) internal dashboard for RISE's team, partners (education counselors), and mentors. Most data lives in Airtable (multiple bases); there is no application database of its own. The exception is student *progress* (session feedback, bookings, assigned mentor/coach), which now comes from the Supabase-backed RISE LMS, read over a direct Postgres connection — see "RISE LMS (Supabase)" below. Auth is cookie-based per role, no external auth provider.
 
 ## Commands
 
@@ -57,6 +57,34 @@ When adding a new protected area, decide which of these three cookie/role system
 - `src/app/api/` — route handlers; mirrors the `lib/` domain split (`auth/`, `calcom/`, `counselors/`, `student-pipeline/`, etc.).
 - `src/lib/` — all data access, business logic, and cross-cutting utilities (Airtable, analytics/funnel calculations, health checks, email/meeting-feedback, program-team lookups). UI components should not talk to Airtable directly — go through `lib/`.
 
+### RISE LMS (Supabase)
+
+Student progress — session feedback, bookings, the assigned mentor and writing coach — moved out of Airtable into the Supabase-backed RISE LMS, and the portal reads that database **directly**.
+
+[src/lib/lms-db.ts](src/lib/lms-db.ts) is the single query/cache layer, mirroring `airtable.ts`: `query(tag, sql, params)` runs a read against a module-level `pg.Pool` and is wrapped in `unstable_cache` (60s, tagged), with the wrapper memoized in a `Map` because tags are fixed at wrap time. The pool is cached on `globalThis` so dev hot-reload does not leak pools, and capped at `max: 3` because each serverless instance holds its own and the shared pooler has finite slots.
+
+Connecting directly authenticates as the **table owner**, which bypasses RLS — none of these tables set `FORCE ROW LEVEL SECURITY`. That is why no service key is needed. Note RLS *is* enabled on all seven tables with **zero policies**, so any other role (`anon`, `authenticated`) reads nothing at all.
+
+Because the connection enforces nothing, authorization is entirely the route handler's job: [api/meeting-feedback](src/app/api/meeting-feedback/route.ts) verifies the student belongs to the counselor behind the slug (against Airtable) *before* any query runs. Keep that check ahead of the data calls. `lms-db.ts` is server-only and must never be imported from a client component.
+
+Only identifiers drawn from `lms-schema.ts` are ever interpolated into SQL text; every value goes through a `$n` parameter.
+
+**[src/lib/lms-schema.ts](src/lib/lms-schema.ts) holds every LMS table and column name.** Reading the database directly couples this repo to the LMS schema, so all of that coupling lives in one file — a renamed column is a one-line fix there, not a hunt through the data layer. Every name was verified against the live schema with [scripts/inspect-lms-schema.mjs](scripts/inspect-lms-schema.mjs); re-run it after any LMS migration. A wrong name surfaces as a Postgres `42P01` (unknown table) or `42703` (unknown column) error.
+
+Domain wrappers: [programs.ts](src/lib/programs.ts) (resolves a pipeline student *name* → program, and joins the mentor and coach names off the same row — the only bridge between Airtable and the LMS), [program-meetings.ts](src/lib/program-meetings.ts) (all bookings, which is what upcoming sessions are derived from), [meeting-feedback.ts](src/lib/meeting-feedback.ts) (mentor + writing-coach feedback in one `UNION ALL`), [upcoming-sessions.ts](src/lib/upcoming-sessions.ts).
+
+**Review Meet (the PM's `review_feedback` note to the counselor) is deliberately excluded from this view — not just hidden in the UI filter, but never queried.** `TABLES` in `lms-schema.ts` has no `reviewFeedback` entry and `FeedbackSource` has no `"Review Meet"` member; both were removed on purpose. If it needs to come back, re-add the table constant, the union branch in `meeting-feedback.ts`, and the filter option — don't just re-add the filter option, or the data will still be missing.
+
+Three schema facts the code deliberately handles — don't "simplify" them away:
+
+- **A feedback record's kind comes from its table, never from `meetings.meeting_type`.** `meeting_type` only ever takes `M` and `WC` in this database — no review meeting is booked as its own slot — so when Review Meet feedback was still read, classifying by meeting type would have labelled every review note as coach feedback. The RISE LMS integration notes advise the opposite ("classify by `meetingType`, drop the row that disagrees"); that guidance does not hold against this data.
+- **One meeting legitimately carries records in both feedback tables** — 1188 meetings have both mentor and WC feedback, and no such pair shares summary text. These are distinct records, not duplicate filings, so *all* rows are kept and nothing is deduplicated. The unique index on `meeting_id` is per table, so a table can never contribute two rows for one meeting.
+- **Session numbers are derived, not read from `meetings.meeting_number`.** Numbering runs per meeting type while feedback is routinely filed against a slot of the other type, so two mentor sessions can land on meetings sharing a number and both render as "Mentor Session 3". `assignSessionNumbers` counts each source's own records in date order instead.
+
+The final mentor session has no `mentor_feedback` row — it files a structured evaluation into `final_evaluations`, which carries `program_id` directly, so it is fetched by program rather than by hunting for meetings with no feedback.
+
+The progress modal is **partner-facing**, so `handoff_note_for_wc`, `extra_support`, `flagged_status` and `steps_taken_offtrack` are staff-only. They are left out of the SELECT lists entirely rather than filtered after the fact, so they cannot reach a counselor's browser by accident.
+
 ### Other integrations
 
 - **Cal.com** (`src/app/api/calcom/`) — booking data (`CALCOM_API_KEY`).
@@ -67,7 +95,9 @@ When adding a new protected area, decide which of these three cookie/role system
 
 ### Env vars
 
-No `.env.example` is checked in (`.env*` is gitignored). Required vars are discoverable via `process.env.*` references throughout `src/`: `AIRTABLE_TOKEN`, `AIRTABLE_COUNSELOR_TOKEN`, `DASHBOARD_SECRET`, `USER_SECRET`, `DASHBOARD_PASSWORD`, `PARTNER_PASSWORD`, `CALCOM_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM`, `PDF_CONVERT_API_KEY`, `NEXT_PUBLIC_BASE_URL`.
+No `.env.example` is checked in (`.env*` is gitignored). Required vars are discoverable via `process.env.*` references throughout `src/`: `AIRTABLE_TOKEN`, `AIRTABLE_COUNSELOR_TOKEN`, `DASHBOARD_SECRET`, `USER_SECRET`, `DASHBOARD_PASSWORD`, `PARTNER_PASSWORD`, `CALCOM_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM`, `PDF_CONVERT_API_KEY`, `NEXT_PUBLIC_BASE_URL`, `SUPABASE_DB_URL`.
+
+`SUPABASE_DB_URL` is the LMS Postgres connection string (Supabase → Project Settings → Database → Connection string). It is read at runtime by [lms-db.ts](src/lib/lms-db.ts) and by [scripts/inspect-lms-schema.mjs](scripts/inspect-lms-schema.mjs). `SUPABASE_URL` is accepted as a fallback only because that is where the connection string was first configured; no Supabase API key of any kind is needed, since the connection authenticates as the table owner.
 
 ### Path alias
 
