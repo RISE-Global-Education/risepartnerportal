@@ -94,6 +94,19 @@ export async function query<T extends QueryResultRow>(
   return (await getCachedRunner(tag)(sql, params)) as T[];
 }
 
+/**
+ * Runs a write (INSERT/UPDATE/DELETE) against the same database, never
+ * cached — unstable_cache exists to memoize reads, so a write must never go
+ * through it. Same parameterization rule as query(): only identifiers drawn
+ * from a schema-constants file are ever interpolated into the SQL text.
+ */
+export async function mutate<T extends QueryResultRow>(
+  sql: string,
+  params: readonly unknown[] = []
+): Promise<T[]> {
+  return runQuery<T>(sql, params);
+}
+
 /** Normalizes a name for comparison: trimmed, case-folded, whitespace collapsed. */
 export function normalizeName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, " ");

@@ -77,7 +77,6 @@ export async function getAllLeads(): Promise<LeadRecord[]> {
   }));
 }
 
-
 export async function getAllBrochureDownloads(): Promise<BrochureDownloadRecord[]> {
   // Only record id/createdTime are used below (both metadata, unaffected by field
   // selection) — fetching no fields keeps the cached payload well under unstable_cache's
