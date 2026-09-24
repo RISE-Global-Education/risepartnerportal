@@ -56,11 +56,11 @@ export default async function PartnerPage({
   const funnelCounts = computeFunnelCounts(students);
   const total = students.length;
 
-  const contacts = await getContactsForCounselor(counselor.pocRecordIds);
+  const contacts = await getContactsForCounselor(counselor.counselorId);
 
   let conversations = undefined;
   if (isCeoView) {
-    conversations = await getConversationsForCounselor(counselor.id);
+    conversations = await getConversationsForCounselor(counselor.counselorId);
   }
 
   return (
@@ -96,7 +96,7 @@ export default async function PartnerPage({
         <StudentTable students={students} partnerSlug={slug} />
         {isCeoView && (
           <AddConversationForm
-            counselorId={counselor.id}
+            counselorId={counselor.counselorId}
             counselorName={counselor.companyName}
             secret={process.env.DASHBOARD_SECRET!}
           />

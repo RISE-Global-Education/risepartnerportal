@@ -14,7 +14,7 @@ export default async function PartnersSearchPage({
   ]);
 
   const counselorOptions = counselors.map((c) => {
-    const pocPhones = c.pocRecordIds.map((id) => phoneMap.get(id) ?? "").filter(Boolean);
+    const pocPhones = phoneMap.get(c.counselorId) ?? [];
     return {
       companyName: c.companyName,
       slug: c.slug,

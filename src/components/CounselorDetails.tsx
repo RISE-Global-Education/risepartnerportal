@@ -238,20 +238,20 @@ function ContactsPanel({
           body: JSON.stringify({
             secret,
             recordId: draft.id,
-            fields: {
-              Name: draft.name,
-              Email: draft.email,
-              "Phone Number": draft.phone,
-              Position: draft.position,
-              E_FNAME: draft.eFname,
-              "Email Opt-in": draft.outreachOptIn ? "Yes" : "No",
-            },
+            name: draft.name,
+            email: draft.email,
+            phone: draft.phone,
+            position: draft.position,
+            eFname: draft.eFname,
+            outreachOptIn: draft.outreachOptIn,
           }),
         });
         if (!res.ok) throw new Error("Failed to update contact");
       }
 
-      // Create new contacts
+      // Create new contacts — counselor_id is set directly at insert time
+      // (Supabase), so there's no separate "link to counselor" step anymore;
+      // that was only needed for Airtable's linked-record POC field.
       const newDrafts = drafts.filter((d) => d.id === null && d.name.trim());
       if (newDrafts.length > 0) {
         const contactsPayload = newDrafts.map((d, i) => ({
@@ -272,20 +272,6 @@ function ContactsPanel({
           body: JSON.stringify({ secret, contacts: contactsPayload }),
         });
         if (!res.ok) throw new Error("Failed to create contact");
-
-        // Link new contacts to counselor's POC field
-        const data = await res.json();
-        const newIds = (data.records as { id: string }[]).map((r) => r.id);
-        const allIds = [...counselor.pocRecordIds, ...newIds];
-        await fetch("/api/counselors", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            secret,
-            recordId: counselor.id,
-            fields: { POC: allIds },
-          }),
-        });
       }
 
       onSaved();
@@ -301,19 +287,12 @@ function ContactsPanel({
     if (!draft.id) return;
     setDeleting(true);
     try {
-      const remainingPocIds = drafts
-        .filter((_, j) => j !== index)
-        .map((d) => d.id)
-        .filter((id): id is string => id !== null);
-
       const res = await fetch("/api/contacts", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           secret,
           recordId: draft.id,
-          counselorRecordId: counselor.id,
-          remainingPocIds,
         }),
       });
       if (!res.ok) throw new Error("Failed to delete contact");

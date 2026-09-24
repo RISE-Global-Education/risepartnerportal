@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRecord, updateRecord, deleteRecord } from "@/lib/airtable";
+import { mutate } from "@/lib/lms-db";
+import { COUNSELOR_CONTACTS as CT, COUNSELORS } from "@/lib/supabase-schema";
 
-const COUNSELOR_DB_BASE = "appU2cJpIWIHQI4up";
-const CONTACTS_TABLE = "tbl6kgEdDr0C3lib4";
-const COUNSELORS_TABLE = "tblxCiUOdN435Zfju";
+// Contacts live in Supabase only — nothing here ever reaches Airtable (see
+// supabase-schema.ts). counselor_id is a direct column, so there's no
+// separate "link to counselor" step the way Airtable's POC array field
+// needed; the relationship is set once, at insert time.
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -17,28 +19,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "contacts array is required" }, { status: 400 });
   }
 
-  const token = process.env.AIRTABLE_COUNSELOR_TOKEN;
   const results = [];
 
   for (const contact of contacts) {
     const { name, email, phone, position, eFname, outreachOptIn, companyName, counselorId, index } = contact;
-    const leadId = `${companyName} — ${counselorId} — ${index}`;
-
     if (!name) continue;
 
-    const fields: Record<string, unknown> = {
-      Name: name,
-      "Lead ID": leadId,
-      "Email Opt-in": outreachOptIn !== false ? "Yes" : "No",
-    };
+    const leadId = `${companyName} — ${counselorId} — ${index}`;
 
-    if (email) fields["Email"] = email;
-    if (phone) fields["Phone Number"] = phone;
-    if (position) fields["Position"] = position;
-    if (eFname) fields["E_FNAME"] = eFname;
-
-    const record = await createRecord(COUNSELOR_DB_BASE, CONTACTS_TABLE, fields, token);
-    results.push(record);
+    const [row] = await mutate<{ id: string }>(
+      `INSERT INTO ${CT.table}
+         (${CT.airtableRecordId}, ${CT.counselorId}, ${CT.counselerUuid}, ${CT.leadId},
+          ${CT.name}, ${CT.email}, ${CT.phoneNumber}, ${CT.position}, ${CT.firstName}, ${CT.emailOptIn})
+       VALUES
+         ('native:' || gen_random_uuid(), $1,
+          (SELECT ${COUNSELORS.counselerUuid} FROM ${COUNSELORS.table} WHERE ${COUNSELORS.id} = $1),
+          $2, $3, $4, $5, $6, $7, $8)
+       RETURNING ${CT.id}::text AS id`,
+      [
+        counselorId, leadId, name,
+        email || null, phone || null, position || null, eFname || null,
+        outreachOptIn !== false,
+      ]
+    );
+    results.push(row);
   }
 
   return NextResponse.json({ success: true, records: results });
@@ -46,24 +50,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const body = await request.json();
-  const { secret, recordId, fields } = body;
-
-  if (secret !== process.env.DASHBOARD_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!recordId || !fields || Object.keys(fields).length === 0) {
-    return NextResponse.json({ error: "recordId and fields are required" }, { status: 400 });
-  }
-
-  const token = process.env.AIRTABLE_COUNSELOR_TOKEN;
-  const record = await updateRecord(COUNSELOR_DB_BASE, CONTACTS_TABLE, recordId, fields, token);
-  return NextResponse.json({ success: true, record });
-}
-
-export async function DELETE(request: NextRequest) {
-  const body = await request.json();
-  const { secret, recordId, counselorRecordId, remainingPocIds } = body;
+  const { secret, recordId, name, email, phone, position, eFname, outreachOptIn } = body;
 
   if (secret !== process.env.DASHBOARD_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -73,15 +60,46 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "recordId is required" }, { status: 400 });
   }
 
-  const token = process.env.AIRTABLE_COUNSELOR_TOKEN;
-
-  // Delete the contact record
-  await deleteRecord(COUNSELOR_DB_BASE, CONTACTS_TABLE, recordId, token);
-
-  // Update counselor's POC linked field to remove this contact
-  if (counselorRecordId && Array.isArray(remainingPocIds)) {
-    await updateRecord(COUNSELOR_DB_BASE, COUNSELORS_TABLE, counselorRecordId, { POC: remainingPocIds }, token);
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  function set(column: string, value: unknown) {
+    params.push(value);
+    sets.push(`${column} = $${params.length}`);
   }
+
+  if (name !== undefined) set(CT.name, name);
+  if (email !== undefined) set(CT.email, email || null);
+  if (phone !== undefined) set(CT.phoneNumber, phone || null);
+  if (position !== undefined) set(CT.position, position || null);
+  if (eFname !== undefined) set(CT.firstName, eFname || null);
+  if (outreachOptIn !== undefined) set(CT.emailOptIn, outreachOptIn !== false);
+
+  if (sets.length === 0) {
+    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+  }
+
+  params.push(recordId);
+  const [row] = await mutate(
+    `UPDATE ${CT.table} SET ${sets.join(", ")} WHERE ${CT.id}::text = $${params.length} RETURNING *`,
+    params
+  );
+
+  return NextResponse.json({ success: true, record: row });
+}
+
+export async function DELETE(request: NextRequest) {
+  const body = await request.json();
+  const { secret, recordId } = body;
+
+  if (secret !== process.env.DASHBOARD_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!recordId) {
+    return NextResponse.json({ error: "recordId is required" }, { status: 400 });
+  }
+
+  await mutate(`DELETE FROM ${CT.table} WHERE ${CT.id}::text = $1`, [recordId]);
 
   return NextResponse.json({ success: true });
 }
