@@ -1,15 +1,15 @@
-import { fetchAllRecords, getField } from "./airtable";
 import { getAllCounselors } from "./counselors";
+import { query, toIso, toStr } from "./lms-db";
+import { COUNSELOR_CONVERSATIONS as CC } from "./supabase-schema";
 import type { Conversation, ConversationIntent } from "./types";
-
-const COUNSELOR_DB_BASE = "appU2cJpIWIHQI4up";
-const CONVERSATIONS_TABLE = "tblIg6bBDbLvsvPiJ";
 
 const INTENT_VALUES: ConversationIntent[] = ["cold", "neutral", "warm"];
 
 // AddConversationForm writes intent as a "Cold\nNotes: ..." prefix on the
-// Notes field (there's no dedicated Airtable column for it) — parse it back
-// out here rather than duplicating that format elsewhere.
+// notes column (there's no dedicated column for it) — parse it back out
+// here rather than duplicating that format elsewhere. Kept exactly as it
+// worked when this table was Airtable-backed, so no schema change was
+// needed to bring Conversations over to Supabase.
 function parseIntent(rawNotes: string): {
   intent: ConversationIntent | null;
   notes: string;
@@ -21,88 +21,74 @@ function parseIntent(rawNotes: string): {
   return { intent, notes: match[2] };
 }
 
-export async function getConversationsForCounselor(
-  counselorRecordId: string
-): Promise<Conversation[]> {
-  // Guard: without a record ID we must return nothing, never everything.
-  if (!counselorRecordId) return [];
+interface ConversationRow {
+  id: string;
+  title: string | null;
+  date: Date | string | null;
+  notes: string | null;
+  attendee: string | null;
+}
 
-  const records = await fetchAllRecords(
-    COUNSELOR_DB_BASE,
-    CONVERSATIONS_TABLE,
-    {
-      fields: ["Title", "Date", "Notes", "Attendee", "Counselor"],
-    }
+function toConversation(row: ConversationRow): Omit<Conversation, "companyName"> & { companyName: string } {
+  const { intent, notes } = parseIntent(toStr(row.notes) || "");
+  return {
+    id: row.id,
+    date: toIso(row.date) || "",
+    notes,
+    attendee: toStr(row.attendee) || "",
+    companyName: toStr(row.title) || "",
+    intent,
+  };
+}
+
+export async function getConversationsForCounselor(counselorId: string): Promise<Conversation[]> {
+  // Guard: without a counselor id we must return nothing, never everything.
+  if (!counselorId) return [];
+
+  const rows = await query<ConversationRow>(
+    "counselor-conversations",
+    `SELECT ${CC.id}::text AS id, ${CC.title} AS title, ${CC.date} AS date,
+            ${CC.notes} AS notes, ${CC.attendee} AS attendee
+       FROM ${CC.table}
+      WHERE ${CC.counselorId} = $1`,
+    [counselorId]
   );
 
-  const conversations: Conversation[] = [];
-
-  for (const record of records) {
-    // The REST API returns the linked "Counselor" field as an array of
-    // record IDs. Match exactly to prevent cross-company leakage — a
-    // substring FIND() in filterByFormula matches blank/overlapping IDs.
-    const linkedCounselors = getField<string[]>(record, "Counselor") || [];
-    if (!linkedCounselors.includes(counselorRecordId)) continue;
-
-    const { intent, notes } = parseIntent(getField<string>(record, "Notes") || "");
-
-    conversations.push({
-      id: record.id,
-      date: getField<string>(record, "Date") || "",
-      notes,
-      attendee: getField<string>(record, "Attendee") || "",
-      companyName: getField<string>(record, "Title") || "",
-      intent,
-    });
-  }
-
-  // Sort chronologically (newest first)
-  conversations.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-
+  const conversations = rows.map(toConversation);
+  conversations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   return conversations;
 }
 
 export async function getAllConversations(): Promise<Conversation[]> {
-  const [records, counselors] = await Promise.all([
-    fetchAllRecords(COUNSELOR_DB_BASE, CONVERSATIONS_TABLE, {
-      fields: ["Title", "Date", "Notes", "Attendee", "Counselor"],
-    }),
+  const [rows, counselors] = await Promise.all([
+    query<ConversationRow & { counselor_id: string | null }>(
+      "counselor-conversations",
+      `SELECT ${CC.id}::text AS id, ${CC.title} AS title, ${CC.date} AS date,
+              ${CC.notes} AS notes, ${CC.attendee} AS attendee, ${CC.counselorId} AS counselor_id
+         FROM ${CC.table}`
+    ),
     getAllCounselors(),
   ]);
 
-  const counselorById = new Map(counselors.map((c) => [c.id, c]));
+  const counselorByCounselorId = new Map(counselors.map((c) => [c.counselorId, c]));
 
   const conversations: Conversation[] = [];
-
-  for (const record of records) {
-    const linkedCounselors = getField<string[]>(record, "Counselor") || [];
-    const counselorRecordId = linkedCounselors[0];
-    if (!counselorRecordId) continue;
-
-    const counselor = counselorById.get(counselorRecordId);
+  for (const row of rows) {
+    if (!row.counselor_id) continue;
+    const counselor = counselorByCounselorId.get(row.counselor_id);
     // Conversations linked to a counselor no longer in the directory
     // (deleted/archived) have nothing meaningful to show on the dashboard.
     if (!counselor) continue;
 
-    const { intent, notes } = parseIntent(getField<string>(record, "Notes") || "");
-
+    const base = toConversation(row);
     conversations.push({
-      id: record.id,
-      date: getField<string>(record, "Date") || "",
-      notes,
-      attendee: getField<string>(record, "Attendee") || "",
+      ...base,
       companyName: counselor.companyName,
-      intent,
-      counselorRecordId,
+      counselorRecordId: row.counselor_id,
       counselorName: counselor.companyName,
     });
   }
 
-  conversations.sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-
+  conversations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   return conversations;
 }

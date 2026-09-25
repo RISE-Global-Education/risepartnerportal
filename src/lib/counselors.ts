@@ -1,4 +1,6 @@
 import { fetchAllRecords, getField } from "./airtable";
+import { query, toStr } from "./lms-db";
+import { COUNSELOR_CONTACTS as CT } from "./supabase-schema";
 import type { Counselor, Contact } from "./types";
 
 // Partners in these Follow Up statuses are dead leads — every "who hasn't
@@ -13,7 +15,6 @@ const COUNSELOR_DB_BASE = "appU2cJpIWIHQI4up";
 // Table IDs
 const COUNSELOR_DB_TABLE = "tblxCiUOdN435Zfju"; // Counselor Database (Base 2)
 const COUNSELOR_RECORDS_TABLE = "tblzcy02PoVxhAXId"; // Counselor Records (Base 1)
-const CONTACTS_TABLE = "tbl6kgEdDr0C3lib4";
 
 export function generateSlug(companyName: string): string {
   return companyName
@@ -108,36 +109,55 @@ export async function getCounselorBySlug(
   return null;
 }
 
-export async function getAllContactPhones(): Promise<Map<string, string>> {
-  const records = await fetchAllRecords(COUNSELOR_DB_BASE, CONTACTS_TABLE, {
-    fields: ["Name", "Phone Number"],
-  });
-  const phoneMap = new Map<string, string>();
-  for (const record of records) {
-    const phone = getField<string>(record, "Phone Number");
-    if (phone) phoneMap.set(record.id, phone);
+// Reads counselor_contacts in Supabase — Contacts are created in Supabase
+// only now (see supabase-schema.ts), so this is the sole source of contact
+// phone numbers going forward, not just the legacy-Airtable ones.
+export async function getAllContactPhones(): Promise<Map<string, string[]>> {
+  const rows = await query<{ counselor_id: string | null; phone_number: string | null }>(
+    "counselor-contacts",
+    `SELECT ${CT.counselorId} AS counselor_id, ${CT.phoneNumber} AS phone_number FROM ${CT.table}`
+  );
+  const phonesByCounselor = new Map<string, string[]>();
+  for (const row of rows) {
+    if (!row.counselor_id || !row.phone_number) continue;
+    const existing = phonesByCounselor.get(row.counselor_id) || [];
+    existing.push(row.phone_number);
+    phonesByCounselor.set(row.counselor_id, existing);
   }
-  return phoneMap;
+  return phonesByCounselor;
 }
 
-export async function getContactsForCounselor(recordIds: string[]): Promise<Contact[]> {
-  if (recordIds.length === 0) return [];
+export async function getContactsForCounselor(counselorId: string): Promise<Contact[]> {
+  if (!counselorId) return [];
 
-  const formula = `OR(${recordIds.map((id) => `RECORD_ID()="${id}"`).join(",")})`;
-  const records = await fetchAllRecords(COUNSELOR_DB_BASE, CONTACTS_TABLE, {
-    fields: ["Name", "Email", "Phone Number", "Position", "E_FNAME", "Email Opt-in", "Lead ID"],
-    filterByFormula: formula,
-  });
+  const rows = await query<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    phone_number: string | null;
+    position: string | null;
+    first_name: string | null;
+    email_opt_in: boolean | null;
+    lead_id: string | null;
+  }>(
+    "counselor-contacts",
+    `SELECT ${CT.id}::text AS id, ${CT.name} AS name, ${CT.email} AS email,
+            ${CT.phoneNumber} AS phone_number, ${CT.position} AS position,
+            ${CT.firstName} AS first_name, ${CT.emailOptIn} AS email_opt_in, ${CT.leadId} AS lead_id
+       FROM ${CT.table}
+      WHERE ${CT.counselorId} = $1`,
+    [counselorId]
+  );
 
-  return records.map((record) => ({
-    id: record.id,
-    name: getField<string>(record, "Name") || "",
-    email: getField<string>(record, "Email") || "",
-    phone: getField<string>(record, "Phone Number") || "",
-    position: getField<string>(record, "Position") || "",
-    eFname: getField<string>(record, "E_FNAME") || "",
-    outreachOptIn: getField<string>(record, "Email Opt-in") !== "No",
-    leadId: getField<string>(record, "Lead ID") || "",
+  return rows.map((row) => ({
+    id: row.id,
+    name: toStr(row.name) || "",
+    email: toStr(row.email) || "",
+    phone: toStr(row.phone_number) || "",
+    position: toStr(row.position) || "",
+    eFname: toStr(row.first_name) || "",
+    outreachOptIn: row.email_opt_in !== false,
+    leadId: toStr(row.lead_id) || "",
   }));
 }
 

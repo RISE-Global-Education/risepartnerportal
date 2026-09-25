@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCounselorBySlug } from "@/lib/counselors";
 import { updateRecord } from "@/lib/airtable";
+import { mutate } from "@/lib/lms-db";
+import { COUNSELORS } from "@/lib/supabase-schema";
 
 const COUNSELOR_DB_BASE = "appU2cJpIWIHQI4up";
 const COUNSELOR_DB_TABLE = "tblxCiUOdN435Zfju";
@@ -45,6 +47,11 @@ export async function POST(req: NextRequest) {
     counselor.id,
     { "Partner Password": password },
     process.env.AIRTABLE_COUNSELOR_TOKEN
+  );
+
+  await mutate(
+    `UPDATE ${COUNSELORS.table} SET ${COUNSELORS.partnerPassword} = $1 WHERE ${COUNSELORS.id} = $2`,
+    [password, counselor.counselorId]
   );
 
   const res = NextResponse.json({ ok: true });

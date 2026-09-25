@@ -128,7 +128,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
         throw new Error(data.error || "Failed to create partner");
       }
 
-      const { recordId, counselorId: finalCounselorId } = await counselorRes.json();
+      const { counselorId: finalCounselorId } = await counselorRes.json();
 
       // Step 2: Create contacts (one per POC)
       const contacts = pocs
@@ -145,28 +145,14 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           index: i + 1,
         }));
 
-      const contactsRes = await fetch("/api/contacts", {
+      // Contacts are created directly with counselor_id set (Supabase),
+      // so there's no separate "link to counselor" step anymore — that was
+      // only needed for Airtable's linked-record POC field.
+      await fetch("/api/contacts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ secret, contacts }),
       });
-
-      // Step 2b: Link contacts to counselor's POC field
-      if (contactsRes.ok) {
-        const contactsData = await contactsRes.json();
-        const contactRecordIds = (contactsData.records as { id: string }[]).map((r) => r.id);
-        if (contactRecordIds.length > 0) {
-          await fetch("/api/counselors", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              secret,
-              recordId,
-              fields: { POC: contactRecordIds },
-            }),
-          });
-        }
-      }
 
       // Step 3: Create first conversation
       await fetch("/api/conversations", {
@@ -174,7 +160,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           secret,
-          counselorId: recordId,
+          counselorId: finalCounselorId,
           counselorName: companyName.trim(),
           date: new Date().toISOString().split("T")[0],
           notes: meetingNotes.trim(),

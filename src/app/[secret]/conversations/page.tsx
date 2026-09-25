@@ -13,15 +13,19 @@ export default async function ConversationsInsightsPage({
     getAllCounselors(),
   ]);
 
+  // .id here is the counselor's PR business code, not the Airtable record
+  // id — conversations now live in Supabase keyed by that code (see
+  // conversations.ts), so this has to match what getAllConversations()
+  // returns as counselorRecordId.
   const partnerOptions = counselors
-    .map((c) => ({ id: c.id, companyName: c.companyName }))
+    .map((c) => ({ id: c.counselorId, companyName: c.companyName }))
     .sort((a, b) => a.companyName.localeCompare(b.companyName));
 
   // Lean roster for the follow-up tracker — every partner, not just ones
   // with a conversation already logged in this app, so someone who has
   // never been contacted still shows up rather than being invisible.
   const roster = counselors.map((c) => ({
-    id: c.id,
+    id: c.counselorId,
     companyName: c.companyName,
     risePoc: c.risePoc,
     followUpStatus: c.followUpStatus,
