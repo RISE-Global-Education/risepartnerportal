@@ -4,7 +4,14 @@ import { useState } from "react";
 
 const STATUS_OPTIONS = ["Pending", "MOU Signed", "Partnership", "Rejected", "Unqualified"];
 const RISE_POC_OPTIONS = ["Yash", "Shreyans", "Prachi", "Muskaan", "Arth"];
-const PARTNER_TYPE_OPTIONS = ["Counsellor", "School"];
+const PARTNER_TYPE_OPTIONS = [
+  "Counsellor",
+  "School",
+  "Distribution - Competitions",
+  "Distribution - DECA",
+  "Distribution - Fairs",
+  "Distribution - Olympiads",
+];
 const WORKSHOP_TYPE_OPTIONS = ["Offline", "Online", "Both", "None"];
 
 interface PocEntry {
