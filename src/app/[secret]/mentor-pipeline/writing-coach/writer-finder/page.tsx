@@ -32,10 +32,9 @@ export default async function WriterFinderPage() {
       "Fields of Interest",
       "Notes",
       "Active Status",
-      "Training Status",
       "Resume",
     ],
-    filterByFormula: `AND({Active Status}="Yes",{Training Status}="Complete")`,
+    filterByFormula: `{Active Status}="Yes"`,
   });
 
   const writers: ActiveWriter[] = records.map((r) => {
