@@ -974,15 +974,10 @@ export default function CounselorDetails({
                   isCeoView={isCeoView}
                   onSaved={onSaved}
                 />
-                <EditableField
-                  label="Counselor ID"
-                  value={counselor.counselorId}
-                  fieldName="Counselor ID"
-                  recordId={counselor.id}
-                  secret={secret}
-                  isCeoView={isCeoView}
-                  onSaved={onSaved}
-                />
+                <div>
+                  <span className="text-xs text-rise-brown uppercase tracking-wide">Counselor ID</span>
+                  <p className="text-sm font-medium text-rise-black mt-1">{counselor.counselorId || "—"}</p>
+                </div>
                 <EditableField
                   label="First Name"
                   value={counselor.firstName}

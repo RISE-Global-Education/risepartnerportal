@@ -40,6 +40,33 @@ function toBool(value: unknown): boolean | null {
   return null;
 }
 
+// Maps an Airtable field edit to its Supabase column, applying the same value
+// conversions as the create path. Returns null for Airtable-only fields.
+function toSupabaseColumn(field: string, value: unknown): { column: string; value: unknown } | null {
+  switch (field) {
+    case "Partner Name": return { column: COUNSELORS.companyName, value };
+    // "Counselor ID" is deliberately not mirrored: it is the primary key that
+    // nine tables reference with no ON UPDATE CASCADE, so renaming it needs a
+    // dedicated migration, not a plain UPDATE.
+    case "Country": return { column: COUNSELORS.country, value: value || null };
+    case "Partner Type": return { column: COUNSELORS.partnerType, value: value || null };
+    case "Follow Up Status": return { column: COUNSELORS.followUpStatus, value: value || null };
+    case "Workshop Type": return { column: COUNSELORS.workshopType, value: value || null };
+    case "Expected Number": return { column: COUNSELORS.expectedStudentCount, value: value === "" ? null : value };
+    case "POC (RISE)": return { column: COUNSELORS.pocRise, value };
+    case "Scholarship Amount":
+      return { column: COUNSELORS.scholarshipAmount, value: value == null || value === "" ? null : Number(value) };
+    // Callers already send Referral Amount as a fraction (percent / 100).
+    case "Referral Amount":
+      return { column: COUNSELORS.referralPercentage, value: value == null || value === "" ? null : Number(value) };
+    case "Student Interview": return { column: COUNSELORS.studentInterview, value: toBool(value) };
+    case "Share Brochure": return { column: COUNSELORS.shareBrochure, value: toBool(value) };
+    case "Share Payment": return { column: COUNSELORS.sharePayment, value: toBool(value) };
+    case "Student MixMax Addin": return { column: COUNSELORS.studentMixmaxAddin, value: toBool(value) };
+    default: return null;
+  }
+}
+
 // POST — Create new counselor
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -146,7 +173,52 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const record = await updateRecord(COUNSELOR_DB_BASE, COUNSELOR_DB_TABLE, recordId, fields, getToken());
+  // Mirror the edit into Supabase first, then push to Airtable; if Airtable
+  // fails, restore the previous Supabase values so the two stores agree.
+  // Fields with no Supabase counterpart are Airtable-only.
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  const columns: string[] = [];
+  for (const [name, value] of Object.entries(fields as Record<string, unknown>)) {
+    const mapped = toSupabaseColumn(name, value);
+    if (!mapped) continue;
+    params.push(mapped.value);
+    sets.push(`${mapped.column} = $${params.length}`);
+    columns.push(mapped.column);
+  }
+
+  let previous: Record<string, unknown> | undefined;
+  let currentId: string | undefined;
+  if (sets.length > 0) {
+    [previous] = await mutate<Record<string, unknown>>(
+      `SELECT ${COUNSELORS.id}, ${columns.join(", ")} FROM ${COUNSELORS.table} WHERE ${COUNSELORS.airtableRecordId} = $1`,
+      [recordId]
+    );
+    if (previous) {
+      currentId = previous[COUNSELORS.id] as string;
+      params.push(recordId);
+      await mutate(
+        `UPDATE ${COUNSELORS.table} SET ${sets.join(", ")} WHERE ${COUNSELORS.airtableRecordId} = $${params.length}`,
+        params
+      );
+    }
+  }
+
+  let record;
+  try {
+    record = await updateRecord(COUNSELOR_DB_BASE, COUNSELOR_DB_TABLE, recordId, fields, getToken());
+  } catch (err) {
+    if (previous) {
+      const restoreSets = columns.map((c, i) => `${c} = $${i + 1}`);
+      const restoreParams = columns.map((c) => previous![c]);
+      restoreParams.push(currentId);
+      await mutate(
+        `UPDATE ${COUNSELORS.table} SET ${restoreSets.join(", ")} WHERE ${COUNSELORS.id} = $${restoreParams.length}`,
+        restoreParams
+      );
+    }
+    throw err;
+  }
 
   return NextResponse.json({ success: true, record });
 }
