@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { updateRecord } from "@/lib/airtable";
 import { mutate } from "@/lib/lms-db";
 import { COUNSELOR_CONVERSATIONS as CC, COUNSELORS } from "@/lib/supabase-schema";
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  revalidateTag("counselor-conversations", { expire: 0 });
   return NextResponse.json({ success: true, record: row });
 }
 
@@ -91,7 +93,16 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (date !== undefined) set(CC.date, date);
-  if (notes !== undefined) set(CC.notes, notes);
+  if (notes !== undefined) {
+    // The client edits the parsed notes text; re-attach the stored intent
+    // prefix ("Warm\nNotes: ...") so editing doesn't silently drop it.
+    const [existing] = await mutate<{ notes: string | null }>(
+      `SELECT ${CC.notes} AS notes FROM ${CC.table} WHERE ${CC.id}::text = $1`,
+      [recordId]
+    );
+    const intentMatch = (existing?.notes || "").match(/^(Cold|Neutral|Warm)\n/);
+    set(CC.notes, intentMatch ? `${intentMatch[1]}\nNotes: ${notes}` : notes);
+  }
   if (attendee !== undefined) set(CC.attendee, attendee || null);
 
   if (sets.length === 0) {
@@ -104,5 +115,6 @@ export async function PATCH(request: NextRequest) {
     params
   );
 
+  revalidateTag("counselor-conversations", { expire: 0 });
   return NextResponse.json({ success: true, record: row });
 }
