@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { mutate } from "@/lib/lms-db";
 import { COUNSELOR_CONTACTS as CT, COUNSELORS } from "@/lib/supabase-schema";
 
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
     results.push(row);
   }
 
+  revalidateTag("counselor-contacts", { expire: 0 });
   return NextResponse.json({ success: true, records: results });
 }
 
@@ -84,6 +86,7 @@ export async function PATCH(request: NextRequest) {
     params
   );
 
+  revalidateTag("counselor-contacts", { expire: 0 });
   return NextResponse.json({ success: true, record: row });
 }
 
@@ -101,5 +104,6 @@ export async function DELETE(request: NextRequest) {
 
   await mutate(`DELETE FROM ${CT.table} WHERE ${CT.id}::text = $1`, [recordId]);
 
+  revalidateTag("counselor-contacts", { expire: 0 });
   return NextResponse.json({ success: true });
 }

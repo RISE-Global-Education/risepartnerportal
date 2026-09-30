@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { Conversation } from "@/lib/types";
 
 function formatDate(dateStr: string): string {
@@ -42,6 +43,7 @@ function ConversationItem({
   secret: string;
   attendees: string[];
 }) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [date, setDate] = useState(conv.date);
   const [notes, setNotes] = useState(conv.notes);
@@ -63,6 +65,7 @@ function ConversationItem({
         throw new Error(data.error || "Failed to save");
       }
       setEditing(false);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
