@@ -1,7 +1,7 @@
 import { getAllCounselors, HIDDEN_FOLLOWUP_STATUSES } from "@/lib/counselors";
 import CallsClient from "./CallsClient";
 
-const ALL_RISE_POCS = ["Shreyans", "Yash", "Prachi", "Arth", "Muskaan"];
+const ALL_RISE_POCS = ["Shreyans", "Yash", "Prachi", "Arth", "Muskaan", "Nicki"];
 
 function daysSince(dateStr: string): number {
   const diff = Date.now() - new Date(dateStr).getTime();
