@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Counselor } from "@/lib/types";
 
-const POC_OPTIONS = ["Shreyans", "Yash", "Prachi", "Arth", "Muskaan"];
+const POC_OPTIONS = ["Shreyans", "Yash", "Prachi", "Arth", "Muskaan", "Nicki"];
 
 // Mirrors generateSlug() in src/lib/counselors.ts — the URL is derived from the
 // company name, so renaming it must redirect to the new slug or the page 404s.
