@@ -11,6 +11,10 @@ const PARTNER_TYPE_OPTIONS = [
   "Distribution - DECA",
   "Distribution - Fairs",
   "Distribution - Olympiads",
+  "Employer Perk Platforms",
+  "Distribution - Service Provider",
+  "Distribution - Scholarship",
+  "Distribution - Club/Extracurricular",
 ];
 const WORKSHOP_TYPE_OPTIONS = ["Offline", "Online", "Both", "None"];
 
@@ -253,13 +257,13 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           <label className="block text-sm font-medium text-rise-black mb-2">
             Partner Type <span className="text-red-400">*</span>
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {PARTNER_TYPE_OPTIONS.map((type) => (
               <button
                 key={type}
                 type="button"
                 onClick={() => { setPartnerType(type); if (type !== "School") setWorkshopType(""); }}
-                className={`px-4 py-1.5 text-sm rounded-lg border transition-colors ${
+                className={`px-4 py-1.5 text-sm rounded-lg border transition-colors whitespace-nowrap ${
                   partnerType === type
                     ? "bg-rise-green text-white border-rise-green"
                     : "bg-white text-rise-brown border-gray-200 hover:border-rise-green"
