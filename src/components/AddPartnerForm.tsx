@@ -47,6 +47,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
 
   // Optional
   const [workshopType, setWorkshopType] = useState("");
+  const [isWhitelabel, setIsWhitelabel] = useState(false);
   const [capacity, setCapacity] = useState("");
   const [scholarshipAmount, setScholarshipAmount] = useState("");
   const [referralAmount, setReferralAmount] = useState("");
@@ -84,6 +85,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
     setCountry("");
     setRisePoc([]);
     setWorkshopType("");
+    setIsWhitelabel(false);
     setPocs([emptyPoc()]);
     setMeetingNotes("");
     setCapacity("");
@@ -119,6 +121,7 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
           companyName: companyName.trim(),
           partnerType,
           workshopType: partnerType === "School" ? (workshopType || undefined) : undefined,
+          isWhitelabel,
           firstName: primaryPoc.name.trim(),
           email: primaryPoc.email.trim() || undefined,
           country: country.trim(),
@@ -272,6 +275,35 @@ export default function AddPartnerForm({ secret }: { secret: string }) {
                 {type}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Whitelabel */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-rise-black">Whitelabel Partner</span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsWhitelabel(true)}
+              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                isWhitelabel
+                  ? "bg-rise-green text-white border-rise-green"
+                  : "bg-white text-rise-brown border-gray-200 hover:border-rise-green"
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsWhitelabel(false)}
+              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                !isWhitelabel
+                  ? "bg-red-500 text-white border-red-500"
+                  : "bg-white text-rise-brown border-gray-200 hover:border-red-300"
+              }`}
+            >
+              No
+            </button>
           </div>
         </div>
 

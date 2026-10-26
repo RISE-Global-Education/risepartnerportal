@@ -22,6 +22,7 @@ export interface Counselor {
   mouUrl: string | null;
   partnerType: string;
   workshopType: string;
+  whitelabel: string; // "Yes" | "No" | "" (unset)
   lastConversationDate: string | null;
   slug: string; // auto-generated from company name
   partnerPassword: string; // partner-set password gating /partner/[slug]; empty until they create one
