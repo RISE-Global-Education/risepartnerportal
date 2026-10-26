@@ -12,7 +12,7 @@ interface EditableFieldProps {
   recordId: string;
   secret: string;
   isCeoView: boolean;
-  type?: "text" | "number" | "select";
+  type?: "text" | "number" | "select" | "toggle";
   options?: string[];
   suffix?: string;
   onSaved: () => void;
@@ -66,7 +66,26 @@ function EditableField({
       <div>
         <span className="text-xs text-rise-brown uppercase tracking-wide">{label}</span>
         <div className="flex items-center gap-2 mt-1">
-          {type === "select" && options ? (
+          {type === "toggle" && options ? (
+            <div className="flex flex-1 gap-2">
+              {options.map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => setEditValue(o)}
+                  className={`px-3 py-1 text-xs rounded-lg border transition-colors ${
+                    editValue === o
+                      ? o === "No"
+                        ? "bg-red-500 text-white border-red-500"
+                        : "bg-rise-green text-white border-rise-green"
+                      : "bg-white text-rise-brown border-gray-200 hover:border-rise-green"
+                  }`}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          ) : type === "select" && options ? (
             <select
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
@@ -965,6 +984,17 @@ export default function CounselorDetails({
                     <p className="text-sm font-medium text-rise-black mt-1">{counselor.workshopType || "—"}</p>
                   </div>
                 )}
+                <EditableField
+                  label="Whitelabel"
+                  value={counselor.whitelabel}
+                  fieldName="Whitelabel"
+                  recordId={counselor.id}
+                  secret={secret}
+                  isCeoView={isCeoView}
+                  type="toggle"
+                  options={["Yes", "No"]}
+                  onSaved={onSaved}
+                />
                 <EditableField
                   label="Country"
                   value={counselor.country}

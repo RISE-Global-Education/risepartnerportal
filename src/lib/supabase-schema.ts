@@ -41,6 +41,7 @@ export const COUNSELORS = {
   allEmails: "all_emails",
   country: "country",
   partnerType: "partner_type",
+  isWhitelabel: "is_whitelabel", // nullable boolean (null = not set) — must be added by migration
   followUpStatus: "follow_up_status",
   scholarshipAmount: "scholarship_amount",
   referralPercentage: "referral_percentage",

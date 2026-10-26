@@ -50,6 +50,7 @@ function toSupabaseColumn(field: string, value: unknown): { column: string; valu
     // dedicated migration, not a plain UPDATE.
     case "Country": return { column: COUNSELORS.country, value: value || null };
     case "Partner Type": return { column: COUNSELORS.partnerType, value: value || null };
+    case "Whitelabel": return { column: COUNSELORS.isWhitelabel, value: toBool(value) };
     case "Follow Up Status": return { column: COUNSELORS.followUpStatus, value: value || null };
     case "Workshop Type": return { column: COUNSELORS.workshopType, value: value || null };
     case "Expected Number": return { column: COUNSELORS.expectedStudentCount, value: value === "" ? null : value };
@@ -70,7 +71,7 @@ function toSupabaseColumn(field: string, value: unknown): { column: string; valu
 // POST — Create new counselor
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { secret, companyName, partnerType, workshopType, firstName, email, country, poc, phone, capacity, scholarshipAmount, referralAmount, counselorId, followUpStatus, studentInterview, shareBrochure, sharePayment, studentMixMaxAddin } = body;
+  const { secret, companyName, partnerType, workshopType, isWhitelabel, firstName, email, country, poc, phone, capacity, scholarshipAmount, referralAmount, counselorId, followUpStatus, studentInterview, shareBrochure, sharePayment, studentMixMaxAddin } = body;
 
   if (secret !== process.env.DASHBOARD_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
 
   if (partnerType) fields["Partner Type"] = partnerType;
   if (workshopType) fields["Workshop Type"] = workshopType;
+  fields["Whitelabel"] = isWhitelabel === true ? "Yes" : "No";
 
   if (capacity) fields["Expected Number"] = capacity;
   if (scholarshipAmount != null) fields["Scholarship Amount"] = Number(scholarshipAmount);
@@ -117,8 +119,9 @@ export async function POST(request: NextRequest) {
         ${COUNSELORS.country}, ${COUNSELORS.partnerType}, ${COUNSELORS.followUpStatus},
         ${COUNSELORS.scholarshipAmount}, ${COUNSELORS.referralPercentage}, ${COUNSELORS.workshopType},
         ${COUNSELORS.studentInterview}, ${COUNSELORS.shareBrochure}, ${COUNSELORS.sharePayment},
-        ${COUNSELORS.studentMixmaxAddin}, ${COUNSELORS.pocRise}, ${COUNSELORS.expectedStudentCount})
-     VALUES ($1,$2,gen_random_uuid(),$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+        ${COUNSELORS.studentMixmaxAddin}, ${COUNSELORS.pocRise}, ${COUNSELORS.expectedStudentCount},
+        ${COUNSELORS.isWhitelabel})
+     VALUES ($1,$2,gen_random_uuid(),$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
     [
       finalCounselorId, placeholderRecordId,
       companyName, email || null, email ? [email] : null,
@@ -128,6 +131,7 @@ export async function POST(request: NextRequest) {
       workshopType || null,
       toBool(studentInterview), toBool(shareBrochure), toBool(sharePayment), toBool(studentMixMaxAddin),
       poc, capacity || null,
+      isWhitelabel === true,
     ]
   );
 
