@@ -34,7 +34,10 @@ export default async function PartnerPage({
 
   if (isCeoView) {
     // CEO-view links use the shared internal password, unrelated to the partner's own password.
-    const ceoAuthed = cookieStore.get("ceo_partner_auth")?.value === "1";
+    // Being signed in to the CEO dashboard counts too, so the CEO is never asked twice.
+    const ceoAuthed =
+      cookieStore.get("ceo_partner_auth")?.value === "1" ||
+      cookieStore.get("ceo_auth")?.value === "1";
     if (!ceoAuthed) {
       redirect(`/partner/${slug}/ceo-login`);
     }

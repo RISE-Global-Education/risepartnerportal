@@ -19,7 +19,8 @@ export default function CeoPartnerLoginClient({ slug }: { slug: string }) {
     });
 
     if (res.ok) {
-      window.location.href = `/partner/${slug}`;
+      // replace, not push: keeps this form out of history so Back skips past it
+      window.location.replace(`/partner/${slug}`);
     } else {
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "Invalid password.");
