@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { fetchAllRecords, getField } from "./airtable";
 import type { FunnelStage } from "./types";
 
@@ -13,14 +14,10 @@ export interface DiscoveryCallRecord {
   id: string;
   createdDate: string; // ISO
   consultationDate: string | null; // ISO
-  applicationFormStatus: string | null; // "Form Sent" | "Don't Send" | "Drop" | null
-  notes: string | null;
-  lastModified: string; // ISO
 }
 
 export interface LeadRecord {
   id: string;
-  name: string;
   email: string;
   createdDate: string; // ISO
 }
@@ -49,29 +46,34 @@ export interface CounselorRecord {
 
 // --- Fetchers ---
 
+// Leads and discovery calls are the same Discovery Call table. Both are read
+// from this one fetch so the dashboard pulls its ~8k rows once, not twice, and
+// only the columns computeAnalytics actually uses are requested — a wider
+// selection (it used to include Notes) pushes the cached payload toward
+// unstable_cache's 2MB item limit, past which Vercel stops caching it and
+// every dashboard load re-pages the whole table from Airtable. React's cache()
+// dedupes the two concurrent callers within one render.
+const fetchDiscoveryCallTable = cache(() =>
+  fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
+    fields: ["Student Email ID", "Created", "Consultation Date"],
+  })
+);
+
 export async function getAllDiscoveryCalls(): Promise<DiscoveryCallRecord[]> {
-  const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
-    fields: ["Created", "Consultation Date", "Student Application Form", "Last Modified", "Notes"],
-  });
+  const records = await fetchDiscoveryCallTable();
 
   return records.map((r) => ({
     id: r.id,
     createdDate: getField<string>(r, "Created") || r.createdTime,
     consultationDate: getField<string>(r, "Consultation Date") || null,
-    applicationFormStatus: getField<string>(r, "Student Application Form") || null,
-    notes: getField<string>(r, "Notes") || null,
-    lastModified: getField<string>(r, "Last Modified") || r.createdTime,
   }));
 }
 
 export async function getAllLeads(): Promise<LeadRecord[]> {
-  const records = await fetchAllRecords(STUDENT_PIPELINE_BASE, DISCOVERY_CALL_TABLE, {
-    fields: ["Student Name", "Student Email ID", "Created"],
-  });
+  const records = await fetchDiscoveryCallTable();
 
   return records.map((r) => ({
     id: r.id,
-    name: getField<string>(r, "Student Name") || "Unknown",
     email: (getField<string>(r, "Student Email ID") || "").toLowerCase(),
     createdDate: getField<string>(r, "Created") || r.createdTime,
   }));

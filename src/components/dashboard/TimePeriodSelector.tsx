@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 const PERIODS = [
@@ -16,15 +17,23 @@ export default function TimePeriodSelector() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const current = (searchParams.get("period") as TimePeriod) || "7d";
+  // Recomputing analytics for a new period can take a moment — dim the
+  // selector meanwhile so the click visibly registered.
+  const [isPending, startTransition] = useTransition();
 
   function select(value: TimePeriod) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("period", value);
-    router.push(`${pathname}?${params.toString()}`);
+    startTransition(() => router.push(`${pathname}?${params.toString()}`));
   }
 
   return (
-    <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+    <div
+      className={`flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm border border-gray-200 transition-opacity ${
+        isPending ? "opacity-50 pointer-events-none" : ""
+      }`}
+      aria-busy={isPending}
+    >
       {PERIODS.map((p) => (
         <button
           key={p.value}
