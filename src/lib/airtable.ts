@@ -34,6 +34,29 @@ function safeRevalidate(tag: string): void {
   }
 }
 
+// Airtable allows 5 requests/second per base and answers a burst with 429 and
+// a 30-second lockout. A cold dashboard pages ~200 requests through one base
+// and can trip it; throwing on that 429 used to fail the whole page. Requests
+// aren't paced up front (that made every cold load ~50% slower and queued
+// other pages behind the dashboard) — only a 429 makes the base wait it out.
+const RATE_LIMIT_WAIT_MS = 30_000;
+const MAX_RATE_LIMIT_RETRIES = 2;
+const lockedUntilByBase = new Map<string, number>();
+
+async function airtableFetch(baseId: string, url: string, init: RequestInit): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const wait = (lockedUntilByBase.get(baseId) ?? 0) - Date.now();
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    const res = await fetch(url, init);
+    if (res.status !== 429 || attempt >= MAX_RATE_LIMIT_RETRIES) return res;
+    await res.body?.cancel();
+    console.warn(`[Airtable] Rate limited on ${baseId} — retrying in ${RATE_LIMIT_WAIT_MS / 1000}s`);
+    // Hold the whole base, not just this request: anything sent during the
+    // lockout is rejected too and only prolongs it.
+    lockedUntilByBase.set(baseId, Date.now() + RATE_LIMIT_WAIT_MS);
+  }
+}
+
 async function fetchAllRecordsUncached(
   baseId: string,
   tableId: string,
@@ -65,7 +88,7 @@ async function fetchAllRecordsUncached(
     }
 
     const url = `${BASE_URL}/${baseId}/${tableId}?${params.toString()}`;
-    const res = await fetch(url, {
+    const res = await airtableFetch(baseId, url, {
       headers: {
         Authorization: `Bearer ${AIRTABLE_TOKEN}`,
       },
@@ -89,6 +112,23 @@ async function fetchAllRecordsUncached(
   return allRecords;
 }
 
+// unstable_cache doesn't dedupe concurrent misses, so several people opening a
+// cold page at once would each page the whole table. They share one pull
+// instead.
+const inFlightFetches = new Map<string, Promise<AirtableRecord[]>>();
+
+function fetchAllRecordsShared(
+  ...args: Parameters<typeof fetchAllRecordsUncached>
+): Promise<AirtableRecord[]> {
+  const key = JSON.stringify(args);
+  let pending = inFlightFetches.get(key);
+  if (!pending) {
+    pending = fetchAllRecordsUncached(...args).finally(() => inFlightFetches.delete(key));
+    inFlightFetches.set(key, pending);
+  }
+  return pending;
+}
+
 // unstable_cache tags are fixed at wrap-time, not per-call, so a wrapper is
 // created once per (baseId, tableId) and reused — not recreated per request.
 const cachedFetchersByTable = new Map<string, typeof fetchAllRecordsUncached>();
@@ -97,7 +137,7 @@ function getCachedFetcher(baseId: string, tableId: string) {
   const tag = tableTag(baseId, tableId);
   let fn = cachedFetchersByTable.get(tag);
   if (!fn) {
-    fn = unstable_cache(fetchAllRecordsUncached, ["airtable-fetch-all-records", tag], {
+    fn = unstable_cache(fetchAllRecordsShared, ["airtable-fetch-all-records", tag], {
       revalidate: CACHE_SECONDS,
       tags: [tag],
     });
@@ -131,7 +171,7 @@ export async function createRecord(
   token?: string
 ): Promise<AirtableRecord> {
   const url = `${BASE_URL}/${baseId}/${tableId}`;
-  const res = await fetch(url, {
+  const res = await airtableFetch(baseId, url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token || AIRTABLE_TOKEN}`,
@@ -156,7 +196,7 @@ export async function getRecord(
   token?: string
 ): Promise<AirtableRecord> {
   const url = `${BASE_URL}/${baseId}/${tableId}/${recordId}`;
-  const res = await fetch(url, {
+  const res = await airtableFetch(baseId, url, {
     headers: {
       Authorization: `Bearer ${token || AIRTABLE_TOKEN}`,
     },
@@ -178,7 +218,7 @@ export async function updateRecord(
   token?: string
 ): Promise<AirtableRecord> {
   const url = `${BASE_URL}/${baseId}/${tableId}/${recordId}`;
-  const res = await fetch(url, {
+  const res = await airtableFetch(baseId, url, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${token || AIRTABLE_TOKEN}`,
@@ -203,7 +243,7 @@ export async function deleteRecord(
   token?: string
 ): Promise<void> {
   const url = `${BASE_URL}/${baseId}/${tableId}/${recordId}`;
-  const res = await fetch(url, {
+  const res = await airtableFetch(baseId, url, {
     method: "DELETE",
     headers: {
       Authorization: `Bearer ${token || AIRTABLE_TOKEN}`,
