@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Fuse from "fuse.js";
+import { Spinner } from "@/components/Skeletons";
+import { startNavigationProgress } from "@/components/NavigationProgress";
 
 interface CounselorOption {
   companyName: string;
@@ -67,6 +69,11 @@ export default function SearchBar({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  // isPending stays true until the partner page has rendered, so the clicked
+  // row can show a spinner for the whole Airtable fetch.
+  const [isPending, startTransition] = useTransition();
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const loadingId = isPending ? pendingId : null;
 
   // Fuse only as typo fallback when keyword search finds nothing
   const fuse = useMemo(
@@ -114,8 +121,13 @@ export default function SearchBar({
   }, [query]);
 
   function navigate(counselor: CounselorOption) {
+    if (loadingId) return;
     const ceoSlug = `${counselor.slug}-${counselor.counselorId.toLowerCase()}`;
-    router.push(`/partner/${ceoSlug}`);
+    setPendingId(counselor.counselorId);
+    startNavigationProgress();
+    startTransition(() => {
+      router.push(`/partner/${ceoSlug}`);
+    });
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -160,25 +172,41 @@ export default function SearchBar({
         onKeyDown={handleKeyDown}
         className="w-full px-5 py-4 text-lg rounded-xl border-2 border-gray-200 focus:border-rise-green focus:outline-none bg-white text-rise-black placeholder:text-rise-brown/50 shadow-sm transition-colors"
       />
-      {isOpen && filtered.length > 0 && (
+      {loadingId && (
+        <div className="absolute right-5 top-1/2 -translate-y-1/2 text-rise-green pointer-events-none">
+          <Spinner className="h-5 w-5" />
+        </div>
+      )}
+      {(isOpen || loadingId) && filtered.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50 max-h-80 overflow-y-auto">
           {filtered.map((counselor, index) => {
             const companyMatch =
               norm(counselor.companyName).includes(norm(qLow)) ||
               anyWordStartsWith(counselor.companyName, qLow);
             const viaContacts = !companyMatch ? isContactMatch(counselor) : [];
+            const isLoading = loadingId === counselor.counselorId;
 
             return (
               <button
                 key={counselor.counselorId}
                 onMouseDown={() => navigate(counselor)}
+                disabled={!!loadingId && !isLoading}
+                aria-busy={isLoading}
                 className={`w-full px-5 py-3 text-left hover:bg-rise-cream transition-colors ${
-                  index === selectedIndex ? "bg-rise-cream" : ""
-                }`}
+                  index === selectedIndex || isLoading ? "bg-rise-cream" : ""
+                } ${loadingId && !isLoading ? "opacity-50 cursor-wait" : ""}`}
               >
-                <p className="font-medium text-rise-black">
-                  {counselor.companyName}
-                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium text-rise-black">
+                    {counselor.companyName}
+                  </p>
+                  {isLoading && (
+                    <span className="flex items-center gap-2 text-xs font-medium text-rise-green shrink-0">
+                      <Spinner />
+                      Opening…
+                    </span>
+                  )}
+                </div>
                 {viaContacts.length > 0 && (
                   <p className="text-xs text-rise-green mt-0.5">
                     via {viaContacts.join(", ")}
