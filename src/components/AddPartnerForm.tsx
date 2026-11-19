@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { RISE_POC_OPTIONS } from "@/lib/rise-pocs";
 
 const STATUS_OPTIONS = ["Pending", "MOU Signed", "Partnership", "Rejected", "Unqualified"];
-const RISE_POC_OPTIONS = ["Yash", "Shreyans", "Prachi", "Muskaan", "Arth", "Nicki"];
 const PARTNER_TYPE_OPTIONS = [
   "Counsellor",
   "School",

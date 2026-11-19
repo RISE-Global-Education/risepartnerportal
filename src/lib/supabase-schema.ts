@@ -72,6 +72,20 @@ export const COUNSELOR_CONTACTS = {
   emailOptIn: "email_opt_in",
 } as const;
 
+// The no-send list: emails that have unsubscribed. Record-keeping only — the
+// portal never reads this to block a send. Created by
+// scripts/create-email-unsubscribes.sql.
+export const EMAIL_UNSUBSCRIBES = {
+  table: "email_unsubscribes",
+  id: "id",
+  email: "email", // stored lowercased; unique
+  name: "name",
+  companyName: "company_name",
+  country: "country",
+  risePoc: "rise_poc", // text[] — same multi-select as the Add Partner form
+  createdAt: "created_at",
+} as const;
+
 export const COUNSELOR_CONVERSATIONS = {
   table: "counselor_conversations",
   id: "id",
