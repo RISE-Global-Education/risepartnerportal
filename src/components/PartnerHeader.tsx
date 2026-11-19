@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { startNavigationProgress } from "@/components/NavigationProgress";
 import type { Counselor } from "@/lib/types";
 
 const POC_OPTIONS = ["Shreyans", "Yash", "Prachi", "Arth", "Muskaan", "Nicki"];
@@ -73,6 +74,7 @@ export default function PartnerHeader({
 
       const newSlug = generateSlug(trimmed);
       const newUrl = isCeoView ? `/partner/${newSlug}-${counselor.counselorId.toLowerCase()}` : `/partner/${newSlug}`;
+      startNavigationProgress();
       router.push(newUrl);
     } catch (err) {
       setNameError(err instanceof Error ? err.message : "Failed to save");

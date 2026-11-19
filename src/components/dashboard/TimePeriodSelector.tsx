@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { startNavigationProgress } from "@/components/NavigationProgress";
 
 const PERIODS = [
   { label: "7 days", value: "7d" },
@@ -20,6 +21,7 @@ export default function TimePeriodSelector() {
   function select(value: TimePeriod) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("period", value);
+    if (value !== current) startNavigationProgress();
     router.push(`${pathname}?${params.toString()}`);
   }
 
