@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
   if (sharePayment) fields["Share Payment"] = sharePayment;
   if (studentMixMaxAddin) fields["Student MixMax Addin"] = studentMixMaxAddin;
 
+  const PARTNER_LINK_SUFFIX = companyName.toLowerCase().replace(" ", "-");
+  fields["Partner Link"] = `https://partner.riseresearch.com/partner/${PARTNER_LINK_SUFFIX}`;
+
   // Supabase first: insert with a temporary placeholder for airtable_record_id
   // (that column is NOT NULL/UNIQUE and Airtable hasn't assigned a real one
   // yet). Placeholder is unique per counselor, so it can never collide.
