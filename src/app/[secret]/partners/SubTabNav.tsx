@@ -9,7 +9,7 @@ export default function PartnersSubTabNav({ secret }: { secret: string }) {
   const tabs = [
     { label: "Search", href: `${base}/search` },
     { label: "Calls", href: `${base}/calls` },
-    { label: "Unsubscribed", href: `${base}/unsubscribed` },
+    { label: "Unsubscribe List", href: `${base}/unsubscribed` },
   ];
 
   return (
