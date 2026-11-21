@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   BILL_ID_FORMAT,
   billLabelForInstant,
-  billPeriodText,
   extractBillId,
   lastClosedBillLabel,
   makeBillId,
@@ -106,16 +105,5 @@ describe("lastClosedBillLabel", () => {
   it("handles the year boundary", () => {
     expect(lastClosedBillLabel(new Date("2027-01-10T12:00:00Z"))).toBe("December 2026");
     expect(lastClosedBillLabel(new Date("2027-01-26T17:00:00Z"))).toBe("January 2027");
-  });
-});
-
-describe("billPeriodText", () => {
-  it("spells the period out with full month names", () => {
-    expect(billPeriodText("November 2026")).toBe("October 26 to November 26");
-    expect(billPeriodText("January 2027")).toBe("December 26 to January 26");
-  });
-
-  it("returns null for an unreadable label", () => {
-    expect(billPeriodText("someday")).toBeNull();
   });
 });

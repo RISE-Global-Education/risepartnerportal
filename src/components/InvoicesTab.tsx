@@ -1,4 +1,3 @@
-import { billPeriodText } from "@/lib/bill-id";
 import type { CounselorInvoice, InvoiceStatus } from "@/lib/counselor-invoices";
 import InvoiceDownloadButton from "./InvoiceDownloadButton";
 
@@ -108,14 +107,7 @@ export default function InvoicesTab({ invoices }: { invoices: CounselorInvoice[]
                     className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-rise-black">{invoice.billId}</td>
-                    <td className="px-6 py-4 text-rise-black">
-                      {invoice.billingMonth}
-                      {billPeriodText(invoice.billingMonth) && (
-                        <span className="block text-xs text-rise-brown">
-                          {billPeriodText(invoice.billingMonth)}
-                        </span>
-                      )}
-                    </td>
+                    <td className="px-6 py-4 text-rise-black">{invoice.billingMonth}</td>
                     <td className="px-6 py-4 text-rise-black">{invoice.studentCount}</td>
                     {showRateColumn && (
                       <td className="px-6 py-4 text-rise-black">

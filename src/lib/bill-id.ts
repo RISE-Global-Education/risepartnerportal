@@ -95,11 +95,3 @@ export function lastClosedBillLabel(now: Date = new Date()): string {
   const { year, month, day } = billingClockParts(now);
   return day >= BILLING_DAY ? labelFor(year, month) : labelFor(year, month - 1);
 }
-
-/** Spells a bill's period out, e.g. "October 26 to November 26", or null for an unreadable label. */
-export function billPeriodText(label: string): string | null {
-  const parsed = parseMonthLabel(label);
-  if (!parsed) return null;
-  const startMonth = MONTH_NAMES[(parsed.monthIndex + 11) % 12];
-  return `${startMonth} ${BILLING_DAY} to ${MONTH_NAMES[parsed.monthIndex]} ${BILLING_DAY}`;
-}
