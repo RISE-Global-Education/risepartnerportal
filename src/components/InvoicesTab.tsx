@@ -1,3 +1,4 @@
+import { billPeriodText } from "@/lib/bill-id";
 import type { CounselorInvoice, InvoiceStatus } from "@/lib/counselor-invoices";
 import InvoiceDownloadButton from "./InvoiceDownloadButton";
 
@@ -66,14 +67,15 @@ export default function InvoicesTab({ invoices }: { invoices: CounselorInvoice[]
         </div>
       )}
 
-      <div className="mb-6 rounded-xl border border-rise-green/20 bg-rise-green/5 px-5 py-4">
-        <p className="text-sm font-semibold text-rise-green">Automatic Invoice Sync</p>
-        <p className="text-sm text-rise-black/80 mt-0.5">
-          Invoices are shared by the RISE accounts team and appear here automatically once uploaded.
-          Each invoice is named by its Bill ID. Every day at 9:00 AM Pacific Time, we check the Drive
-          for an uploaded invoice for each Bill ID. If a matching invoice is found, the payment is
-          automatically marked as Paid.
-        </p>
+      <div className="mb-6 flex items-start gap-3 rounded-xl border border-rise-green/20 bg-rise-green/5 px-5 py-4">
+        <span aria-hidden="true" className="mt-0.5 h-7 w-7 shrink-0 rounded-md border-2 border-rise-green" />
+        <div>
+          <p className="text-sm font-semibold text-rise-green">Automatic Invoice Sync</p>
+          <p className="text-sm text-rise-black/80 mt-0.5">
+            Invoices are shared by the RISE accounts team and appear here automatically once
+            uploaded. Each invoice is named by your Counselor ID.
+          </p>
+        </div>
       </div>
 
       {invoices.length === 0 ? (
@@ -106,7 +108,14 @@ export default function InvoicesTab({ invoices }: { invoices: CounselorInvoice[]
                     className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors"
                   >
                     <td className="px-6 py-4 font-medium text-rise-black">{invoice.billId}</td>
-                    <td className="px-6 py-4 text-rise-black">{invoice.billingMonth}</td>
+                    <td className="px-6 py-4 text-rise-black">
+                      {invoice.billingMonth}
+                      {billPeriodText(invoice.billingMonth) && (
+                        <span className="block text-xs text-rise-brown">
+                          {billPeriodText(invoice.billingMonth)}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-rise-black">{invoice.studentCount}</td>
                     {showRateColumn && (
                       <td className="px-6 py-4 text-rise-black">

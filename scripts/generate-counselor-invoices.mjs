@@ -1,23 +1,25 @@
 #!/usr/bin/env node
 // Manual version of the monthly job: writes a .sql file that creates one Pending
-// counselor_invoices row for every counselor with referred students in a month.
+// counselor_invoices row for every counselor with referred students in a billing
+// period. A period runs from the 26th of one month to the 26th of the next, named
+// after the month it ends in ("November 2026" is October 26 to November 26).
 // Use it to backfill a month or to preview what the automatic job will create.
 //
-// It only READS Airtable (the same student view the Invoices tab uses). It never
+// It only READS Airtable (the same student table the Invoices tab uses). It never
 // connects to the database: you review the generated file and apply it yourself
 // in the Supabase SQL editor.
 //
 // Usage:
 //   node scripts/generate-counselor-invoices.mjs --month "October 2026" [--out file.sql]
 //
-//   --month  required. A full month name and year, matching Airtable's "Month" text.
+//   --month  required. The bill's name: a full month name and year, such as "November 2026".
 //   --out    optional. Defaults to counselor-invoices-<month>.sql in the current folder.
 //
-// Bill IDs are the counselor ID and the month, for example PR1126_October2026,
+// Bill IDs are the counselor ID and the month, for example PR1126_November2026,
 // so the SQL is safe to re-run: a bill that already exists is skipped.
 //
-// Needs AIRTABLE_TOKEN, AIRTABLE_REFERRAL_BASE_ID, AIRTABLE_REFERRAL_TABLE_ID and
-// AIRTABLE_REFERRAL_VIEW_ID in .env.local (or the environment).
+// Needs AIRTABLE_TOKEN, AIRTABLE_REFERRAL_BASE_ID and AIRTABLE_REFERRAL_TABLE_ID in
+// .env.local (or the environment).
 
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 
@@ -25,6 +27,23 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
+
+// Mirrors billLabelForInstant() in src/lib/bill-id.ts: keep the two in step. IST,
+// start inclusive, end exclusive, so the 26th at midnight begins
+// the next period.
+function billLabelForInstant(instant) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(instant);
+  const get = (type) => Number(parts.find((p) => p.type === type).value);
+  const year = get("year");
+  const month = get("month") + (get("day") >= 26 ? 1 : 0);
+  const index = (((month - 1) % 12) + 12) % 12;
+  return `${MONTHS[index]} ${year + Math.floor((month - 1) / 12)}`;
+}
 
 function arg(name) {
   const i = process.argv.indexOf(`--${name}`);
@@ -58,17 +77,16 @@ const token = process.env.AIRTABLE_TOKEN;
 if (!token) fail("AIRTABLE_TOKEN is not set (.env.local or the environment).");
 const BASE = process.env.AIRTABLE_REFERRAL_BASE_ID?.trim();
 const TABLE = process.env.AIRTABLE_REFERRAL_TABLE_ID?.trim();
-const VIEW = process.env.AIRTABLE_REFERRAL_VIEW_ID?.trim();
-if (!BASE || !TABLE || !VIEW) {
-  fail("Set AIRTABLE_REFERRAL_BASE_ID, AIRTABLE_REFERRAL_TABLE_ID and AIRTABLE_REFERRAL_VIEW_ID (.env.local or the environment).");
+if (!BASE || !TABLE) {
+  fail("Set AIRTABLE_REFERRAL_BASE_ID and AIRTABLE_REFERRAL_TABLE_ID (.env.local or the environment).");
 }
 
 // Only the two fields needed, so no student details are ever downloaded.
-const fields = ["Month", "Counselor Name"];
+const fields = ["Record Created", "Counselor Name"];
 const counselors = new Map(); // counselor id -> student count
 let offset;
 do {
-  const params = new URLSearchParams({ view: VIEW, pageSize: "100" });
+  const params = new URLSearchParams({ pageSize: "100" });
   for (const f of fields) params.append("fields[]", f);
   if (offset) params.set("offset", offset);
   const res = await fetch(`https://api.airtable.com/v0/${BASE}/${TABLE}?${params}`, {
@@ -77,8 +95,8 @@ do {
   if (!res.ok) fail(`Airtable error ${res.status}: ${await res.text()}`);
   const data = await res.json();
   for (const record of data.records) {
-    const rowMonth = [].concat(record.fields["Month"] ?? [])[0];
-    if (typeof rowMonth !== "string" || rowMonth.trim().toLowerCase() !== month.toLowerCase()) continue;
+    const created = new Date(record.fields["Record Created"]);
+    if (Number.isNaN(created.getTime()) || billLabelForInstant(created) !== month) continue;
     const name = [].concat(record.fields["Counselor Name"] ?? [])[0];
     const id = typeof name === "string" ? /(PR\d+)\s*$/i.exec(name.trim())?.[1]?.toUpperCase() : null;
     if (!id) continue;
@@ -88,7 +106,7 @@ do {
 } while (offset);
 
 if (counselors.size === 0) {
-  fail(`No students found for "${month}" in the Airtable view. Check the month spelling.`);
+  fail(`No students found for the "${month}" period in the Airtable view. Check the month spelling.`);
 }
 
 const ids = [...counselors.keys()].sort();

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseCounselorId, parseReferralPercent, referralMonthKey } from "./referral-months";
+import {
+  parseCounselorId,
+  parseReferralPercent,
+  referralMonthKey,
+} from "./referral-months";
 
 describe("parseCounselorId", () => {
   it("takes the PR code from the end of the name", () => {

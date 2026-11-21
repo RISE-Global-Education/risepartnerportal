@@ -73,13 +73,11 @@ export default async function PartnerPage({
     conversations = await getConversationsForCounselor(counselor.counselorId);
   }
 
-  // Invoices are financial, so a partner who has not set a password (and is
-  // therefore not logged in) is asked to create one instead of seeing them.
-  const invoicesLocked = showSecureLoginButton;
+  // Invoices follow the same rule as the rest of the page: a partner who has set
+  // a password is behind the login gate above, and one who has not set one can
+  // see the page, invoices included.
   const invoices =
-    activeTab === "invoices" && !invoicesLocked
-      ? await getInvoicesForCounselor(counselor.counselorId)
-      : [];
+    activeTab === "invoices" ? await getInvoicesForCounselor(counselor.counselorId) : [];
 
   return (
     <div className="min-h-screen bg-rise-cream">
@@ -127,23 +125,7 @@ export default async function PartnerPage({
             )}
           </>
         )}
-        {activeTab === "invoices" &&
-          (invoicesLocked ? (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-              <p className="text-rise-black font-medium">Create a password to view your invoices</p>
-              <p className="text-sm text-rise-brown mt-1 mb-4">
-                Invoices are protected. Set up a secure login to see and download them.
-              </p>
-              <a
-                href={`/partner/${slug}/create-password`}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-rise-green rounded-lg hover:bg-rise-green/90 transition-colors"
-              >
-                Secure Login
-              </a>
-            </div>
-          ) : (
-            <InvoicesTab invoices={invoices} />
-          ))}
+        {activeTab === "invoices" && <InvoicesTab invoices={invoices} />}
       </div>
     </div>
   );

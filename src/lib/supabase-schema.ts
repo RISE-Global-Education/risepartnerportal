@@ -100,6 +100,7 @@ export const COUNSELOR_INVOICES = {
   driveFileId: "invoice_drive_file_id", // never sent to the browser
   fileName: "invoice_file_name",
   uploadedAt: "invoice_uploaded_at",
+  paidEmailSentAt: "paid_email_sent_at", // set once the "invoice is paid" email has gone out
 } as const;
 
 export const COUNSELOR_CONVERSATIONS = {

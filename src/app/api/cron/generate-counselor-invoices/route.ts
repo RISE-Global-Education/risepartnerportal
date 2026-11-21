@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { previousMonthLabel } from "@/lib/bill-id";
+import { lastClosedBillLabel } from "@/lib/bill-id";
 import { INVOICES_CACHE_TAG } from "@/lib/counselor-invoices";
 import {
   generateInvoicesForMonth,
@@ -15,8 +15,9 @@ function secretMatches(provided: string | null, expected: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-// Called by the Supabase pg_cron job on the 1st of each month (see
-// scripts/create-counselor-invoices.sql). It bills the month that just ended.
+// Called by the Supabase pg_cron job on the 26th of each month (see
+// scripts/create-counselor-invoices.sql). It bills the period that just ended,
+// the 26th of last month to the 26th of this one.
 // A body of {"month": "October 2026"} backfills a specific month instead.
 export async function POST(request: NextRequest) {
   const expected = process.env.CRON_WEBHOOK_SECRET;
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
   const requested = typeof body?.month === "string" ? body.month : null;
 
   try {
-    const result = await generateInvoicesForMonth(requested ?? previousMonthLabel());
+    const result = await generateInvoicesForMonth(requested ?? lastClosedBillLabel());
     try {
       revalidateTag(INVOICES_CACHE_TAG, { expire: 0 });
     } catch (err) {

@@ -1,6 +1,6 @@
 -- Run once in the Supabase SQL editor. Safe to re-run.
--- Student count and referral % are NOT stored here. The portal reads them from
--- the Airtable referral view by counselor and month.
+-- Student count and referral % are NOT stored here. The portal works them out
+-- from the Airtable student table by counselor and billing period.
 -- Backs the Invoices tab on the partner portal (counselor referral invoices).
 -- This is separate from the LMS "invoices" table, which holds mentor and
 -- writing coach bills and is reconciled by the LMS backend.
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS counselor_invoices (
   id                    bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   bill_id               text NOT NULL,                 -- counselor ID and month, e.g. PR1126_October2026, also the Drive file name
   counselor_id          text NOT NULL,                 -- matches counselors.id
-  billing_month         text NOT NULL,                 -- e.g. October 2026, must match the Month text in the Airtable referral view
+  billing_month         text NOT NULL,                 -- named after the month the 26th-to-26th period ends in, e.g. November 2026 is October 26 to November 26
   payment_status        text NOT NULL DEFAULT 'Pending'
                         CHECK (payment_status IN ('Pending', 'Processing', 'Paid')),
   paid_at               timestamptz,
@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS counselor_invoices (
   invoice_uploaded_at   timestamptz,
   created_at            timestamptz NOT NULL DEFAULT now()
 );
+
+-- When the "your invoice is paid" email went out. Added separately from the
+-- CREATE above so the script upgrades a table created by an earlier version.
+ALTER TABLE counselor_invoices ADD COLUMN IF NOT EXISTS paid_email_sent_at timestamptz;
 
 -- Bill IDs are unique, case-insensitively. The reconciler upper-cases the ID
 -- it pulls out of a file name before looking it up.
@@ -42,9 +46,9 @@ ALTER TABLE counselor_invoices ENABLE ROW LEVEL SECURITY;
 --   portal_cron_secret  any long random string. Set the SAME value as the
 --                    CRON_WEBHOOK_SECRET environment variable on the portal.
 --
--- pg_cron runs in UTC. 9:00 AM Pacific is 16:00 UTC in summer and 17:00 UTC in
--- winter, so the job fires at both hours and the function returns at once
--- unless it is currently 9 o'clock in Los Angeles.
+-- pg_cron runs in UTC. 9:00 AM IST is 03:30 UTC all year (IST has no daylight
+-- saving), so the job fires at 03:30 UTC and the function double-checks that it
+-- is currently 9 o'clock in India before it calls the portal.
 -- ---------------------------------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
@@ -58,7 +62,7 @@ DECLARE
   secret   text;
   base_url text;
 BEGIN
-  IF EXTRACT(hour FROM (now() AT TIME ZONE 'America/Los_Angeles')) <> 9 THEN
+  IF EXTRACT(hour FROM (now() AT TIME ZONE 'Asia/Kolkata')) <> 9 THEN
     RETURN;
   END IF;
 
@@ -86,16 +90,17 @@ $$;
 
 SELECT cron.schedule(
   'reconcile-counselor-invoices',
-  '0 16,17 * * *',
+  '30 3 * * *',
   $$SELECT reconcile_counselor_invoices();$$
 );
 
 -- ---------------------------------------------------------------------------
--- Monthly bill creation. On the 1st of each month the portal creates one
--- Pending bill (PR1126_October2026 style) for every counselor who referred
--- students in the month that just ended. Uses the same two vault secrets.
--- 16:00 and 17:00 UTC cover 9:00 AM Pacific in summer and winter; the function
--- returns at once unless it is currently 9 o'clock in Los Angeles.
+-- Monthly bill creation. Billing periods run from the 26th to the 26th, so on
+-- the 26th of each month the portal creates one Pending bill (PR1126_November2026
+-- style, named after the month the period ends in) for every counselor who
+-- referred students in the period that just ended. Uses the same two vault secrets.
+-- A period ends at midnight IST on the 26th, so by 9:00 AM IST (03:30 UTC) that
+-- day it is closed. The function returns at once unless it is 9 o'clock in India.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION generate_counselor_invoices()
 RETURNS void
@@ -106,7 +111,7 @@ DECLARE
   secret   text;
   base_url text;
 BEGIN
-  IF EXTRACT(hour FROM (now() AT TIME ZONE 'America/Los_Angeles')) <> 9 THEN
+  IF EXTRACT(hour FROM (now() AT TIME ZONE 'Asia/Kolkata')) <> 9 THEN
     RETURN;
   END IF;
 
@@ -134,6 +139,6 @@ $$;
 
 SELECT cron.schedule(
   'generate-counselor-invoices',
-  '0 16,17 1 * *',
+  '30 3 26 * *',
   $$SELECT generate_counselor_invoices();$$
 );

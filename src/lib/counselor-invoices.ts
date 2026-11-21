@@ -188,3 +188,54 @@ export async function insertPendingBills(
   );
   return rows.length;
 }
+
+export interface BillAwaitingEmail {
+  id: string;
+  billId: string;
+  counselorId: string;
+  billingMonth: string;
+}
+
+/**
+ * Bills that are Paid, have their invoice file, and have not been emailed yet.
+ * Only bills paid on or after `since` count, so bills that were Paid before
+ * this feature existed never trigger an email.
+ */
+export async function getBillsAwaitingPaidEmail(since: Date): Promise<BillAwaitingEmail[]> {
+  const rows = await mutate<{ id: string; bill_id: string; counselor_id: string; billing_month: string }>(
+    `SELECT ${CI.id}::text AS id, ${CI.billId} AS bill_id,
+            ${CI.counselorId} AS counselor_id, ${CI.billingMonth} AS billing_month
+       FROM ${CI.table}
+      WHERE ${CI.paymentStatus} = 'Paid'
+        AND ${CI.driveFileId} IS NOT NULL
+        AND ${CI.paidEmailSentAt} IS NULL
+        AND ${CI.paidAt} >= $1
+      ORDER BY ${CI.id}`,
+    [since.toISOString()]
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    billId: row.bill_id,
+    counselorId: row.counselor_id,
+    billingMonth: row.billing_month,
+  }));
+}
+
+/**
+ * Claims the email for a bill before sending, so two overlapping runs can never
+ * both send it. Returns false when someone else already claimed it.
+ */
+export async function claimPaidEmail(id: string): Promise<boolean> {
+  const rows = await mutate(
+    `UPDATE ${CI.table} SET ${CI.paidEmailSentAt} = now()
+      WHERE ${CI.id} = $1::bigint AND ${CI.paidEmailSentAt} IS NULL
+      RETURNING ${CI.id}`,
+    [id]
+  );
+  return rows.length > 0;
+}
+
+/** Undoes a claim after a failed send, so the next run tries again. */
+export async function releasePaidEmail(id: string): Promise<void> {
+  await mutate(`UPDATE ${CI.table} SET ${CI.paidEmailSentAt} = NULL WHERE ${CI.id} = $1::bigint`, [id]);
+}

@@ -55,15 +55,51 @@ export function extractBillId(fileName: string): string | null {
 // What the download route accepts in its URL.
 export const BILL_ID_FORMAT = /^PR\d+_(?:[A-Za-z]+)\d{4}$/i;
 
-/** The month before the one that "now" falls in, by Los Angeles time, as a label like "October 2026". */
-export function previousMonthLabel(now: Date = new Date()): string {
+// Billing periods run from the 26th of one month to the 26th of the next, in
+// Indian Standard Time (IST, UTC+5:30, no daylight saving). A period is named after
+// the month it ends in: October 26 to November 26 is the "November 2026" bill,
+// raised on November 26. The start is inclusive and the end is exclusive, so a
+// student who joins at midnight on the 26th belongs to the next period.
+export const BILLING_DAY = 26;
+
+// The clock the 26th is read on. IST has no daylight saving, so a period always
+// starts and ends at the same IST time.
+const BILLING_TIME_ZONE = "Asia/Kolkata";
+
+function billingClockParts(instant: Date): { year: number; month: number; day: number } {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles",
+    timeZone: BILLING_TIME_ZONE,
     year: "numeric",
     month: "numeric",
-  }).formatToParts(now);
-  const month = Number(parts.find((p) => p.type === "month")!.value);
-  const year = Number(parts.find((p) => p.type === "year")!.value);
-  const previous = month === 1 ? { month: 12, year: year - 1 } : { month: month - 1, year };
-  return `${MONTH_NAMES[previous.month - 1]} ${previous.year}`;
+    day: "numeric",
+  }).formatToParts(instant);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)!.value);
+  return { year: get("year"), month: get("month"), day: get("day") };
+}
+
+function labelFor(year: number, month: number): string {
+  // Month is 1 to 12 but may overflow either way by one, which is wrapped here.
+  const index = (((month - 1) % 12) + 12) % 12;
+  const adjustedYear = year + Math.floor((month - 1) / 12);
+  return `${MONTH_NAMES[index]} ${adjustedYear}`;
+}
+
+/** The bill an instant belongs to, such as "November 2026" for October 26 to November 25. */
+export function billLabelForInstant(instant: Date): string {
+  const { year, month, day } = billingClockParts(instant);
+  return day >= BILLING_DAY ? labelFor(year, month + 1) : labelFor(year, month);
+}
+
+/** The most recent bill whose period has fully ended, such as "November 2026" on November 26. */
+export function lastClosedBillLabel(now: Date = new Date()): string {
+  const { year, month, day } = billingClockParts(now);
+  return day >= BILLING_DAY ? labelFor(year, month) : labelFor(year, month - 1);
+}
+
+/** Spells a bill's period out, e.g. "October 26 to November 26", or null for an unreadable label. */
+export function billPeriodText(label: string): string | null {
+  const parsed = parseMonthLabel(label);
+  if (!parsed) return null;
+  const startMonth = MONTH_NAMES[(parsed.monthIndex + 11) % 12];
+  return `${startMonth} ${BILLING_DAY} to ${MONTH_NAMES[parsed.monthIndex]} ${BILLING_DAY}`;
 }

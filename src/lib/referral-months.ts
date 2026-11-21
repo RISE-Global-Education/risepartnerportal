@@ -1,29 +1,36 @@
 import { fetchAllRecords, getField } from "./airtable";
+import { billLabelForInstant } from "./bill-id";
 
-// The student view in the RISE LMS Airtable. One row per referred student, with
-// the month they came in, the counselor, and that counselor's referral rate for
-// the month. Invoices read their student count and referral % from here.
+// The student table in the RISE LMS Airtable. One row per student, with when they
+// were created, the counselor, and that counselor's referral rate. Invoices read
+// their student count and referral % from here. A student counts toward the bill
+// whose 26th-to-26th period contains their creation time (see billLabelForInstant),
+// not toward a calendar month. Every student with a counselor counts.
+//
+// The table is read directly, NOT through an Airtable view. A view's filter can be
+// edited in the Airtable app by anyone, and the view this used to read was an
+// email-sending queue (students left it once their email was marked Sent), so
+// counts would have shrunk as emails went out.
 //
 // Where it lives comes only from the environment, with no defaults:
-//   AIRTABLE_REFERRAL_BASE_ID, AIRTABLE_REFERRAL_TABLE_ID, AIRTABLE_REFERRAL_VIEW_ID
+//   AIRTABLE_REFERRAL_BASE_ID, AIRTABLE_REFERRAL_TABLE_ID
 // A missing one is an error, not an empty result: the Airtable layer quietly
-// returns nothing when it cannot read a base, and that would show every bill
-// with 0 students.
-function getReferralSource(): { base: string; table: string; view: string } {
+// returns nothing when it cannot read a base, which would show every bill with 0
+// students.
+function getReferralSource(): { base: string; table: string } {
   const base = process.env.AIRTABLE_REFERRAL_BASE_ID?.trim();
   const table = process.env.AIRTABLE_REFERRAL_TABLE_ID?.trim();
-  const view = process.env.AIRTABLE_REFERRAL_VIEW_ID?.trim();
-  if (!base || !table || !view) {
+  if (!base || !table) {
     throw new Error(
-      "The referral view is not configured: set AIRTABLE_REFERRAL_BASE_ID, AIRTABLE_REFERRAL_TABLE_ID and AIRTABLE_REFERRAL_VIEW_ID."
+      "Referral students are not configured: set AIRTABLE_REFERRAL_BASE_ID and AIRTABLE_REFERRAL_TABLE_ID."
     );
   }
-  return { base, table, view };
+  return { base, table };
 }
 
 // Only these fields are requested. The table also holds student contact and
 // application details that the partner page has no business pulling in.
-const FIELDS = ["Month", "Referral %", "Counselor Name"];
+const FIELDS = ["Record Created", "Referral %", "Counselor Name"];
 
 export interface ReferralMonthStats {
   studentCount: number;
@@ -35,7 +42,7 @@ export function referralMonthKey(counselorId: string, month: string): string {
   return `${counselorId.trim().toUpperCase()}|${month.trim().toLowerCase()}`;
 }
 
-// "Q&A College Admissions — PR12430" ends with the counselor's ID.
+// A name like "Q&A College Admissions (dash) PR12430" ends with the counselor's ID.
 export function parseCounselorId(value: unknown): string | null {
   const text = Array.isArray(value) ? value[0] : value;
   if (typeof text !== "string") return null;
@@ -59,24 +66,27 @@ export function parseReferralPercent(value: unknown): number | null {
   return Math.round(percent * 100) / 100;
 }
 
-function monthText(value: unknown): string | null {
-  const text = Array.isArray(value) ? value[0] : value;
-  return typeof text === "string" && text.trim() ? text.trim() : null;
+function createdAt(value: unknown): Date | null {
+  if (typeof value !== "string") return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**
- * Student count and referral rate for every (counselor, month) in the view,
- * keyed by referralMonthKey(). Rows without a counselor ID or month are skipped.
+ * Student count and referral rate for every (counselor, bill) in the table,
+ * keyed by referralMonthKey() with the bill label (such as "November 2026").
+ * Rows without a counselor ID or a creation time are skipped.
  */
 export async function getReferralMonthStats(): Promise<Map<string, ReferralMonthStats>> {
-  const { base, table, view } = getReferralSource();
-  const records = await fetchAllRecords(base, table, { view, fields: FIELDS });
+  const { base, table } = getReferralSource();
+  const records = await fetchAllRecords(base, table, { fields: FIELDS });
 
   const stats = new Map<string, ReferralMonthStats>();
   for (const record of records) {
     const counselorId = parseCounselorId(getField<unknown>(record, "Counselor Name"));
-    const month = monthText(getField<unknown>(record, "Month"));
-    if (!counselorId || !month) continue;
+    const created = createdAt(getField<unknown>(record, "Record Created"));
+    if (!counselorId || !created) continue;
+    const month = billLabelForInstant(created);
 
     const key = referralMonthKey(counselorId, month);
     const entry = stats.get(key) ?? { studentCount: 0, referralPercent: null };
@@ -88,7 +98,7 @@ export async function getReferralMonthStats(): Promise<Map<string, ReferralMonth
   return stats;
 }
 
-/** Every counselor with at least one referred student in the month (a label like "October 2026"). */
+/** Every counselor with at least one referred student in the bill's period (a label like "November 2026"). */
 export async function getCounselorIdsForMonth(month: string): Promise<string[]> {
   const wanted = month.trim().toLowerCase();
   const ids = new Set<string>();

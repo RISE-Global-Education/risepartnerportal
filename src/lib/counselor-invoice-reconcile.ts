@@ -1,6 +1,7 @@
 import { listInvoiceFiles, type DriveInvoiceFile } from "./drive-invoices";
 import { extractBillId } from "./bill-id";
 import { parseCutoff, splitByCutoff } from "./invoice-cutoff";
+import { sendPaidEmails, type EmailRunResult } from "./counselor-invoice-emails";
 import { attachInvoiceFile, getBillsForReconcile, normalizeBillId } from "./counselor-invoices";
 
 // Re-exported so callers (the cron route) keep one import for the reconciler.
@@ -12,6 +13,7 @@ export interface ReconcileResult {
   matched: number;
   newlyPaid: number;
   unmatchedFiles: string[];
+  emails: EmailRunResult;
 }
 
 // Keeps the cron response small when the folder holds many unrelated files.
@@ -58,11 +60,16 @@ export async function reconcileCounselorInvoices(): Promise<ReconcileResult> {
     }
   }
 
+  // Email counselors whose invoice just became available. Failures are caught
+  // per bill inside, so an email problem never hides the reconciliation above.
+  const emails = await sendPaidEmails(cutoff);
+
   return {
     filesScanned: files.length,
     skippedBeforeCutoff: skipped,
     matched,
     newlyPaid,
     unmatchedFiles: unmatchedFiles.slice(0, MAX_UNMATCHED_LISTED),
+    emails,
   };
 }

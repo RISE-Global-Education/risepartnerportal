@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { BILL_ID_FORMAT, extractBillId, makeBillId, previousMonthLabel } from "./bill-id";
+import {
+  BILL_ID_FORMAT,
+  billLabelForInstant,
+  billPeriodText,
+  extractBillId,
+  lastClosedBillLabel,
+  makeBillId,
+} from "./bill-id";
 
 describe("makeBillId", () => {
   it("joins the counselor ID and the month with no space", () => {
@@ -46,17 +53,69 @@ describe("BILL_ID_FORMAT", () => {
   });
 });
 
-describe("previousMonthLabel", () => {
-  it("gives the month before the current one", () => {
-    expect(previousMonthLabel(new Date("2026-11-01T17:00:00Z"))).toBe("October 2026");
+describe("billLabelForInstant (26th to 26th, IST)", () => {
+  it("puts October 26 through November 25 in the November bill", () => {
+    expect(billLabelForInstant(new Date("2026-10-26T12:00:00Z"))).toBe("November 2026");
+    expect(billLabelForInstant(new Date("2026-11-20T12:00:00Z"))).toBe("November 2026");
+    expect(billLabelForInstant(new Date("2026-11-25T12:00:00Z"))).toBe("November 2026");
   });
 
-  it("rolls back across the new year", () => {
-    expect(previousMonthLabel(new Date("2027-01-01T17:00:00Z"))).toBe("December 2026");
+  it("starts a period at midnight IST on the 26th", () => {
+    // Midnight IST (UTC+5:30) on October 26 is 18:30 UTC on October 25.
+    expect(billLabelForInstant(new Date("2026-10-25T18:29:59Z"))).toBe("October 2026");
+    expect(billLabelForInstant(new Date("2026-10-25T18:30:00Z"))).toBe("November 2026");
   });
 
-  it("uses Los Angeles time, not UTC, at the month boundary", () => {
-    // 06:00 UTC on 1 November is still 31 October in Los Angeles.
-    expect(previousMonthLabel(new Date("2026-11-01T06:00:00Z"))).toBe("September 2026");
+  it("uses the same IST time in winter, since IST has no daylight saving", () => {
+    // Midnight IST on November 26 is again 18:30 UTC the day before.
+    expect(billLabelForInstant(new Date("2026-11-25T18:29:59Z"))).toBe("November 2026");
+    expect(billLabelForInstant(new Date("2026-11-25T18:30:00Z"))).toBe("December 2026");
+  });
+
+  it("rolls into the next year", () => {
+    expect(billLabelForInstant(new Date("2026-12-25T18:30:00Z"))).toBe("January 2027");
+    expect(billLabelForInstant(new Date("2027-01-05T12:00:00Z"))).toBe("January 2027");
+  });
+
+  it("places students created near the edge on the right side", () => {
+    // 9:08 AM Pacific on October 26 is 9:38 PM IST that day: the November bill.
+    expect(billLabelForInstant(new Date("2026-10-26T16:08:08Z"))).toBe("November 2026");
+    // 3:46 PM UTC on October 25 is 9:16 PM IST that day: still the October bill.
+    expect(billLabelForInstant(new Date("2026-10-25T15:46:56Z"))).toBe("October 2026");
+  });
+});
+
+describe("lastClosedBillLabel", () => {
+  it("is the bill that ends on the 26th, from midnight IST that day", () => {
+    expect(billLabelForInstant(new Date("2026-11-25T18:29:59Z"))).toBe("November 2026");
+    expect(lastClosedBillLabel(new Date("2026-11-25T18:29:59Z"))).toBe("October 2026");
+    expect(lastClosedBillLabel(new Date("2026-11-25T18:30:00Z"))).toBe("November 2026");
+  });
+
+  it("is the bill that just closed when the 9 AM IST job runs on the 26th", () => {
+    // 9:00 AM IST on November 26 is 03:30 UTC that day.
+    expect(lastClosedBillLabel(new Date("2026-11-26T03:30:00Z"))).toBe("November 2026");
+    expect(lastClosedBillLabel(new Date("2026-10-26T03:30:00Z"))).toBe("October 2026");
+  });
+
+  it("is still the previous bill until the next 26th", () => {
+    expect(lastClosedBillLabel(new Date("2026-11-21T12:00:00Z"))).toBe("October 2026");
+    expect(lastClosedBillLabel(new Date("2026-12-10T12:00:00Z"))).toBe("November 2026");
+  });
+
+  it("handles the year boundary", () => {
+    expect(lastClosedBillLabel(new Date("2027-01-10T12:00:00Z"))).toBe("December 2026");
+    expect(lastClosedBillLabel(new Date("2027-01-26T17:00:00Z"))).toBe("January 2027");
+  });
+});
+
+describe("billPeriodText", () => {
+  it("spells the period out with full month names", () => {
+    expect(billPeriodText("November 2026")).toBe("October 26 to November 26");
+    expect(billPeriodText("January 2027")).toBe("December 26 to January 26");
+  });
+
+  it("returns null for an unreadable label", () => {
+    expect(billPeriodText("someday")).toBeNull();
   });
 });

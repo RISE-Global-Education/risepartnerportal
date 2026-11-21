@@ -1,6 +1,6 @@
 import { fetchAllRecords, getField } from "./airtable";
-import { query, toStr } from "./lms-db";
-import { COUNSELOR_CONTACTS as CT } from "./supabase-schema";
+import { mutate, query, toStr } from "./lms-db";
+import { COUNSELOR_CONTACTS as CT, COUNSELORS as CO } from "./supabase-schema";
 import type { Counselor, Contact } from "./types";
 
 // Partners in these Follow Up statuses are dead leads — every "who hasn't
@@ -127,6 +127,28 @@ export async function getAllContactPhones(): Promise<Map<string, string[]>> {
     phonesByCounselor.set(row.counselor_id, existing);
   }
   return phonesByCounselor;
+}
+
+/**
+ * The email on each counselor's row in Supabase, keyed by counselor ID. Read
+ * fresh (never cached) because it decides who an invoice email goes to. A
+ * counselor with no email on file is simply absent from the map.
+ */
+export async function getCounselorEmails(counselorIds: string[]): Promise<Map<string, string>> {
+  const emails = new Map<string, string>();
+  if (counselorIds.length === 0) return emails;
+
+  const rows = await mutate<{ id: string; email: string | null }>(
+    `SELECT ${CO.id} AS id, ${CO.email} AS email
+       FROM ${CO.table}
+      WHERE ${CO.id} = ANY($1::text[])`,
+    [counselorIds]
+  );
+  for (const row of rows) {
+    const email = toStr(row.email);
+    if (email) emails.set(row.id, email);
+  }
+  return emails;
 }
 
 export async function getContactsForCounselor(counselorId: string): Promise<Contact[]> {
