@@ -13,9 +13,10 @@ npm run dev      # next dev --webpack (start dev server)
 npm run build    # next build
 npm run start    # next start (serve production build)
 npm run lint      # eslint
+npm test         # vitest run
 ```
 
-There is no test suite configured in this repo.
+There is a small Vitest suite (`src/lib/*.test.ts`) covering the invoice logic that is costly to get wrong: bill ID parsing and matching, the reconcile cutoff guard, referral rate parsing, and the monthly date maths. Everything else is untested. Tests import only pure modules (no Drive or database), which is why the cutoff lives in its own [invoice-cutoff.ts](src/lib/invoice-cutoff.ts).
 
 ## Architecture
 
@@ -84,6 +85,20 @@ Three schema facts the code deliberately handles — don't "simplify" them away:
 The final mentor session has no `mentor_feedback` row — it files a structured evaluation into `final_evaluations`, which carries `program_id` directly, so it is fetched by program rather than by hunting for meetings with no feedback.
 
 The progress modal is **partner-facing**, so `handoff_note_for_wc`, `extra_support`, `flagged_status` and `steps_taken_offtrack` are staff-only. They are left out of the SELECT lists entirely rather than filtered after the fact, so they cannot reach a counselor's browser by accident.
+
+### Counselor invoices (Supabase + Google Drive)
+
+The partner page has two tabs (`?tab=pipeline` and `?tab=invoices`). Invoices live in `counselor_invoices` (created by [scripts/create-counselor-invoices.sql](scripts/create-counselor-invoices.sql), applied by hand), separate from the LMS `invoices` table, which holds mentor and writing coach bills and is reconciled by the LMS backend. A bill's `bill_id` is the counselor ID and month, e.g. `PR1126_October2026`: unique, needs no numbering, and is also the Drive file name. The whole format lives in [bill-id.ts](src/lib/bill-id.ts).
+
+- [counselor-invoices.ts](src/lib/counselor-invoices.ts) is the data layer. Client-bound data says whether a file exists, never which Drive file it is.
+- [drive-invoices.ts](src/lib/drive-invoices.ts) walks the shared folder (one subfolder per month) read-only and downloads files. [counselor-invoice-reconcile.ts](src/lib/counselor-invoice-reconcile.ts) matches file names to bill IDs (case-insensitive, tolerating a space, `_` or `-` between month and year), ignores files created before `INVOICES_RECONCILE_FROM` (fails closed if unset or invalid), and marks matched bills Paid idempotently.
+- `POST /api/cron/reconcile-counselor-invoices` is called daily by Supabase `pg_cron` at 9 AM Pacific (the SQL fires at 16:00 and 17:00 UTC and checks the Los Angeles hour). It needs the `x-cron-secret` header to equal `CRON_WEBHOOK_SECRET`.
+- `GET /api/invoices/[billId]/file` streams the PDF. Authorization runs before any Drive call ([partner-access.ts](src/lib/partner-access.ts)): the matching `partner_auth` counselor, `ceo_partner_auth`, or `ceo_auth`. Everyone else gets 404. A partner with no password set sees a prompt to create one instead of the tab.
+- Month, student count and referral % come from the RISE LMS Airtable student view ([referral-months.ts](src/lib/referral-months.ts)); its base, table and view IDs come from `AIRTABLE_REFERRAL_BASE_ID`, `AIRTABLE_REFERRAL_TABLE_ID` and `AIRTABLE_REFERRAL_VIEW_ID`, with no defaults and a loud error if one is missing (the Airtable layer silently returns nothing on an auth failure, which would show 0 students): one row per referred student, grouped by counselor PR code (parsed from "Counselor Name") and "Month". Student count is the row count, the rate is that month's "Referral %". The invoice row's `billing_month` text must equal Airtable's "Month" text (e.g. "October 2026"), or the bill shows 0 students. At 0% or no rate, the rate card and column are hidden.
+
+- Bills are created automatically: `POST /api/cron/generate-counselor-invoices` runs on the 1st of each month (pg_cron, 9 AM Pacific, same secret as the reconciler) and inserts one Pending bill per counselor with students in the month that just ended ([counselor-invoice-generate.ts](src/lib/counselor-invoice-generate.ts)). Existing bills are skipped, so a repeat run creates nothing. A body of `{"month": "October 2026"}` backfills a specific month. [scripts/generate-counselor-invoices.mjs](scripts/generate-counselor-invoices.mjs) is the manual version: it reads Airtable and writes a reviewable `.sql` file, never touching the database.
+
+Env vars: `AIRTABLE_REFERRAL_BASE_ID`, `AIRTABLE_REFERRAL_TABLE_ID`, `AIRTABLE_REFERRAL_VIEW_ID`, `GOOGLE_DRIVE_INVOICES_FOLDER_ID`, `GOOGLE_DRIVE_REFRESH_TOKEN` (needs `drive.readonly`), `INVOICES_RECONCILE_FROM` (ISO 8601), `CRON_WEBHOOK_SECRET`. None have defaults.
 
 ### Other integrations
 
