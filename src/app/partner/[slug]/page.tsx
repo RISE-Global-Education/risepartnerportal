@@ -11,13 +11,20 @@ import ConversationLog from "@/components/ConversationLog";
 import AddConversationForm from "@/components/AddConversationForm";
 import CounselorDetails from "@/components/CounselorDetails";
 import PartnerLoginGate from "@/components/PartnerLoginGate";
+import PartnerTabs, { type PartnerTab } from "@/components/PartnerTabs";
+import InvoicesTab from "@/components/InvoicesTab";
+import { getInvoicesForCounselor } from "@/lib/counselor-invoices";
 
 export default async function PartnerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { slug } = await params;
+  const { tab } = await searchParams;
+  const activeTab: PartnerTab = tab === "invoices" ? "invoices" : "pipeline";
   const result = await getCounselorBySlug(slug);
 
   if (!result) {
@@ -52,16 +59,25 @@ export default async function PartnerPage({
     }
   }
 
-  const students = await getStudentsForCounselor(counselor.counselorId);
+  // Only the active tab's data is fetched.
+  const isPipeline = activeTab === "pipeline";
+
+  const students = isPipeline ? await getStudentsForCounselor(counselor.counselorId) : [];
   const funnelCounts = computeFunnelCounts(students);
   const total = students.length;
 
-  const contacts = await getContactsForCounselor(counselor.counselorId);
+  const contacts = isPipeline ? await getContactsForCounselor(counselor.counselorId) : [];
 
   let conversations = undefined;
-  if (isCeoView) {
+  if (isPipeline && isCeoView) {
     conversations = await getConversationsForCounselor(counselor.counselorId);
   }
+
+  // Invoices follow the same rule as the rest of the page: a partner who has set
+  // a password is behind the login gate above, and one who has not set one can
+  // see the page, invoices included.
+  const invoices =
+    activeTab === "invoices" ? await getInvoicesForCounselor(counselor.counselorId) : [];
 
   return (
     <div className="min-h-screen bg-rise-cream">
@@ -86,24 +102,30 @@ export default async function PartnerPage({
           </div>
         )}
         <PartnerHeader counselor={counselor} isCeoView={isCeoView} secret={process.env.DASHBOARD_SECRET} />
-        <CounselorDetails
-          counselor={counselor}
-          contacts={contacts}
-          isCeoView={isCeoView}
-          secret={process.env.DASHBOARD_SECRET!}
-        />
-        <FunnelStats counts={funnelCounts} total={total} />
-        <StudentTable students={students} partnerSlug={slug} />
-        {isCeoView && (
-          <AddConversationForm
-            counselorId={counselor.counselorId}
-            counselorName={counselor.companyName}
-            secret={process.env.DASHBOARD_SECRET!}
-          />
+        <PartnerTabs active={activeTab} />
+        {isPipeline && (
+          <>
+            <CounselorDetails
+              counselor={counselor}
+              contacts={contacts}
+              isCeoView={isCeoView}
+              secret={process.env.DASHBOARD_SECRET!}
+            />
+            <FunnelStats counts={funnelCounts} total={total} />
+            <StudentTable students={students} partnerSlug={slug} />
+            {isCeoView && (
+              <AddConversationForm
+                counselorId={counselor.counselorId}
+                counselorName={counselor.companyName}
+                secret={process.env.DASHBOARD_SECRET!}
+              />
+            )}
+            {isCeoView && conversations && (
+              <ConversationLog conversations={conversations} secret={process.env.DASHBOARD_SECRET!} />
+            )}
+          </>
         )}
-        {isCeoView && conversations && (
-          <ConversationLog conversations={conversations} secret={process.env.DASHBOARD_SECRET!} />
-        )}
+        {activeTab === "invoices" && <InvoicesTab invoices={invoices} />}
       </div>
     </div>
   );

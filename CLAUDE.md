@@ -13,9 +13,10 @@ npm run dev      # next dev --webpack (start dev server)
 npm run build    # next build
 npm run start    # next start (serve production build)
 npm run lint      # eslint
+npm test         # vitest run
 ```
 
-There is no test suite configured in this repo.
+There is a small Vitest suite (`src/lib/*.test.ts`) covering the invoice logic that is costly to get wrong: bill ID parsing and matching, the reconcile cutoff guard, referral rate parsing, and the monthly date maths. Everything else is untested. Tests import only pure modules (no Drive or database), which is why the cutoff lives in its own [invoice-cutoff.ts](src/lib/invoice-cutoff.ts).
 
 ## Architecture
 
@@ -85,17 +86,33 @@ The final mentor session has no `mentor_feedback` row — it files a structured 
 
 The progress modal is **partner-facing**, so `handoff_note_for_wc`, `extra_support`, `flagged_status` and `steps_taken_offtrack` are staff-only. They are left out of the SELECT lists entirely rather than filtered after the fact, so they cannot reach a counselor's browser by accident.
 
+### Counselor invoices (Supabase + Google Drive)
+
+The partner page has two tabs (`?tab=pipeline` and `?tab=invoices`). Invoices live in `counselor_invoices` (created by [scripts/create-counselor-invoices.sql](scripts/create-counselor-invoices.sql), applied by hand), separate from the LMS `invoices` table, which holds mentor and writing coach bills and is reconciled by the LMS backend. A bill's `bill_id` is the counselor ID and the month its period ends in, e.g. `PR1126_November2026`: unique, needs no numbering, and is also the Drive file name. The whole format lives in [bill-id.ts](src/lib/bill-id.ts).
+
+- [counselor-invoices.ts](src/lib/counselor-invoices.ts) is the data layer. Client-bound data says whether a file exists, never which Drive file it is.
+- [drive-invoices.ts](src/lib/drive-invoices.ts) walks the shared folder (one subfolder per month) read-only and downloads files. [counselor-invoice-reconcile.ts](src/lib/counselor-invoice-reconcile.ts) matches file names to bill IDs (case-insensitive, tolerating a space, `_` or `-` between month and year), ignores files created before `INVOICES_RECONCILE_FROM` (fails closed if unset or invalid), and marks matched bills Paid idempotently.
+- `POST /api/cron/reconcile-counselor-invoices` is called daily by Supabase `pg_cron` at 9 AM IST (03:30 UTC, no daylight saving to account for; the SQL also checks the India hour). It needs the `x-cron-secret` header to equal `CRON_WEBHOOK_SECRET`.
+- `GET /api/invoices/[billId]/file` streams the PDF. Authorization runs before any Drive call ([partner-access.ts](src/lib/partner-access.ts)): the matching `partner_auth` counselor, `ceo_partner_auth`, or `ceo_auth`. Everyone else gets 404. The same rule as the partner page applies: a partner who has set a password must be logged in to it (the page's login gate), and a partner with no password has an open page, so the Invoices tab and downloads are open too. "Has set a password" is read from the same Airtable `Partner Password` field the page uses.
+- **Billing periods run from the 26th to the 26th** (read in IST, `Asia/Kolkata`, start inclusive, end exclusive, so a period runs from 12:00 AM IST on the 26th to 12:00 AM IST on the next 26th) and are named after the month they end in: `November 2026` is October 26 to November 26, raised on November 26. The rules live in [bill-id.ts](src/lib/bill-id.ts) (`billLabelForInstant`, `lastClosedBillLabel`). `scripts/generate-counselor-invoices.mjs` mirrors `billLabelForInstant`, so keep the two in step.
+- Student count and referral % come from the RISE LMS Airtable student table ([referral-months.ts](src/lib/referral-months.ts)), read directly and NOT through a view: the view it used to read was an email-sending queue (students left it once their email was marked Sent), so counts would have shrunk over time. The base and table come from `AIRTABLE_REFERRAL_BASE_ID` and `AIRTABLE_REFERRAL_TABLE_ID`, required with no defaults and a loud error if missing (the Airtable layer silently returns nothing on an auth failure, which would show 0 students). Every student with a counselor counts, with no other filter. One row per student: each is assigned to a bill by its "Record Created" time, grouped by counselor PR code (parsed from "Counselor Name"). Student count is the row count, the rate is that row's "Referral %". At 0% or no rate, the rate card and column are hidden.
+- Bills are created automatically: `POST /api/cron/generate-counselor-invoices` runs on the 26th of each month (pg_cron, 9 AM IST, same secret as the reconciler) and inserts one Pending bill per counselor with students in the period that just ended ([counselor-invoice-generate.ts](src/lib/counselor-invoice-generate.ts)). Existing bills are skipped, so a repeat run creates nothing. A body of `{"month": "November 2026"}` backfills a specific bill. [scripts/generate-counselor-invoices.mjs](scripts/generate-counselor-invoices.mjs) is the manual version: it reads Airtable and writes a reviewable `.sql` file, never touching the database.
+
+- **Paid email:** at the end of each reconcile run, [counselor-invoice-emails.ts](src/lib/counselor-invoice-emails.ts) emails the counselor (the `email` on their row in the Supabase `counselors` table, read fresh via `getCounselorEmails`; it may hold several addresses) once a bill is Paid with its file, with a link to the Invoices tab; the subject and body are the RISE team's own wording, fixed in [invoice-email-content.ts](src/lib/invoice-email-content.ts) (the subject has non-ASCII dashes, so [mime.ts](src/lib/mime.ts) RFC 2047 encodes it). It sends through the shared [gmail.ts](src/lib/gmail.ts) (also used by `/api/send-email`). Nothing is sent, or marked sent, while `NEXT_PUBLIC_BASE_URL` is unset, because the email is useless without its link. Safeguards: off unless `INVOICE_EMAILS_ENABLED=true`; `INVOICE_EMAIL_TEST_TO` redirects every email to a test address and marks nothing as sent; each bill is claimed via `paid_email_sent_at` before sending so it is emailed at most once (a failed send releases the claim and retries next run); only bills paid on or after `INVOICES_RECONCILE_FROM` are considered.
+
+Env vars: `AIRTABLE_REFERRAL_BASE_ID`, `AIRTABLE_REFERRAL_TABLE_ID`, `GOOGLE_DRIVE_INVOICES_FOLDER_ID`, `GOOGLE_DRIVE_REFRESH_TOKEN` (needs `drive.readonly`), `INVOICES_RECONCILE_FROM` (ISO 8601), `CRON_WEBHOOK_SECRET`, `INVOICE_EMAILS_ENABLED` and optionally `INVOICE_EMAIL_TEST_TO`; the email link uses the existing `NEXT_PUBLIC_BASE_URL`. None have defaults.
+
 ### Other integrations
 
 - **Cal.com** (`src/app/api/calcom/`) — booking data (`CALCOM_API_KEY`).
-- **Google/Gmail** (`GOOGLE_CLIENT_ID/SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM`) — used for sending emails (e.g. mentor contracts, MOUs) via `googleapis` (`src/app/api/send-email/`).
+- **Google/Gmail** (`GMAIL_CLIENT_ID/SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM`; `GOOGLE_CLIENT_ID/SECRET` are a separate OAuth client used for Drive and are only a fallback here when the `GMAIL_` pair is unset) — used for sending emails (e.g. mentor contracts, MOUs) via `googleapis` (`src/app/api/send-email/`).
 - **docx-templates** — generates MOU/contract documents (`src/app/api/counselors/mou/generate`, `src/app/api/mentor-contract`, `src/app/api/wc-contract`) from Airtable data, with a PDF conversion step (`PDF_CONVERT_API_KEY`).
 - **fuse.js** — fuzzy search (e.g. duplicate-lead detection, partner search).
 - **recharts** — all dashboard charts under `src/components/dashboard/`.
 
 ### Env vars
 
-No `.env.example` is checked in (`.env*` is gitignored). Required vars are discoverable via `process.env.*` references throughout `src/`: `AIRTABLE_TOKEN`, `AIRTABLE_COUNSELOR_TOKEN`, `DASHBOARD_SECRET`, `USER_SECRET`, `DASHBOARD_PASSWORD`, `PARTNER_PASSWORD`, `CALCOM_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM`, `PDF_CONVERT_API_KEY`, `NEXT_PUBLIC_BASE_URL`, `SUPABASE_DB_URL`.
+No `.env.example` is checked in (`.env*` is gitignored). Required vars are discoverable via `process.env.*` references throughout `src/`: `AIRTABLE_TOKEN`, `AIRTABLE_COUNSELOR_TOKEN`, `DASHBOARD_SECRET`, `USER_SECRET`, `DASHBOARD_PASSWORD`, `PARTNER_PASSWORD`, `CALCOM_API_KEY`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `GMAIL_FROM`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (the Drive client), `PDF_CONVERT_API_KEY`, `NEXT_PUBLIC_BASE_URL`, `SUPABASE_DB_URL`.
 
 `SUPABASE_DB_URL` is the LMS Postgres connection string (Supabase → Project Settings → Database → Connection string). It is read at runtime by [lms-db.ts](src/lib/lms-db.ts) and by [scripts/inspect-lms-schema.mjs](scripts/inspect-lms-schema.mjs). `SUPABASE_URL` is accepted as a fallback only because that is where the connection string was first configured; no Supabase API key of any kind is needed, since the connection authenticates as the table owner.
 

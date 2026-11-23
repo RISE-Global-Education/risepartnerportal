@@ -86,6 +86,23 @@ export const EMAIL_UNSUBSCRIBES = {
   createdAt: "created_at",
 } as const;
 
+// Counselor referral invoices shown on the partner portal's Invoices tab.
+// Separate from the LMS "invoices" table (mentor and writing coach bills).
+// Created by scripts/create-counselor-invoices.sql.
+export const COUNSELOR_INVOICES = {
+  table: "counselor_invoices",
+  id: "id",
+  billId: "bill_id", // counselor ID and month, e.g. PR1126_October2026, unique, also the Drive file name
+  counselorId: "counselor_id", // matches counselors.id
+  billingMonth: "billing_month", // e.g. "October 2026", matches Month in the Airtable referral view
+  paymentStatus: "payment_status", // Pending | Processing | Paid
+  paidAt: "paid_at",
+  driveFileId: "invoice_drive_file_id", // never sent to the browser
+  fileName: "invoice_file_name",
+  uploadedAt: "invoice_uploaded_at",
+  paidEmailSentAt: "paid_email_sent_at", // set once the "invoice is paid" email has gone out
+} as const;
+
 export const COUNSELOR_CONVERSATIONS = {
   table: "counselor_conversations",
   id: "id",
