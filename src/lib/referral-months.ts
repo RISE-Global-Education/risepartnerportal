@@ -98,13 +98,17 @@ export async function getReferralMonthStats(): Promise<Map<string, ReferralMonth
   return stats;
 }
 
-/** Every counselor with at least one referred student in the bill's period (a label like "November 2026"). */
+/**
+ * Every counselor with at least one referred student in the bill's period (a
+ * label like "November 2026") AND a referral rate for it. A counselor with no
+ * rate, or 0%, is not on a referral arrangement, so there is nothing to invoice.
+ */
 export async function getCounselorIdsForMonth(month: string): Promise<string[]> {
   const wanted = month.trim().toLowerCase();
   const ids = new Set<string>();
-  for (const key of (await getReferralMonthStats()).keys()) {
+  for (const [key, stats] of await getReferralMonthStats()) {
     const [counselorId, rowMonth] = key.split("|");
-    if (rowMonth === wanted) ids.add(counselorId);
+    if (rowMonth === wanted && stats.referralPercent != null) ids.add(counselorId);
   }
   return [...ids].sort();
 }
