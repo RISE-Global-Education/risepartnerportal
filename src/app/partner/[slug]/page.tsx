@@ -14,6 +14,7 @@ import PartnerLoginGate from "@/components/PartnerLoginGate";
 import PartnerTabs, { type PartnerTab } from "@/components/PartnerTabs";
 import InvoicesTab from "@/components/InvoicesTab";
 import { getInvoicesForCounselor } from "@/lib/counselor-invoices";
+import { hasReferralRate } from "@/lib/referral-rate";
 
 export default async function PartnerPage({
   params,
@@ -24,7 +25,6 @@ export default async function PartnerPage({
 }) {
   const { slug } = await params;
   const { tab } = await searchParams;
-  const activeTab: PartnerTab = tab === "invoices" ? "invoices" : "pipeline";
   const result = await getCounselorBySlug(slug);
 
   if (!result) {
@@ -32,6 +32,11 @@ export default async function PartnerPage({
   }
 
   const { counselor, isCeoView } = result;
+
+  // Only partners with a referral rate have invoices. For everyone else the tab
+  // is not shown, and a link straight to it falls back to the pipeline.
+  const showInvoices = hasReferralRate(counselor.referralAmount);
+  const activeTab: PartnerTab = tab === "invoices" && showInvoices ? "invoices" : "pipeline";
 
   const cookieStore = await cookies();
 
@@ -102,7 +107,7 @@ export default async function PartnerPage({
           </div>
         )}
         <PartnerHeader counselor={counselor} isCeoView={isCeoView} secret={process.env.DASHBOARD_SECRET} />
-        <PartnerTabs active={activeTab} />
+        {showInvoices && <PartnerTabs active={activeTab} />}
         {isPipeline && (
           <>
             <CounselorDetails
