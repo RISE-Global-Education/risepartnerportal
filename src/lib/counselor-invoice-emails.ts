@@ -4,7 +4,7 @@ import {
   releasePaidEmail,
 } from "./counselor-invoices";
 import { getAllCounselors, getCounselorEmails } from "./counselors";
-import { sendEmail } from "./gmail";
+import { invoiceGmailConfig, sendEmail } from "./gmail";
 import { buildPaidEmail, invoicesPortalUrl, parseRecipients } from "./invoice-email-content";
 
 export interface EmailRunResult {
@@ -64,11 +64,14 @@ export async function sendPaidEmails(since: Date): Promise<EmailRunResult> {
     });
 
     try {
-      await sendEmail({
-        to: recipients.join(", "),
-        subject: testTo ? `[TEST] ${subject}` : subject,
-        body,
-      });
+      await sendEmail(
+        {
+          to: recipients.join(", "),
+          subject: testTo ? `[TEST] ${subject}` : subject,
+          body,
+        },
+        invoiceGmailConfig()
+      );
       result.sent += 1;
     } catch (err) {
       result.failed += 1;

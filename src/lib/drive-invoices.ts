@@ -26,12 +26,12 @@ export function getInvoicesFolderId(): string | null {
 }
 
 function getDrive(): drive_v3.Drive {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
   const refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN;
   if (!clientId || !clientSecret || !refreshToken) {
     throw new DriveNotConfiguredError(
-      "Google Drive is not configured: set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_DRIVE_REFRESH_TOKEN."
+      "Google Drive is not configured: set GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET and GOOGLE_DRIVE_REFRESH_TOKEN."
     );
   }
   const auth = new google.auth.OAuth2(

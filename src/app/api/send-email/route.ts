@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendEmail } from "@/lib/gmail";
+import { defaultGmailConfig, sendEmail } from "@/lib/gmail";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields: to, subject, body" }, { status: 400 });
     }
 
-    await sendEmail({ to, cc, bcc, subject, body });
+    await sendEmail({ to, cc, bcc, subject, body }, defaultGmailConfig());
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

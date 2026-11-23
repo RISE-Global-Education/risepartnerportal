@@ -1,36 +1,81 @@
 import { google, type gmail_v1 } from "googleapis";
 import { cleanHeader, encodeHeader } from "./mime";
 
-// The one place the portal sends mail from. Used by the send-email route and by
-// the invoice emails. Credentials come only from the environment:
-// GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN and GMAIL_FROM.
+// One place the portal sends mail from. The sender is given its credentials, so
+// two features can use two different Gmail accounts side by side without their
+// environment variables colliding:
 //
-// The Gmail OAuth client is separate from the one Drive uses (GOOGLE_CLIENT_ID and
-// GOOGLE_CLIENT_SECRET), and a refresh token only works with the client that issued
-// it. GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are used here only when the
-// GMAIL_ pair is not set, which is how this worked before the clients were split.
+// - defaultGmailConfig(): the original setup, used by /api/send-email (mentor
+//   contracts, MOUs). GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GMAIL_REFRESH_TOKEN
+//   and GMAIL_FROM, exactly as before.
+// - invoiceGmailConfig(): the counselor invoice emails. INVOICE_GMAIL_CLIENT_ID,
+//   INVOICE_GMAIL_CLIENT_SECRET, INVOICE_GMAIL_REFRESH_TOKEN and INVOICE_GMAIL_FROM.
+//
+// A refresh token only works with the OAuth client that issued it, so each set
+// must be kept together.
 
-let cachedGmail: gmail_v1.Gmail | null = null;
+export interface GmailConfig {
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string;
+  from: string;
+}
 
-function getGmail(): gmail_v1.Gmail {
-  if (!cachedGmail) {
-    const clientId = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-    const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
-    if (!clientId || !clientSecret || !refreshToken) {
-      throw new Error(
-        "Gmail is not configured: set GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET and GMAIL_REFRESH_TOKEN."
-      );
-    }
+interface GmailEnvNames {
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string;
+  from: string;
+}
+
+function readConfig(names: GmailEnvNames): GmailConfig {
+  const clientId = process.env[names.clientId];
+  const clientSecret = process.env[names.clientSecret];
+  const refreshToken = process.env[names.refreshToken];
+  const from = process.env[names.from];
+  if (!clientId || !clientSecret || !refreshToken || !from) {
+    throw new Error(
+      `Gmail is not configured: set ${names.clientId}, ${names.clientSecret}, ${names.refreshToken} and ${names.from}.`
+    );
+  }
+  return { clientId, clientSecret, refreshToken, from };
+}
+
+export function defaultGmailConfig(): GmailConfig {
+  return readConfig({
+    clientId: "GOOGLE_CLIENT_ID",
+    clientSecret: "GOOGLE_CLIENT_SECRET",
+    refreshToken: "GMAIL_REFRESH_TOKEN",
+    from: "GMAIL_FROM",
+  });
+}
+
+export function invoiceGmailConfig(): GmailConfig {
+  return readConfig({
+    clientId: "INVOICE_GMAIL_CLIENT_ID",
+    clientSecret: "INVOICE_GMAIL_CLIENT_SECRET",
+    refreshToken: "INVOICE_GMAIL_REFRESH_TOKEN",
+    from: "INVOICE_GMAIL_FROM",
+  });
+}
+
+// One Gmail client per credential set, so the two features never share one.
+const gmailClients = new Map<string, gmail_v1.Gmail>();
+
+function getGmail(config: GmailConfig): gmail_v1.Gmail {
+  const key = `${config.clientId}|${config.refreshToken}`;
+  let gmail = gmailClients.get(key);
+  if (!gmail) {
     const oauth2Client = new google.auth.OAuth2(
-      clientId,
-      clientSecret,
+      config.clientId,
+      config.clientSecret,
       "https://developers.google.com/oauthplayground"
     );
-    oauth2Client.setCredentials({ refresh_token: refreshToken });
-    cachedGmail = google.gmail({ version: "v1", auth: oauth2Client });
+    oauth2Client.setCredentials({ refresh_token: config.refreshToken });
+    gmail = google.gmail({ version: "v1", auth: oauth2Client });
+    gmailClients.set(key, gmail);
   }
-  return cachedGmail;
+  return gmail;
 }
 
 export interface OutgoingEmail {
@@ -59,12 +104,9 @@ function buildRawMessage(email: OutgoingEmail, from: string): string {
   return Buffer.from(lines).toString("base64url");
 }
 
-export async function sendEmail(email: OutgoingEmail): Promise<void> {
-  const from = process.env.GMAIL_FROM;
-  if (!from) throw new Error("GMAIL_FROM is not set.");
-
-  await getGmail().users.messages.send({
+export async function sendEmail(email: OutgoingEmail, config: GmailConfig): Promise<void> {
+  await getGmail(config).users.messages.send({
     userId: "me",
-    requestBody: { raw: buildRawMessage(email, from) },
+    requestBody: { raw: buildRawMessage(email, config.from) },
   });
 }
